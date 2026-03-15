@@ -9,7 +9,7 @@ body {
 }
 
 .inicio {
-    background: #2a5c1a;
+    background: #007832;
     color: white;
     padding: 24px 40px;
     display: flex;
@@ -56,7 +56,7 @@ label {
     display: block;
     font-weight: 600;
     font-size: 12px;
-    color: #3b6d1f;
+    color: #007832;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-family: 'DM Sans', sans-serif;
@@ -88,7 +88,7 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-    border-color: #639922;
+    border-color: #39A900;
     background-color: #f0f7e8;
     box-shadow: 0 0 0 3px rgba(99,153,34,0.12);
 }
@@ -122,7 +122,7 @@ select {
 }
 
 .checkbox-group div:hover {
-    border-color: #639922;
+    border-color: #39A900;
     background-color: #f0f7e8;
 }
 
@@ -132,7 +132,7 @@ select {
     margin: 0;
     padding: 0;
     margin-bottom: 0;
-    accent-color: #3b6d1f;
+    accent-color: #39A900;
     cursor: pointer;
     flex-shrink: 0;
 }
@@ -160,7 +160,7 @@ input[type="file"] {
 }
 
 input[type="submit"] {
-    background-color: #3b6d1f;
+    background-color: #007832;
     color: white;
     border: none;
     padding: 13px 20px;
