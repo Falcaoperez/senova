@@ -23,12 +23,12 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(PasswordResetToken)
 class PasswordResetTokenAdmin(admin.ModelAdmin):
-    list_display = ('user', 'created_at', 'expires_at', 'used', 'is_valid')
-    list_filter = ('used', 'created_at', 'expires_at')
-    search_fields = ('user__email', 'user__username', 'token')
-    readonly_fields = ('token', 'created_at', 'expires_at')
+    list_display = ('usuario', 'creado_en', 'expira_en', 'utilizado', 'es_valido')
+    list_filter = ('utilizado', 'creado_en', 'expira_en')
+    search_fields = ('usuario__email', 'usuario__username', 'token')
+    readonly_fields = ('token', 'creado_en', 'expira_en')
     
-    def is_valid(self, obj):
-        return obj.is_valid()
-    is_valid.boolean = True
-    is_valid.short_description = "¿Válido?"
+    def es_valido(self, obj):
+        return obj.es_valido()
+    es_valido.boolean = True
+    es_valido.short_description = "¿Válido?"

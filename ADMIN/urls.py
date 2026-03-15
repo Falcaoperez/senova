@@ -4,7 +4,7 @@ from . import views
 app_name = 'admin_personalizado'
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
+    path('', views.panel_control, name='dashboard'),
     path('usuarios/', views.usuarios, name='usuarios'),
     path('gestionar-usuarios/', views.gestionar_usuarios, name='gestionar_usuarios'),
     path('usuario/<int:usuario_id>/', views.detalle_usuario, name='detalle_usuario'),

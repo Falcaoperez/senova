@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'SENNOVA.middleware.RateLimitMiddleware',
+    # 'SENNOVA.middleware.MiddlewareLimiteVelocidad',
 ]
 
 ROOT_URLCONF = 'SENNOVA.urls'
@@ -120,7 +120,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
     {
-        'NAME': 'Gesicom.validators.EightCharUpperNumberOrSpecialValidator',
+        'NAME': 'Gesicom.validators.ValidadorContraseñaOchoCarActualMayusNumEspecial',
     },
 ]
 
