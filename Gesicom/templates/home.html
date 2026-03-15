@@ -53,22 +53,19 @@
         <div class="card">
             <h3>Enviar Evidencia</h3>
             <p>Subir nuevos archivos</p>
-              <a href="{% url 'evidencia' %}" class="btn-primary">Enviar</a>
+              <button type="button" class="btn-primary" onclick="location.href='{% url 'evidencia' %}'">Enviar</button>
         </div>
 
         <div class="card">
             <h3>Evidencias</h3>
-            <div class="status-box">
-              
-                
-            </div>
-            <a href="{% url 'evidencias_list' %}" class="btn-secondary">Ver estado</a>
+            <p>Ver evidencias</p>
+            <button type="button" class="btn-secondary" onclick="location.href='{% url 'evidencias_list' %}'">Ver estado</button>
         </div>
 
         <div class="card">
             <h3>Perfil</h3>
             <p>Editar información</p>
-           <a href="{% url 'editar_perfil' %}" class="btn-secondary">Editar Perfil</a>
+           <button type="button" class="btn-secondary" onclick="location.href='{% url 'editar_perfil' %}'">Editar Perfil</button>
         </div>
 
         <div class="card">

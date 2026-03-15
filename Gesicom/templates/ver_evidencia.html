@@ -31,6 +31,21 @@
                     <img src="{{ envio.archivo_evidencia.url }}" class="preview-img" alt="Previsualización de imagen">
                 {% elif ".pdf" in ext %}
                     <iframe src="{{ envio.archivo_evidencia.url }}" class="preview-frame"></iframe>
+                {% elif ".txt" in ext %}
+                    <pre id="txt-preview" class="preview-frame" style="padding:20px; overflow:auto; background:#fff;" aria-live="polite">Cargando contenido...</pre>
+                {% elif ".mp4" in ext or ".webm" in ext or ".ogg" in ext %}
+                    <video controls class="preview-frame">
+                        <source src="{{ envio.archivo_evidencia.url }}" type="video/{{ ext|slice:'1:' }}">
+                        Tu navegador no soporta video.
+                    </video>
+                {% elif ".mp3" in ext or ".wav" in ext or ".ogg" in ext %}
+                    <audio controls style="width:100%;">
+                        <source src="{{ envio.archivo_evidencia.url }}" type="audio/{{ ext|slice:'1:' }}">
+                        Tu navegador no soporta audio.
+                    </audio>
+                {% elif ".doc" in ext or ".docx" in ext or ".xls" in ext or ".xlsx" in ext or ".ppt" in ext or ".pptx" in ext or ".odt" in ext or ".ods" in ext or ".odp" in ext %}
+                    {% comment %}Usamos el visor de Office (requiere URL pública accesible) o el visor de Google Docs{% endcomment %}
+                    <iframe src="https://view.officeapps.live.com/op/embed.aspx?src={{ archivo_url|urlencode }}" class="preview-frame"></iframe>
                 {% else %}
                     <div class="no-preview">
                         <p>Este tipo de archivo no se puede previsualizar directamente.</p>
@@ -44,5 +59,17 @@
             <div class="no-preview">No hay archivo o link disponible para mostrar.</div>
         {% endif %}
     </main>
+
+    <script>
+    // Cargar texto para archivos .txt
+    (function(){
+        const pre = document.getElementById('txt-preview');
+        if(!pre) return;
+        fetch('{{ envio.archivo_evidencia.url }}')
+            .then(r => r.text())
+            .then(t => { pre.textContent = t; })
+            .catch(() => { pre.textContent = 'No se pudo cargar el contenido del texto.'; });
+    })();
+    </script>
 </body>
 </html>
