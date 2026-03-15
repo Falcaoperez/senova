@@ -5,8 +5,6 @@
     <title>Estado de Evidencias</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'CSS/panel_evidencias.css' %}"> <!-- panel personalizado -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style> /* ajustes rápidos responsive */
         .container { max-width:1100px; margin:20px auto; padding:12px; }
@@ -15,34 +13,18 @@
 <body>
 <div class="container">
     <div class="page-header">
-        {% if request.user.is_superuser or request.user.is_staff %}
-            <a href="{% url 'admin_personalizado:dashboard' %}" class="back-arrow" title="Volver al Panel de Administrador" style="text-decoration: none; font-size: 1.5rem; margin-right: 1rem; color: white;">←</a>
-        {% else %}
-            <a href="{% url 'role_instructor' %}" class="back-arrow" title="Volver al Panel de Instructor" style="text-decoration: none; font-size: 1.5rem; margin-right: 1rem; color: white;">←</a>
-        {% endif %}
+        <a href="{{ home_url|default:'/' }}" class="back-arrow" title="Volver al panel" style="text-decoration: none; font-size: 1.5rem; margin-right: 1rem; color: white;">←</a>
         <div class="brand">GESICOM</div>
         <div style="margin-left:auto; display: flex; align-items: center; gap: 15px;">
             <div style="text-align: right; opacity:0.95">
                 {{ request.user.get_full_name }} <br>
                 <small style="opacity:0.9">{{ request.user.email }}</small>
             </div>
-            <form method="post" action="{% url 'logout' %}" style="display:inline">
-                {% csrf_token %}
-                <button type="submit" style="background: #ff6b6b; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Cerrar sesión</button>
-            </form>
         </div>
     </div>
 
     <div class="filter-card">
         <div class="filter-col">
-            <div>
-                <label>Inicio</label>
-                <input type="date" id="f_start" name="start" value="{{ start }}">
-            </div>
-            <div>
-                <label>Fin</label>
-                <input type="date" id="f_end" name="end" value="{{ end }}">
-            </div>
             <div>
                 <label>Categoria</label>
                 <select id="categoria" name="proyecto">
@@ -52,20 +34,9 @@
                     {% endfor %}
                 </select>
             </div>
-            <div>
-                <label>Trimestre</label>
-                <select id="select_quarters" name="quarters">
-                    <option value="4" {% if request.GET.quarters == '4' %}selected{% endif %}>4</option>
-                    <option value="6" {% if request.GET.quarters == '6' %}selected{% endif %}>6</option>
-                    <option value="8" {% if request.GET.quarters == '8' %}selected{% endif %}>8</option>
-                    <option value="12" {% if request.GET.quarters == '12' %}selected{% endif %}>12</option>
-                </select>
-            </div>
         </div>
         <div class="filter-actions">
             <button id="btn_filtrar" class="btn">Filtrar</button>
-            <a href="{% url 'reportes_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-icon">⬇ Exportar CSV</a>
-            <a href="{% url 'reportes_trimestrales_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-icon">⬇ Exportar Trimestral CSV</a>
         </div>
     </div>
 
@@ -113,8 +84,7 @@
                 <th>Link / Archivo</th>
                 <th>Observaciones</th>
                 <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
+        </tr>
         </thead>
         <tbody>
         {% for envio in envios %}
@@ -125,7 +95,7 @@
                 <td>{{ envio.tipo_evidencia }}</td>
                 <td>
                     {% if envio.link_evidencia or envio.archivo_evidencia %}
-                        <a href="{% url 'ver_evidencia' envio.id %}" class="btn-view">Ver Evidencia</a>
+                        <button type="button" class="btn-view" onclick="location.href='{% url 'ver_evidencia' envio.id %}'">Ver estado</button>
                     {% else %}
                         -
                     {% endif %}
@@ -138,22 +108,6 @@
                         <span class="badge badge-rejected" style="background: #FF6B6B; color: #fff; padding: 4px 8px; border-radius: 999px; font-weight: 700;">Rechazada</span>
                     {% else %}
                         <span class="badge badge-pending">Pendiente</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if request.user.is_staff or request.user.is_superuser or request.user.groups.all|length > 0 %}
-                        <form method="post" action="{% url 'set_aprobada' envio.id %}" style="display:inline" class="form-approve">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <input type="hidden" name="valor" value="1">
-                            <button type="button" class="btn-approve" data-nombre="{{ envio.nombre|escapejs }}">Aprobar</button>
-                        </form>
-                        <form method="post" action="{% url 'set_aprobada' envio.id %}" style="display:inline" class="form-reject">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <input type="hidden" name="valor" value="0">
-                            <button type="button" class="btn-reject" data-nombre="{{ envio.nombre|escapejs }}">Rechazar</button>
-                        </form>
                     {% endif %}
                 </td>
             </tr>
@@ -175,74 +129,9 @@
     <p>No hay evidencias registradas.</p>
     {% endif %}
 
-    <div class="charts-grid-bottom" style="margin-top: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 200px;">
-        <div class="panel" style="padding: 10px; height: 160px; overflow: hidden;">
-            <h3 style="font-size: 0.85rem; margin-bottom: 5px;">Trimestres</h3>
-            <canvas id="chart_trimestres" height="120"></canvas>
-        </div>
-        <div class="panel" style="padding: 10px; height: 160px; overflow: hidden;">
-            <h3 style="font-size: 0.85rem; margin-bottom: 5px;">Categorías</h3>
-            <canvas id="chart_categorias" height="120"></canvas>
-        </div>
-        <div class="panel" style="padding: 10px; height: 160px; overflow: hidden;">
-            <h3 style="font-size: 0.85rem; margin-bottom: 5px;">Estado</h3>
-            <div class="donut-wrap" style="padding-top: 0;">
-                <canvas id="chart_estado" height="110"></canvas>
-            </div>
-        </div>
-        <div class="panel" style="padding: 10px; height: 160px; overflow: hidden;">
-            <h3 style="font-size: 0.85rem; margin-bottom: 5px;">Usuarios</h3>
-            <canvas id="chart_usuarios" height="120"></canvas>
-        </div>
-    </div>
 </div>
 
 <script>
-// Datos desde el servidor
-const categoriasLabels = {{ categorias_labels_json|safe }};
-const categoriasData = {{ categorias_data_json|safe }};
-
-// Gráfica trimestral
-const trimestresLabels = {{ trimestres_labels_json|safe }};
-const datosTrimestralesNuevas = {{ datos_trimestrales_nuevas_json|safe }};
-const datosTrimestralesAprobadas = {{ datos_trimestrales_aprobadas_json|safe }};
-const ctxTrim = document.getElementById('chart_trimestres').getContext('2d');
-new Chart(ctxTrim, {
-    type: 'bar',
-    data: {
-        labels: trimestresLabels,
-        datasets: [
-            { label: 'Nuevas', data: datosTrimestralesNuevas, backgroundColor: '#2CB66A' },
-            { label: 'Aprobadas', data: datosTrimestralesAprobadas, backgroundColor: '#1EA7D7' }
-        ]
-    },
-    options: { responsive:true, maintainAspectRatio:false }
-});
-
-// Pie de categorias
-const ctxCat = document.getElementById('chart_categorias').getContext('2d');
-new Chart(ctxCat, {
-    type: 'doughnut',
-    data: { labels: categoriasLabels, datasets: [{ data: categoriasData, backgroundColor: ['#1EA7D7','#2CB66A','#F6A623','#8E44AD','#FF6B6B'] }] },
-    options: { responsive:true, maintainAspectRatio:false }
-});
-
-// Estado donut (Aprobadas vs resto)
-const total = {{ total_envios|default:0 }};
-const aprob = {{ aprobadas|default:0 }};
-const ctxEstado = document.getElementById('chart_estado').getContext('2d');
-new Chart(ctxEstado, { type: 'doughnut', data: { labels:['Aprobadas','No Aprobadas'], datasets:[{ data:[aprob, Math.max(0,total-aprob)], backgroundColor:['#2CB66A','#FF6B6B'] }] }, options:{cutout:'70%'} });
-
-// Usuarios
-const usuariosLabels = {{ usuarios_labels_json|safe }};
-const usuariosData = {{ usuarios_data_json|safe }};
-const ctxUsers = document.getElementById('chart_usuarios').getContext('2d');
-new Chart(ctxUsers, {
-    type: 'bar',
-    data: { labels: usuariosLabels, datasets:[{ label:'Evidencias', data: usuariosData, backgroundColor:['#2CB66A','#F6A623','#1EA7D7','#8E44AD','#FF6B6B','#5D9CEC'] }] },
-    options:{responsive:true, maintainAspectRatio:false}
-});
-
 // Filtrar (envía query params simples)
     document.getElementById('btn_filtrar').addEventListener('click', ()=>{
     const start = document.getElementById('f_start').value;
@@ -257,37 +146,6 @@ new Chart(ctxUsers, {
     window.location.search = params.toString();
 });
 
-// SweetAlert2 confirmaciones para aprobar/rechazar
-document.querySelectorAll('.btn-approve').forEach(btn=>{
-    btn.addEventListener('click', function(e){
-        e.preventDefault();
-        const form = this.closest('form');
-        const nombre = this.getAttribute('data-nombre') || 'esta evidencia';
-        Swal.fire({
-            title: 'Confirmar aprobación',
-            text: `¿Confirmas aprobar la evidencia: "${nombre}"?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, aprobar',
-            cancelButtonText: 'Cancelar'
-        }).then(result=>{ if(result.isConfirmed){ form.submit(); } });
-    });
-});
-document.querySelectorAll('.btn-reject').forEach(btn=>{
-    btn.addEventListener('click', function(e){
-        e.preventDefault();
-        const form = this.closest('form');
-        const nombre = this.getAttribute('data-nombre') || 'esta evidencia';
-        Swal.fire({
-            title: 'Confirmar rechazo',
-            text: `¿Confirmas rechazar la evidencia: "${nombre}"?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, rechazar',
-            cancelButtonText: 'Cancelar'
-        }).then(result=>{ if(result.isConfirmed){ form.submit(); } });
-    });
-});
 </script>
 </body>
 </html>

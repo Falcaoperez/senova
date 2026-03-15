@@ -9,7 +9,7 @@
 <body>
 
   <div class="inicio">
-    <a href="{% url 'role_instructor' %}" class="back-arrow" title="Volver al Panel de Instructor" style="text-decoration: none; font-size: 2rem; position: absolute; left: 20px; top: 20px; color: #00304D;">←</a>
+    <a href="{{ home_url|default:'/' }}" class="back-arrow" title="Volver al inicio" style="text-decoration: none; font-size: 2rem; position: absolute; left: 20px; top: 20px; color: #00304D;">←</a>
     <img src="{% static '/img/areas.png' %}" alt="Logo">
     <h2>ENVÍO DE EVIDENCIAS GESICOM</h2>
   </div>
