@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GESICOM - Bienvenido</title>
+    <link rel="stylesheet" href="{% static 'CSS/usuario.css' %}">
+</head>
+<body>
+
+<header>
+    <div class="header-brand">
+        <h1>GESICOM</h1>
+        <small>Sistema de Gestión</small>
+    </div>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-cerrar">Cerrar sesión</button>
+    </form>
+</header>
+
+<main>
+    <div class="welcome-card">
+        <div class="logo-circle">G</div>
+        <h2 class="welcome-title">¡Bienvenido a GESICOM!</h2>
+        <p class="welcome-subtitle">Has iniciado sesión como</p>
+        <p class="welcome-user">{{ user.get_full_name|default:user.username }}</p>
+        <hr class="divider">
+        <p class="welcome-desc">
+            Sistema de Gestión de Investigación y Competencias.<br>
+            Grupo de Investigación SENNOVA.
+        </p>
+    </div>
+</main>
+
+</body>
+</html>
