@@ -1,0 +1,287 @@
+{% extends "admin_personalizado/base_admin.html" %}
+
+{% block title %}Detalles del Usuario - {{ usuario.username }}{% endblock %}
+
+{% block page_title %}{{ usuario.username }}{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Columna principal -->
+    <div>
+        <div class="content-section">
+            <h2 class="section-title" style="margin-bottom: 2rem;">{{ usuario.username }}</h2>
+
+            <!-- Información básica -->
+            <div class="form-group">
+                <label class="form-label">Nombre Completo</label>
+                <div style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                    {{ usuario.first_name }} {{ usuario.last_name|default:"—" }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <div style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                    {{ usuario.email|default:"—" }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Usuario</label>
+                <div style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                    {{ usuario.username }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <div style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                    {% if usuario.is_active %}
+                        <span class="badge badge-success">✓ Activo</span>
+                    {% else %}
+                        <span class="badge badge-danger">✗ Inactivo</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Registrado</label>
+                <div style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                    {{ usuario.date_joined|date:"d/m/Y H:i" }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Último Acceso</label>
+                <div style="padding: 0.75rem; background: #f5f5f5; border-radius: 4px;">
+                    {% if usuario.last_login %}
+                        {{ usuario.last_login|date:"d/m/Y H:i" }}
+                    {% else %}
+                        <em>Nunca</em>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estado del usuario -->
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin: 2rem 0 1rem 0;">Cambiar Estado</h3>
+            {% if usuario.is_active %}
+                <button type="button" id="btn-desactivar" class="btn btn-danger">
+                    <span>🔒</span>
+                    <span>Desactivar Usuario</span>
+                </button>
+            {% else %}
+                <button type="button" id="btn-activar" class="btn btn-primary">
+                    <span>🔓</span>
+                    <span>Activar Usuario</span>
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Columna de roles -->
+    <div>
+        <div class="content-section">
+            <h2 class="section-title" style="margin-bottom: 2rem;">Gestión de Roles</h2>
+
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Roles Asignados</h3>
+            <div id="roles-list" style="margin-bottom: 1.5rem;">
+                {% for grupo in grupos_usuario %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f5f5f5; border-left: 4px solid #66bb6a; margin-bottom: 0.5rem; border-radius: 4px;">
+                    <span style="font-weight: 500;">👤 {{ grupo.name|title }}</span>
+                    <button type="button" class="btn btn-danger btn-quitar" data-grupo-id="{{ grupo.id }}" style="padding: 0.5rem 0.75rem; font-size: 0.8rem;">
+                        Quitar
+                    </button>
+                </div>
+                {% empty %}
+                <p style="color: #999; text-align: center; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
+                    No tiene roles asignados
+                </p>
+                {% endfor %}
+            </div>
+
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Agregar Nuevo Rol</h3>
+            <div class="form-group">
+                <select id="grupo-select" class="form-control" style="width: 100%;">
+                    <option value="">-- Selecciona un rol --</option>
+                    {% for grupo in grupos_disponibles %}
+                        {% if grupo not in grupos_usuario %}
+                        <option value="{{ grupo.id }}">{{ grupo.name|title }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="button" id="btn-agregar-grupo" class="btn btn-primary" style="width: 100%;">
+                <span>➕</span>
+                <span>Agregar Rol</span>
+            </button>
+
+            <div id="alert-container" style="margin-top: 1rem;"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media (max-width: 768px) {
+        div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+{% endblock %}
+
+<script>
+// CSRF Token
+function getCsrf() {
+    const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (tokenInput) return tokenInput.value;
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/);
+    return match ? match[1] : '';
+}
+
+// Función para mostrar alertas
+function mostrarAlerta(mensaje, tipo = 'success') {
+    const alertContainer = document.getElementById('alert-container');
+    const alertClass = tipo === 'error' ? 'alert alert-error' : 'alert alert-success';
+    const html = `
+        <div class="${alertClass} show" role="alert">
+            <strong>${tipo === 'error' ? 'Error' : 'Éxito'}:</strong> ${mensaje}
+        </div>
+    `;
+    alertContainer.innerHTML = html;
+    setTimeout(() => {
+        alertContainer.innerHTML = '';
+    }, 5000);
+}
+
+// Agregar grupo
+document.getElementById('btn-agregar-grupo').addEventListener('click', () => {
+    const grupoId = document.getElementById('grupo-select').value;
+    
+    if (!grupoId) {
+        mostrarAlerta('Selecciona un rol primero', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('grupo_id', grupoId);
+    formData.append('accion', 'agregar');
+    formData.append('csrfmiddlewaretoken', getCsrf());
+
+    fetch('{% url "admin_personalizado:asignar_grupo" usuario.id %}', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta(data.mensaje, 'success');
+            location.reload();
+        } else {
+            mostrarAlerta(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('Error al asignar el rol', 'error');
+    });
+});
+
+// Quitar grupos
+document.querySelectorAll('.btn-quitar').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const grupoId = this.dataset.grupoId;
+        
+        if (!confirm('¿Estás seguro de que quieres quitar este rol?')) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('grupo_id', grupoId);
+        formData.append('accion', 'quitar');
+        formData.append('csrfmiddlewaretoken', getCsrf());
+
+        fetch('{% url "admin_personalizado:asignar_grupo" usuario.id %}', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta(data.mensaje, 'success');
+                location.reload();
+            } else {
+                mostrarAlerta(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error al quitar el rol', 'error');
+        });
+    });
+});
+
+// Activar/Desactivar usuario
+const btnActivar = document.getElementById('btn-activar');
+const btnDesactivar = document.getElementById('btn-desactivar');
+
+if (btnActivar) {
+    btnActivar.addEventListener('click', () => {
+        if (!confirm('¿Estás seguro de que quieres activar este usuario?')) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('accion', 'activar');
+        formData.append('csrfmiddlewaretoken', getCsrf());
+
+        fetch('{% url "admin_personalizado:activar_desactivar" usuario.id %}', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta(data.mensaje, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarAlerta(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error al activar el usuario', 'error');
+        });
+    });
+}
+
+if (btnDesactivar) {
+    btnDesactivar.addEventListener('click', () => {
+        if (!confirm('¿Estás seguro de que quieres desactivar este usuario? No podrá acceder a la plataforma.')) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('accion', 'desactivar');
+        formData.append('csrfmiddlewaretoken', getCsrf());
+
+        fetch('{% url "admin_personalizado:activar_desactivar" usuario.id %}', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta(data.mensaje, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarAlerta(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error al desactivar el usuario', 'error');
+        });
+    });
+}
+</script>
+{% endblock %}

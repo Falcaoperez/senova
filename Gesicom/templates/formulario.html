@@ -1,0 +1,80 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Envío de Evidencias GESICOM</title>
+  <link rel="stylesheet" href="{% static 'CSS/formulario.css' %}">
+</head>
+<body>
+
+  <div class="inicio">
+    <a href="{% url 'role_instructor' %}" class="back-arrow" title="Volver al Panel de Instructor" style="text-decoration: none; font-size: 2rem; position: absolute; left: 20px; top: 20px; color: #00304D;">←</a>
+    <img src="{% static '/img/areas.png' %}" alt="Logo">
+    <h2>ENVÍO DE EVIDENCIAS GESICOM</h2>
+  </div>
+
+  <div class="cuadro">
+    <form method="post" action="{% url 'evidencia' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {% if errores %}
+        <div class="errores">
+          <ul>{% for error in errores %}<li>{{ error }}</li>{% endfor %}</ul>
+        </div>
+      {% endif %}
+
+      {% if exito %}
+        <div class="exito">{{ mensaje_exito|default:"¡Evidencia enviada correctamente!" }}</div>
+      {% endif %}
+
+      <label for="nombre">Nombre</label>
+      <input type="text" id="nombre" name="nombre" value="{{ nombre|default:'' }}" required>
+
+      <label for="opcion">Proyecto</label>
+      <select id="opcion" name="proyecto" required>
+        <option value="">Seleccione un proyecto</option>
+        <option value="LEM" {% if proyecto == 'LEM' %}selected{% endif %}>LEM</option>
+        <option value="GIVIT" {% if proyecto == 'GIVIT' %}selected{% endif %}>GIVIT</option>
+        <option value="ACAF" {% if proyecto == 'ACAF' %}selected{% endif %}>ACAF</option>
+        <option value="DEPOS" {% if proyecto == 'DEPOS' %}selected{% endif %}>DEPOS</option>
+        <option value="IFPI" {% if proyecto == 'IFPI' %}selected{% endif %}>IFPI</option>
+        <option value="TUGA" {% if proyecto == 'TUGA' %}selected{% endif %}>TUGA</option>
+      </select>
+
+      <label>Tipo de Evidencia</label>
+      <div class="checkbox-group">
+        <div>
+          <input type="checkbox" id="planeacion" name="evidencias" value="Planeación" {% if tipos and 'Planeación' in tipos %}checked{% endif %}>
+          <label for="planeacion">Planeación</label>
+        </div>
+        <div>
+          <input type="checkbox" id="ejecucion" name="evidencias" value="Ejecución" {% if tipos and 'Ejecución' in tipos %}checked{% endif %}>
+          <label for="ejecucion">Ejecución</label>
+        </div>
+        <div>
+          <input type="checkbox" id="evaluacion" name="evidencias" value="Evaluación" {% if tipos and 'Evaluación' in tipos %}checked{% endif %}>
+          <label for="evaluacion">Evaluación</label>
+        </div>
+        <div>
+          <input type="checkbox" id="informe" name="evidencias" value="Informe Final" {% if tipos and 'Informe Final' in tipos %}checked{% endif %}>
+          <label for="informe">Informe Final</label>
+        </div>
+      </div>
+
+      <label for="archivo">Subir Archivo</label>
+      <small>Formatos permitidos: PDF, Word, Excel, PowerPoint, Imágenes, ZIP. Máximo 10MB</small>
+      <input type="file" id="archivo" name="archivo" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.zip,.rar">
+
+      <label for="link_evidencia">LINK DE ARCHIVO</label>
+      <input type="url" id="link_evidencia" name="link_evidencia" placeholder="Ingrese el link de la evidencia">
+
+      <label for="observaciones">Observaciones</label>
+      <textarea id="observaciones" name="observaciones" rows="4">{{ observaciones|default:'' }}</textarea>
+
+      <input type="submit" value="ENVIAR">
+    </form>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+{% extends "admin_personalizado/base_admin.html" %}
+{% load admin_personalizado_tags %}
+
+{% block title %}Panel de Administrador - Inicio{% endblock %}
+
+{% block page_title %}Panel de Administración{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <h2 class="section-title">Bienvenido, {{ request.user.get_full_name|default:request.user.username }}</h2>
+    <p class="section-subtitle">Administra usuarios y roles de la plataforma GESICOM</p>
+
+    <!-- Estadísticas -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: #c8e6c9; padding: 1.5rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: #2e7d32;">{{ total_usuarios }}</div>
+            <div style="color: #555; margin-top: 0.5rem; font-weight: 500;">Usuarios Totales</div>
+        </div>
+
+        <div style="background: #bbdefb; padding: 1.5rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: #1565c0;">{{ total_grupos }}</div>
+            <div style="color: #555; margin-top: 0.5rem; font-weight: 500;">Roles Disponibles</div>
+        </div>
+
+        <div style="background: #fff9c4; padding: 1.5rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: #f57f17;">{{ usuarios_activos }}</div>
+            <div style="color: #555; margin-top: 0.5rem; font-weight: 500;">Usuarios Activos</div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; color: #333;">Acciones Rápidas</h3>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{% url 'admin_personalizado:gestionar_usuarios' %}" class="btn btn-primary">
+            <span>👥</span>
+            <span>Gestionar Usuarios</span>
+        </a>
+        <a href="{% url 'admin_personalizado:permisos' %}" class="btn btn-primary">
+            <span>⚙️</span>
+            <span>Configurar Permisos</span>
+        </a>
+        <a href="{% url 'home' %}" class="btn btn-secondary">
+            <span>🏠</span>
+            <span>Volver al Sistema</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

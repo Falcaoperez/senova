@@ -1,0 +1,134 @@
+{% extends 'admin_personalizado/base.html' %}
+
+{% block title %}Gestión de Permisos{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Gestión de Permisos</h2>
+
+<div class="permissions-section">
+    <form method="post" id="permissions-form">
+        {% csrf_token %}
+
+        <div class="section-header">
+            <label for="group-select" class="section-label">Seleccionar Grupo de Usuarios</label>
+            <select id="group-select" name="group" class="group-select" onchange="loadGroupPermissions(this.value)">
+                <option value="">-- Seleccionar Grupo --</option>
+                {% for group in groups %}
+                <option value="{{ group.id }}" {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
+                    {{ group.name|title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if selected_group %}
+        <div class="permissions-table-container">
+            <div class="permissions-table-title">
+                Permisos del Grupo {{ selected_group.name|title }}
+            </div>
+
+            <table class="permissions-table">
+                <thead>
+                    <tr>
+                        <th>Acción</th>
+                        <th>Permiso</th>
+                        <th>Permiso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for permission_data in permissions %}
+                    <tr>
+                        <td class="permission-action">{{ permission_data.label }}</td>
+                        <td>
+                            <select name="perm_{{ permission_data.codename }}_1" class="permission-dropdown">
+                                <option value="inherited" {% if permission_data.status_1 == 'inherited' %}selected{% endif %}>Heredado</option>
+                                <option value="allowed" {% if permission_data.status_1 == 'allowed' %}selected{% endif %}>✓ Permitido</option>
+                                <option value="denied" {% if permission_data.status_1 == 'denied' %}selected{% endif %}>✗ Denegado</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="perm_{{ permission_data.codename }}_2" class="permission-dropdown locked-select">
+                                <option value="inherited" {% if permission_data.status_2 == 'inherited' %}selected{% endif %}>Heredado</option>
+                                <option value="allowed" {% if permission_data.status_2 == 'allowed' %}selected{% endif %}>✓ Permitido</option>
+                                <option value="denied" {% if permission_data.status_2 == 'denied' %}selected{% endif %}>✗ Denegado</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-buttons">
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url 'admin_personalizado:dashboard' %}'">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Cancelar
+            </button>
+
+            <button type="submit" class="btn btn-primary">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Guardar
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadGroupPermissions(groupId) {
+    if (groupId) {
+        window.location.href = '{% url "admin_personalizado:permisos" %}?group=' + groupId;
+    }
+}
+
+function updatePermissionStyle(selectElement) {
+    const value = selectElement.value;
+
+    // Remover todas las clases de estado
+    selectElement.classList.remove('allowed', 'denied', 'inherited');
+
+    // Agregar la clase correspondiente al valor
+    if (value === 'allowed') {
+        selectElement.classList.add('allowed');
+    } else if (value === 'denied') {
+        selectElement.classList.add('denied');
+    } else {
+        selectElement.classList.add('inherited');
+    }
+
+    console.log('Select actualizado:', selectElement.name, '- Valor:', value);
+}
+
+// Aplicar estilos iniciales a todos los dropdowns cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Página cargada, inicializando selectores...');
+
+    const dropdowns = document.querySelectorAll('.permission-dropdown');
+    console.log('Selectores encontrados:', dropdowns.length);
+
+    dropdowns.forEach((dropdown, index) => {
+        // Asegurarse de que no esté disabled
+        dropdown.disabled = false;
+
+        // Aplicar estilo inicial
+        updatePermissionStyle(dropdown);
+
+        // Agregar evento de cambio
+        dropdown.addEventListener('change', function(e) {
+            console.log('Cambio detectado en selector', index);
+            updatePermissionStyle(e.target);
+        });
+
+        console.log('Selector', index, '- Name:', dropdown.name, '- Value:', dropdown.value, '- Disabled:', dropdown.disabled);
+    });
+});
+</script>
+{% endblock %}

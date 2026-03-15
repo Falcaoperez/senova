@@ -1,0 +1,127 @@
+{% extends 'admin_personalizado/base.html' %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Gestión de Usuarios</h2>
+
+<div class="permissions-section">
+    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <input type="text" id="search-input" placeholder="Buscar usuarios..."
+                   style="padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: 8px; width: 300px; font-size: 0.95rem;"
+                   onkeyup="filterUsers()">
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="permissions-table" id="users-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Nombre Completo</th>
+                    <th>Email</th>
+                    <th>Grupos</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr class="user-row">
+                    <td>{{ usuario.username }}</td>
+                    <td>{{ usuario.get_full_name|default:"-" }}</td>
+                    <td>{{ usuario.email|default:"-" }}</td>
+                    <td>
+                        {% for group in usuario.groups.all %}
+                        <span style="display: inline-block; padding: 0.25rem 0.75rem; background: var(--color-primary-light); color: var(--color-text-dark); border-radius: 12px; font-size: 0.85rem; margin: 0.125rem;">
+                            {{ group.name }}
+                        </span>
+                        {% empty %}
+                        <span style="color: var(--color-text-light);">Sin grupo</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if usuario.is_active %}
+                        <span style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: #d4edda; color: #155724; border-radius: 6px; font-size: 0.875rem;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="12" cy="12" r="10"></circle>
+                            </svg>
+                            Activo
+                        </span>
+                        {% else %}
+                        <span style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: #f8d7da; color: #721c24; border-radius: 6px; font-size: 0.875rem;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="12" cy="12" r="10"></circle>
+                            </svg>
+                            Inactivo
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="#" style="padding: 0.5rem; background: var(--color-primary); color: white; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;" title="Editar">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
+                            <a href="#" style="padding: 0.5rem; background: #dc3545; color: white; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;" title="Eliminar">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 3rem; color: var(--color-text-light);">
+                        No hay usuarios registrados
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if usuarios.has_other_pages %}
+    <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if usuarios.has_previous %}
+        <a href="?page={{ usuarios.previous_page_number }}" class="btn btn-secondary">Anterior</a>
+        {% endif %}
+
+        <span style="padding: 0.75rem 1.5rem; background: var(--color-bg-beige); border-radius: 8px;">
+            Página {{ usuarios.number }} de {{ usuarios.paginator.num_pages }}
+        </span>
+
+        {% if usuarios.has_next %}
+        <a href="?page={{ usuarios.next_page_number }}" class="btn btn-secondary">Siguiente</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterUsers() {
+    const input = document.getElementById('search-input');
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById('users-table');
+    const rows = table.getElementsByClassName('user-row');
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const text = row.textContent || row.innerText;
+        if (text.toLowerCase().indexOf(filter) > -1) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

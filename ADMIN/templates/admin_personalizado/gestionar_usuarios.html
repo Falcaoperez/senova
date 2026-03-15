@@ -1,0 +1,88 @@
+{% extends "admin_personalizado/base_admin.html" %}
+
+{% block title %}Gestionar Usuarios{% endblock %}
+
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <h2 class="section-title">Gestión de Usuarios</h2>
+    <p class="section-subtitle">Busca y administra los usuarios del sistema</p>
+
+    <!-- Botón crear usuario -->
+    <div style="margin-bottom: 1.5rem;">
+        <a href="{% url 'admin_personalizado:crear_usuario' %}" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">
+            ➕ Crear Nuevo Usuario
+        </a>
+    </div>
+
+    <!-- Buscador -->
+    <div style="margin-bottom: 1.5rem;">
+        <form method="GET" class="search-box">
+            <input type="text" name="q" placeholder="Buscar por usuario, email o nombre..." value="{{ busqueda }}">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            {% if busqueda %}
+            <a href="{% url 'admin_personalizado:gestionar_usuarios' %}" class="btn btn-secondary">Limpiar</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Tabla de usuarios -->
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Nombre Completo</th>
+                    <th>Roles</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>
+                        <strong>{{ usuario.username }}</strong>
+                    </td>
+                    <td>{{ usuario.email|default:"—" }}</td>
+                    <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
+                    <td>
+                        {% if usuario.groups.all %}
+                            {% for grupo in usuario.groups.all %}
+                            <span class="role-tag">{{ grupo.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span style="color: #999;">Sin roles</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if usuario.is_active %}
+                            <span class="badge badge-success">✓ Activo</span>
+                        {% else %}
+                            <span class="badge badge-danger">✗ Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'admin_personalizado:detalle_usuario' usuario.id %}" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            Ver/Editar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #999; padding: 2rem;">
+                        No se encontraron usuarios
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 1.5rem; text-align: center; color: #999;">
+        Total de usuarios encontrados: <strong>{{ usuarios|length }}</strong>
+    </div>
+</div>
+{% endblock %}

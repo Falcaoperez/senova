@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar sesión · Usuarios</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'instructor/main.css' %}">
+  <style>
+    html { height: 100%; overflow: hidden; }
+    body.login-body { 
+      height: 100vh; 
+      overflow: hidden;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body class="login-body">
+  
+  <main class="login-card" role="main">
+    <div class="login-logo" aria-hidden="false">
+      <img src="data:image/png;base64,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" alt="Logo SENA" class="logo-img" />
+    </div>
+    <h2 class="auth-title">Iniciar sesión</h2>
+
+    {% if error %}
+    <div class="error" role="alert">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+    <div class="status" role="status" style="background:#e6ffed;color:#145a32;padding:8px;border-radius:6px;margin-bottom:12px;">
+      {{ success }}
+    </div>
+    {% endif %}
+
+    <form action="" method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="role" value="{{ role|default:'' }}" />
+      <div class="username-field">
+        <label for="username">Usuario o correo electrónico</label>
+        <div class="input-row">
+          <div class="input-icon left" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="32" height="32" role="img" aria-hidden="true">
+              <circle cx="12" cy="7.5" r="4" stroke="#00304D" stroke-width="2" fill="none" />
+              <path d="M6 20c0-3 3.5-5 6-5s6 2 6 5" stroke="#00304D" stroke-width="2" fill="none" stroke-linecap="round" />
+            </svg>
+          </div>
+          <input id="username" name="username" type="text" class="input username-with-icon" placeholder="tu@correo.com o tu usuario" value="{{ username|default:'' }}" required />
+        </div>
+      </div>
+
+      <div class="password-field">
+        <label for="password" class="password-label">Contraseña</label>
+        <div class="input-row">
+          <button type="button" id="toggle-password" class="toggle-password left" aria-label="Mostrar u ocultar contraseña" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="32" height="32" role="img" aria-hidden="true">
+              <path d="M1 12s4-7 11-7c3 0 5.7 1 7.8 2.6" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M23 12s-4 7-11 7c-3 0-5.7-1-7.8-2.6" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M3 3l18 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <input id="password" name="password" type="password" class="input password-with-icon" placeholder="Tu contraseña" required />
+        </div>
+      </div>
+
+      <div class="remember-field">
+        <label class="remember-label"><input type="checkbox" name="remember" class="checkbox" /> Recordarme</label>
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn">Entrar</button>
+        <a href="{% url 'password_reset' %}" class="helper">¿Olvidaste tu contraseña?</a>
+        <a href="{% url 'register' %}?role={{ role|default:'' }}" class="helper">¿No tienes cuenta? Regístrate</a>
+      </div>
+    </form>
+  </main>
+  <footer class="auth-footer" role="contentinfo">
+    <div class="footer-copy">© SENA 2025 - Servicio Nacional de Aprendizaje</div>
+  </footer>
+  <script>
+    (function(){
+      var btn = document.getElementById('toggle-password');
+      var input = document.getElementById('password');
+      if(!btn || !input) return;
+      var svg = btn.querySelector('svg');
+      function setVisible(v){
+        if(v){
+          input.type = 'text';
+          btn.setAttribute('aria-pressed','true');
+          svg.innerHTML = '<path d="M1 12s4-7 11-7c3 0 5.7 1 7.8 2.6" stroke="currentColor" stroke-width="2" fill="none"/>'+
+                          '<path d="M23 12s-4 7-11 7c-3 0-5.7-1-7.8-2.6" stroke="currentColor" stroke-width="2" fill="none"/>';
+        } else {
+          input.type = 'password';
+          btn.setAttribute('aria-pressed','false');
+          svg.innerHTML = '<path d="M1 12s4-7 11-7c3 0 5.7 1 7.8 2.6" stroke="currentColor" stroke-width="2" fill="none"/>'+
+                          '<path d="M23 12s-4 7-11 7c-3 0-5.7-1-7.8-2.6" stroke="currentColor" stroke-width="2" fill="none"/>'+
+                          '<path d="M3 3l18 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>';
+        }
+      }
+      btn.addEventListener('click', function(){
+        var next = input.type === 'password';
+        setVisible(next);
+      });
+    })();
+  </script>
+</body>
+</html>

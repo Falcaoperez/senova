@@ -1,0 +1,95 @@
+/* Estilos para el panel de evidencias - colores institucionales aproximados */
+/* Paleta SENA (aproximada) */
+:root{
+    --sena-green: #007a3d; /* verde principal SENA (aprox) */
+    --sena-dark: #00562a;
+    --sena-yellow: #ffd100;
+    --sena-accent: #1ea7d7;
+    --sena-red: #ff6b6b;
+}
+.card .card-value{font-size:30px;font-weight:800}
+.btn-primary{background:var(--sena-green);color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+.card .card-foot{font-size:13px;margin-top:10px;opacity:0.95}
+.card .card-top{display:flex;gap:12px;align-items:center}
+.badge-approved{background:var(--sena-green);color:#fff;padding:4px 8px;border-radius:999px;font-weight:700}
+.badge-pending{background:#F0F3F5;color:#333;padding:4px 8px;border-radius:999px}
+.pct{margin-left:8px;font-weight:700}
+.up{color:#16A085}
+.up{color:var(--sena-green)}
+.down{color:var(--sena-red)}
+.down{color:#FF6B6B}
+.pagination a{margin-right:8px;color:var(--sena-accent)}
+.card-blue{background:linear-gradient(90deg,var(--sena-accent),#158fb8)}
+.card-green{background:linear-gradient(90deg,var(--sena-green),var(--sena-dark))}
+/* duplicates handled above */
+.filters{display:flex;gap:12px;align-items:end;margin-bottom:12px}
+.filters label{display:block;font-size:12px;color:#333}
+.filters input, .filters select{padding:8px;border-radius:6px;border:1px solid #e1e6eb}
+.btn-primary{background:#2CB66A;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.panel{background:#fff;padding:14px;border-radius:10px;box-shadow:0 6px 14px rgba(20,34,45,0.06)}
+.panel h3{margin-top:0}
+.donut-wrap{display:flex;justify-content:center;align-items:center;padding-top:8px}
+
+.table-evidencias{width:100%;border-collapse:collapse;margin-top:10px}
+.table-evidencias th, .table-evidencias td{border:1px solid #eef2f6;padding:8px;text-align:left}
+.table-evidencias thead{background:#fafafa}
+
+.badge-approved{background:#2CB66A;color:#fff;padding:4px 8px;border-radius:999px;font-weight:700}
+.badge-pending{background:#F0F3F5;color:#333;padding:4px 8px;border-radius:999px}
+
+.chart-legend{display:flex;gap:8px;align-items:center}
+.chart-legend .item{display:flex;align-items:center;gap:6px}
+.chart-legend .swatch{width:12px;height:12px;border-radius:3px}
+
+.pagination{margin-top:12px}
+.pagination a{margin-right:8px;color:#1EA7D7}
+
+.btn-approve{background:#1EA7D7;color:#fff;border:none;padding:6px 8px;border-radius:6px;margin-right:6px;cursor:pointer}
+.btn-reject{background:#FF6B6B;color:#fff;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
+.badge-approved{background:#2CB66A;color:#fff;padding:4px 8px;border-radius:999px;font-weight:700}
+.badge-pending{background:#F0F3F5;color:#333;padding:4px 8px;border-radius:999px}
+
+@media(max-width:900px){
+    .grid{grid-template-columns:1fr}
+    .cards{flex-direction:column}
+    .filters{flex-direction:column;align-items:stretch}
+}
+
+/* Nuevo diseño: contenedor y tarjeta de filtros */
+body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#f3f7f3;color:#24313a}
+.container{max-width:1100px;margin:24px auto;padding:0 12px}
+.page-header{background:var(--sena-green);color:#fff;padding:18px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:12px}
+.page-header .brand{font-weight:700;font-size:18px}
+.filter-card{background:#fff;border-radius:12px;padding:18px;margin-top:16px;box-shadow:0 6px 18px rgba(15,20,18,0.06);display:flex;gap:18px;align-items:center}
+.filter-col{flex:1;display:flex;gap:12px;align-items:end}
+.filter-actions{display:flex;gap:12px;align-items:center}
+.btn{padding:10px 14px;border-radius:8px;border:1px solid #e6ece8;background:#fff;cursor:pointer}
+.btn-icon{display:inline-flex;align-items:center;gap:8px}
+
+/* Cards principales */
+.cards{display:flex;gap:18px;margin:18px 0}
+.card{flex:1;padding:18px;border-radius:12px;color:#24313a;background:#fff;box-shadow:0 6px 18px rgba(15,20,18,0.04)}
+.card .card-icon{font-size:20px;padding:10px;border-radius:10px;background:rgba(0,0,0,0.03);display:inline-flex}
+.card-center{display:flex;align-items:center;gap:12px}
+.card-value{font-size:36px;font-weight:800;color:var(--sena-green)}
+.card-label{font-size:13px;color:#6b7b72}
+.card-foot{font-size:12px;color:#95a199;margin-top:8px}
+.card-emphasized{background:linear-gradient(90deg,var(--sena-green),var(--sena-dark));color:#fff}
+.card-emphasized .card-value{color:#fff}
+
+/* Panels inferiores */
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:12px}
+.panel{background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(15,20,18,0.04)}
+.panel h3{margin-top:0;margin-bottom:12px;color:#213031}
+.chart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;color:#b9c5bf}
+
+/* Footer limpio */
+.site-footer{background:#111;padding:18px;color:#ddd;border-radius:8px;margin-top:18px;text-align:center}
+
+@media(max-width:900px){
+    .filter-card{flex-direction:column;align-items:stretch}
+    .cards{flex-direction:column}
+    .grid{grid-template-columns:1fr}
+}

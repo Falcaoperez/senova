@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Previsualización - {{ envio.nombre }}</title>
+    <link rel="stylesheet" href="{% static 'CSS/panel_evidencias.css' %}">
+    <style>
+        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .preview-header { background: #007a3d; color: white; padding: 15px 25px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .back-btn { color: white; text-decoration: none; font-size: 24px; font-weight: bold; transition: transform 0.2s; }
+        .back-btn:hover { transform: translateX(-5px); }
+        .preview-title { font-size: 1.2rem; font-weight: 600; flex: 1; }
+        .preview-content { flex: 1; background: #f0f4ee; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: auto; }
+        .preview-frame { width: 100%; height: 100%; border: none; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .preview-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .no-preview { text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+    <header class="preview-header">
+        <a href="javascript:history.back()" class="back-btn" title="Volver">←</a>
+        <div class="preview-title">Visualizando: {{ envio.nombre }} - {{ envio.proyecto }}</div>
+        <div style="font-size: 0.9rem; opacity: 0.9;">{{ envio.usuario.get_full_name|default:envio.usuario.username }}</div>
+    </header>
+
+    <main class="preview-content">
+        {% if envio.archivo_evidencia %}
+            {% with ext=envio.archivo_evidencia.name|lower %}
+                {% if ".jpg" in ext or ".jpeg" in ext or ".png" in ext or ".gif" in ext %}
+                    <img src="{{ envio.archivo_evidencia.url }}" class="preview-img" alt="Previsualización de imagen">
+                {% elif ".pdf" in ext %}
+                    <iframe src="{{ envio.archivo_evidencia.url }}" class="preview-frame"></iframe>
+                {% else %}
+                    <div class="no-preview">
+                        <p>Este tipo de archivo no se puede previsualizar directamente.</p>
+                        <a href="{{ envio.archivo_evidencia.url }}" class="btn-view" style="margin-top: 15px; padding: 10px 20px; font-size: 1rem;">Descargar Archivo</a>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% elif envio.link_evidencia %}
+            <iframe src="{{ envio.link_evidencia }}" class="preview-frame"></iframe>
+        {% else %}
+            <div class="no-preview">No hay archivo o link disponible para mostrar.</div>
+        {% endif %}
+    </main>
+</body>
+</html>

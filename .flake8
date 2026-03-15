@@ -1,0 +1,11 @@
+[flake8]
+max-line-length = 120
+extend-ignore = E203
+exclude = 
+    .venv,
+    **/migrations/*,
+    **/static/*,
+    **/__pycache__/*
+per-file-ignores =
+    SENNOVA/settings.py:E501
+    Gesicom/models.py:W391

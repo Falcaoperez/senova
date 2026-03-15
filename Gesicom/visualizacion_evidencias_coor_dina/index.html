@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>GESICOM - Evidencias</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+
+<div class="contenedor">
+
+<header>
+<h2>GESICOM</h2>
+
+<nav>
+<a href="#">Inicio</a>
+<a href="#">Editar</a>
+<a href="#">Guardar</a>
+<a href="#">Cerrar sesión</a>
+</nav>
+
+</header>
+
+
+<div class="filtros">
+
+<label>Evidencia:</label>
+<select id="filtroEvidencia">
+<option value="todas">Todas</option>
+<option value="Depos">Depos</option>
+<option value="Givit">Givit</option>
+<option value="IFPI">IFPI</option>
+<option value="Tuga">Tuga</option>
+<option value="Lem">Lem</option>
+</select>
+
+</div>
+
+
+<table id="tablaEvidencias">
+
+<thead>
+<tr>
+<th>Nombre</th>
+<th>Evidencia</th>
+<th>Actividad enviada</th>
+<th>Fecha</th>
+<th>Estado de evidencia</th>
+<th>Comentario</th>
+</tr>
+</thead>
+
+
+<tbody>
+
+<tr data-evidencia="Depos">
+<td>Juan Pérez</td>
+<td>Depos</td>
+<td>Informe técnico</td>
+<td>12/03/2026</td>
+
+<td>
+<select class="estado">
+<option value="revision">En revisión</option>
+<option value="revisado">Revisado</option>
+</select>
+</td>
+
+<td><input type="text" placeholder="Comentario"></td>
+
+</tr>
+
+
+<tr data-evidencia="Givit">
+<td>Ana López</td>
+<td>Givit</td>
+<td>Documento PDF</td>
+<td>11/03/2026</td>
+
+<td>
+<select class="estado">
+<option value="revision">En revisión</option>
+<option value="revisado">Revisado</option>
+</select>
+</td>
+
+<td><input type="text" placeholder="Comentario"></td>
+
+</tr>
+
+
+</tbody>
+
+</table>
+
+</div>
+
+
+<script>
+
+const filtro = document.getElementById("filtroEvidencia");
+const filas = document.querySelectorAll("#tablaEvidencias tbody tr");
+
+filtro.addEventListener("change",()=>{
+
+const valor = filtro.value;
+
+filas.forEach(fila=>{
+
+const evidencia = fila.dataset.evidencia;
+
+if(valor==="todas" || evidencia===valor){
+fila.style.display="";
+}else{
+fila.style.display="none";
+}
+
+});
+
+});
+
+</script>
+
+</body>
+</html>

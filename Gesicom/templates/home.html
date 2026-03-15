@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GESICOM - Inicio</title>
+    <link rel="stylesheet" href="{% static 'instructor/panel_usuario.css' %}">
+    <!-- Reutilizamos estilos existentes para mantener coherencia y responsividad -->
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>GESICOM</h1>
+        <small>Panel del instructor</small>
+    </div>
+
+ 
+
+    <div class="user-menu-container">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="user-menu-toggle" style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 600; color: #2a5c1a;">{{ user.get_full_name|default:user.username }}</span>
+            </div>
+            <form method="post" action="{% url 'logout' %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" style="background: #ff6b6b; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;">Cerrar sesión</button>
+            </form>
+        </div>
+    </div>
+</header>
+
+<main>
+
+    <section class="breadcrumb">
+        <button class="btn-inicio">inicio</button>
+        <h2>Panel del Instructor</h2>
+    </section>
+
+    <section class="welcome-section">
+        <div>
+            <img src="{% static 'img/instructor.png' %}" alt="avatar" class="welcome-avatar">
+        </div>
+        <div>
+            <h2>Bienvenido, {{ user.first_name|default:user.username }}</h2>
+            <p>Resumen general de actividades</p>
+        </div>
+    </section>
+
+    <section class="cards-grid">
+
+        <div class="card">
+            <h3>Enviar Evidencia</h3>
+            <p>Subir nuevos archivos</p>
+              <a href="{% url 'evidencia' %}" class="btn-primary">Enviar</a>
+        </div>
+
+        <div class="card">
+            <h3>Evidencias</h3>
+            <div class="status-box">
+                <div>
+                    <p>En revisión <span class="badge badge-review">0</span></p>
+                </div>
+                <div>
+                    <p>Aprobadas <span class="badge badge-approved">0</span></p>
+                </div>
+            </div>
+            <a href="{% url 'evidencias_list' %}" class="btn-secondary">Ver estado</a>
+        </div>
+
+        <div class="card">
+            <h3>Perfil</h3>
+            <p>Editar información</p>
+           <a href="{% url 'editar_perfil' %}" class="btn-secondary">Editar Perfil</a>
+        </div>
+
+        <div class="card">
+            <h3>Reportes</h3>
+            <p>Ver estadísticas</p>
+            <button class="btn-warning">Ver Reportes</button>
+        </div>
+
+    </section>
+
+    
+
+</main>
+
+</body>
+</html>

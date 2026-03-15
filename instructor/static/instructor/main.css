@@ -1,0 +1,83 @@
+:root {
+  --green: #22c55e;
+  --green-dark: #16a34a;
+  --blue-dark: #00304D;
+  --blue-light: #eaf3ff;
+  --accent: #1a73e8;
+  --accent-light: #eaf3ff;
+  --white: #ffffff;
+  --black: #000000;
+  --neutral: #f8fafc;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body { margin: 0; color: var(--black); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+.topbar.topbar-auth { width: 100%; display: flex; align-items: center; justify-content: center; padding: .9rem 1rem; background: transparent; border-bottom: 0; position: static; }
+.topbar.topbar-auth { margin-bottom: clamp(.6rem, 3vw, 1.6rem); }
+.brand-left { display: flex; align-items: center; justify-content: center; gap: .5rem; }
+.brand-left .logo-wrap { display: block; }
+.brand-left .logo-img { display: none; }
+.brand-left .logo-svg { display: block; width: clamp(120px, 20vw, 180px); height: auto; }
+.topbar.topbar-auth .logo-svg { position: static; width: clamp(120px, 18vw, 200px); height: auto; }
+
+.login-body { background: linear-gradient(180deg, #eaf7ee 0%, #39A900 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: clamp(1.5rem, 3vh, 2.5rem) clamp(1rem, 4vw, 2rem); }
+.login-card { width: 100%; max-width: clamp(320px, 60vw, 420px); background: #ffffff; border: 3px solid var(--green-dark); border-radius: 16px; padding: clamp(1rem, 2vh, 1.6rem); box-shadow: 0 20px 48px rgba(0,0,0,0.1); margin: clamp(1rem, 2vh, 1.5rem) 0; overflow: hidden; flex-shrink: 0; }
+.login-card label { font-size: clamp(0.8rem, 1.8vw, 0.95rem); color: var(--blue-dark); display: block; margin-bottom: clamp(0.3em, 0.5em, 0.6em); font-weight: 500; }
+.login-card .input { width: 100%; max-width: 100%; display: block; background: #ffffff; color: var(--black); border: 2px solid #0f172a; border-radius: 10px; padding: clamp(0.7rem, 1.2vh, 0.9rem) clamp(0.8rem, 1.5vw, 1rem); outline: none; font-size: clamp(0.9rem, 1.8vw, 1rem); transition: border-color 0.2s ease; }
+.login-card .input:focus { border-color: rgba(0,48,77,.35); box-shadow: 0 0 0 3px rgba(0,48,77,.12); }
+.input-row { display: flex; align-items: center; gap: clamp(0.4em, 0.6em, 0.8em); }
+.input-row .input-icon.left, .input-row .toggle-password.left { width: clamp(36px, 8vw, 44px); height: clamp(36px, 8vw, 44px); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.08); background: var(--accent-light); flex-shrink: 0; }
+.input-row .input-icon.left { color: var(--blue-dark); }
+.toggle-password { border: none; background: var(--accent-light); color: var(--accent); border-radius: 10px; padding: 4px; cursor: pointer; }
+.toggle-password:hover { filter: brightness(1.05); }
+
+.username-field, .password-field { margin-bottom: clamp(0.8em, 1.2em, 1.5em); }
+
+.login-card .btn { appearance: none; border: none; cursor: pointer; padding: clamp(0.8rem, 1.5vh, 1rem) clamp(1rem, 3vw, 1.5rem); border-radius: 10px; background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); color: #ffffff; font-weight: 700; font-size: clamp(0.9rem, 1.8vw, 1rem); box-shadow: 0 6px 14px rgba(34,197,94,0.18); display: block; margin: clamp(0.6rem, 1.2vh, 0.85rem) auto clamp(0.4rem, 0.8vh, 0.5rem); transition: all 0.3s ease; width: 100%; }
+.login-card .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(34,197,94,0.22); }
+.login-card a { color: var(--green-dark); text-decoration: none; }
+.login-card a:hover { text-decoration: underline; }
+.auth-title { margin: 0 0 clamp(0.75rem, 1.5vh, 1rem); font-size: clamp(1.75rem, 4vw, 2.2rem); line-height: 1.3; color: #0d8a43; font-weight: 800; letter-spacing: 0.2px; text-align: center; }
+.auth-subtitle { margin: 0 0 1.25rem; font-size: 1rem; color: var(--blue-dark); text-align: center; }
+.login-card .login-logo { display: flex; justify-content: center; align-items: center; }
+.login-card .login-logo svg { display: none; }
+.login-card .login-logo .logo-img { display: block; width: clamp(50px, 12vw, 75px); height: auto; object-fit: contain; margin-bottom: clamp(0.5rem, 1vh, 0.75rem); }
+.login-card form { display: grid; gap: clamp(0.6em, 0.9em, 1.2em); }
+.card { background: var(--white); border: 3px solid var(--blue-dark); border-radius: 16px; padding: 2rem; box-shadow: 0 18px 32px rgba(0,0,0,0.12); }
+.brand { display: grid; place-items: center; gap: .6rem; margin-bottom: 1.25rem; }
+.brand .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--blue-dark); }
+.brand h1 { font-size: 2rem; margin: 0; color: var(--blue-dark); }
+.actions { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: clamp(0.5em, 0.8em, 1em); margin-top: clamp(0.8em, 1.2em, 1.5em); }
+.actions-center { justify-content: center; }
+.error { background: #FDECEC; color: #6A0E0E; border: 2px solid #EF4444; border-left-width: 6px; padding: .75rem 1rem; border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,.08); font-size: 1rem; line-height: 1.5; word-break: break-word; overflow-wrap: anywhere; }
+.error ul { margin: 0; padding-left: 1.25rem; list-style: disc; }
+.error li { margin: .2rem 0; }
+
+.remember-field { margin: clamp(0.6em, 0.8em, 1.2em) 0 0; }
+.remember-label { display: inline-flex; align-items: center; gap: 0.5em; color: var(--blue-dark); }
+.remember-label .checkbox { width: 1.1em; height: 1.1em; accent-color: #0c6b2c; }
+.auth-footer { width: 100%; margin-top: auto; background: #f3f4f6; color: #6b7280; text-align: center; padding: clamp(1rem, 2vh, 1.5rem); font-size: clamp(0.8rem, 1.5vw, 0.95rem); border-top: 1px solid #e5e7eb; flex-shrink: 0; }
+.footer-copy { opacity: .95; }
+
+@media (max-width: 600px) {
+  .login-card { max-width: 95vw; padding: clamp(1.2rem, 2.2vh, 1.5rem); }
+  .auth-title { font-size: clamp(1.5rem, 3.5vw, 1.9rem); margin-bottom: clamp(0.6em, 0.9em, 1.1em); }
+  .login-card .input { font-size: clamp(0.85rem, 2vw, 0.95rem); padding: clamp(0.6em, 0.9em, 1em) clamp(0.7em, 1em, 1.2em); }
+  .input-row .input-icon.left, .input-row .toggle-password.left { width: clamp(34px, 8vw, 40px); height: clamp(34px, 8vw, 40px); }
+  .login-card .btn { padding: clamp(0.75rem, 1.2vh, 0.85rem) clamp(0.9rem, 2.5vw, 1.2rem); }
+}
+
+@media (max-width: 380px) {
+  .login-card { padding: 1.2rem; }
+  .auth-title { font-size: 1.4rem; }
+  .username-field, .password-field { margin-bottom: 0.6rem; }
+  .login-card .input { padding: 0.6rem 0.7rem; font-size: 0.9rem; }
+}
+
+@media (min-width: 1200px) {
+  .login-body { padding: 2.5rem 2rem; }
+  .login-card { max-width: 480px; padding: 2rem; }
+  .auth-title { font-size: 2.2rem; }
+  .login-card .input { font-size: 1rem; padding: 0.9rem 1.1rem; }
+}

@@ -1,0 +1,169 @@
+{% extends "admin_personalizado/base_modern.html" %}
+
+{% block title %}Dashboard - Panel Administrativo{% endblock %}
+
+{% block page_title %}Panel de Administrador de Usuarios{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h2 class="content-title">Dashboard</h2>
+</div>
+
+<!-- Tarjetas de Estadísticas -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Total Usuarios -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1.5rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div>
+                <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Total de Usuarios</div>
+                <div style="font-size: 2.5rem; font-weight: 700;">{{ total_usuarios }}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 8px;">
+                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </div>
+        </div>
+        <a href="{% url 'admin_personalizado:gestionar_usuarios' %}" style="color: white; text-decoration: none; font-size: 0.875rem; opacity: 0.9; display: flex; align-items: center; gap: 0.5rem;">
+            Ver todos los usuarios
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
+    </div>
+
+    <!-- Usuarios Activos -->
+    <div style="background: linear-gradient(135deg, #6b8e6b 0%, #5a7a5a 100%); border-radius: 12px; padding: 1.5rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div>
+                <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Usuarios Activos</div>
+                <div style="font-size: 2.5rem; font-weight: 700;">{{ usuarios_activos }}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 8px;">
+                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        </div>
+        <div style="font-size: 0.875rem; opacity: 0.9;">
+            {{ usuarios_activos_porcentaje }}% del total
+        </div>
+    </div>
+
+    <!-- Total Grupos -->
+    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; padding: 1.5rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div>
+                <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Grupos/Roles</div>
+                <div style="font-size: 2.5rem; font-weight: 700;">{{ total_grupos }}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 8px;">
+                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+            </div>
+        </div>
+        <a href="{% url 'admin_personalizado:permisos' %}" style="color: white; text-decoration: none; font-size: 0.875rem; opacity: 0.9; display: flex; align-items: center; gap: 0.5rem;">
+            Gestionar permisos
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
+    </div>
+</div>
+
+<!-- Acciones Rápidas -->
+<div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">
+    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; color: #374151;">Acciones Rápidas</h3>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <a href="{% url 'admin_personalizado:crear_usuario' %}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px dashed #d1d5db; border-radius: 8px; text-decoration: none; color: #374151; transition: all 0.2s;">
+            <div style="background: #6b8e6b; color: white; width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">Nuevo Usuario</div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Crear cuenta</div>
+            </div>
+        </a>
+
+        <a href="{% url 'admin_personalizado:usuarios' %}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px dashed #d1d5db; border-radius: 8px; text-decoration: none; color: #374151; transition: all 0.2s;">
+            <div style="background: #3b82f6; color: white; width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">Gestionar Usuarios</div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Ver y editar</div>
+            </div>
+        </a>
+
+        <a href="{% url 'evidencias_list' %}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px dashed #d1d5db; border-radius: 8px; text-decoration: none; color: #374151; transition: all 0.2s;">
+            <div style="background: #3b82f6; color: white; width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">Ver Evidencias</div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Revisar archivos</div>
+            </div>
+        </a>
+
+        <a href="{% url 'home' %}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px dashed #d1d5db; border-radius: 8px; text-decoration: none; color: #374151; transition: all 0.2s;">
+            <div style="background: #f59e0b; color: white; width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">Permisos</div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Configurar roles</div>
+            </div>
+        </a>
+
+        <a href="{% url 'home' %}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px dashed #d1d5db; border-radius: 8px; text-decoration: none; color: #374151; transition: all 0.2s;">
+            <div style="background: #6b7280; color: white; width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">Volver al Sistema</div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Página principal</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Actividad Reciente (opcional, puedes expandir esto más adelante) -->
+<div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 2rem;">
+    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; color: #374151;">
+        Bienvenido, {{ request.user.get_full_name|default:request.user.username }}
+    </h3>
+
+    <div style="color: #6b7280; line-height: 1.6;">
+        <p style="margin-bottom: 1rem;">
+            Este es el panel de administración de usuarios del sistema SENNOVA. Desde aquí puedes gestionar todos los aspectos relacionados con los usuarios y sus permisos.
+        </p>
+
+        <div style="background: #f9fafb; border-left: 4px solid #6b8e6b; padding: 1rem; border-radius: 4px;">
+            <strong style="color: #374151; display: block; margin-bottom: 0.5rem;">💡 Consejo:</strong>
+            <p style="margin: 0; font-size: 0.95rem;">
+                Usa la sección "Usuarios" para gestionar rápidamente los roles y estados de los usuarios del sistema.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    a[href]:hover {
+        border-color: #6b8e6b !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(107, 142, 107, 0.2);
+    }
+</style>
+{% endblock %}

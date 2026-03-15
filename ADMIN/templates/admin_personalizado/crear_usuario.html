@@ -1,0 +1,191 @@
+{% extends "admin_personalizado/base_admin.html" %}
+
+{% block title %}Crear Nuevo Usuario{% endblock %}
+
+{% block page_title %}Crear Nuevo Usuario{% endblock %}
+
+{% block content %}
+<div class="content-section" style="max-width: 600px; margin: 0 auto;">
+    <h2 class="section-title">Crear Nuevo Usuario</h2>
+    <p class="section-subtitle">Completa el formulario para crear una nueva cuenta de usuario</p>
+
+    {% if errores %}
+    <div class="alert alert-danger">
+        <strong>Error al crear el usuario:</strong>
+        <ul style="margin: 0.5rem 0 0 1.5rem;">
+            {% for error in errores %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" class="form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="username" class="form-label">Nombre de Usuario *</label>
+            <input 
+                type="text" 
+                id="username" 
+                name="username" 
+                class="form-control" 
+                value="{{ nombre_usuario }}"
+                required 
+                placeholder="usuario123"
+            />
+        </div>
+
+        <div class="form-group">
+            <label for="email" class="form-label">Correo Electrónico *</label>
+            <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                class="form-control" 
+                value="{{ correo }}"
+                required 
+                placeholder="usuario@gmail.com"
+            />
+        </div>
+
+        <div class="form-group">
+            <label for="first_name" class="form-label">Nombre</label>
+            <input 
+                type="text" 
+                id="first_name" 
+                name="first_name" 
+                class="form-control" 
+                value="{{ nombre }}"
+                placeholder="Juan"
+            />
+        </div>
+
+        <div class="form-group">
+            <label for="last_name" class="form-label">Apellido</label>
+            <input 
+                type="text" 
+                id="last_name" 
+                name="last_name" 
+                class="form-control" 
+                value="{{ apellido }}"
+                placeholder="Pérez"
+            />
+        </div>
+
+        <div class="form-group">
+            <label for="password" class="form-label">Contraseña *</label>
+            <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                class="form-control" 
+                required 
+                placeholder="8 caracteres con mayúscula y número"
+            />
+            <small style="color: #666; display: block; margin-top: 0.25rem;">
+                ✓ Exactamente 8 caracteres<br/>
+                ✓ Al menos 1 letra mayúscula<br/>
+                ✓ Al menos 1 número o carácter especial
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="password_confirm" class="form-label">Confirmar Contraseña *</label>
+            <input 
+                type="password" 
+                id="password_confirm" 
+                name="password_confirm" 
+                class="form-control" 
+                required 
+                placeholder="Repite la contraseña"
+            />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Asignar Grupos/Roles</label>
+            <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem;">
+                {% if grupos_disponibles %}
+                    {% for grupo in grupos_disponibles %}
+                    <div style="padding: 0.5rem;">
+                        <input 
+                            type="checkbox" 
+                            id="grupo_{{ grupo.id }}" 
+                            name="grupos" 
+                            value="{{ grupo.id }}"
+                        />
+                        <label for="grupo_{{ grupo.id }}" style="margin: 0; display: inline;">
+                            {{ grupo.name|title }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p style="color: #999; margin: 0;">No hay grupos disponibles</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                ✓ Crear Usuario
+            </button>
+            <a href="{% url 'admin_personalizado:gestionar_usuarios' %}" class="btn btn-secondary" style="flex: 1; text-align: center;">
+                ✕ Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #66bb6a;
+        box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.1);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-danger {
+        background-color: #ffebee;
+        border-left: 4px solid #f44336;
+        color: #c62828;
+    }
+
+    @media (max-width: 600px) {
+        .content-section {
+            padding: 1rem !important;
+        }
+    }
+</style>
+{% endblock %}
