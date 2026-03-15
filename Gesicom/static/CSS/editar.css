@@ -59,12 +59,12 @@ nav a::after {
     bottom: -3px;
     width: 0;
     height: 2px;
-    background: #639922;
+    background: #39A900;
     transition: .3s;
 }
 
 nav a:hover {
-    color: #639922;
+    color: #39A900;
 }
 
 nav a:hover::after {
@@ -103,7 +103,7 @@ nav form button {
 }
 
 nav form button:hover {
-    color: #639922;
+    color: #39A900;
     transform: none !important;
     background: none !important;
     box-shadow: none !important;
@@ -116,7 +116,7 @@ nav form button::after {
     bottom: -3px;
     width: 0;
     height: 2px;
-    background: #639922;
+    background: #39A900;
     transition: .3s;
 }
 
@@ -166,7 +166,7 @@ label {
 }
 
 .input-icon {
-    color: #639922;
+    color: #39A900;
     font-size: 18px;
     flex-shrink: 0;
 }
@@ -195,7 +195,7 @@ label {
 }
 
 .toggle-password {
-    background: #3b6d1f;
+    background: #39A900;
     color: white;
     border: none;
     border-radius: 10px;

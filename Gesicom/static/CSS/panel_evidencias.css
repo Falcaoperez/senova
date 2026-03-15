@@ -1,7 +1,7 @@
 /* Estilos para el panel de evidencias - colores institucionales aproximados */
 /* Paleta SENA (aproximada) */
 :root{
-    --sena-green: #007a3d; /* verde principal SENA (aprox) */
+    --sena-green: #39A900; /* verde principal SENA (aprox) */
     --sena-dark: #00562a;
     --sena-yellow: #ffd100;
     --sena-accent: #1ea7d7;
@@ -48,7 +48,7 @@
 
 .btn-approve{background:#1EA7D7;color:#fff;border:none;padding:6px 8px;border-radius:6px;margin-right:6px;cursor:pointer}
 .btn-reject{background:#FF6B6B;color:#fff;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
-.badge-approved{background:#2CB66A;color:#fff;padding:4px 8px;border-radius:999px;font-weight:700}
+.badge-approved{background:#39A900;color:#fff;padding:4px 8px;border-radius:999px;font-weight:700}
 .badge-pending{background:#F0F3F5;color:#333;padding:4px 8px;border-radius:999px}
 
 @media(max-width:900px){
