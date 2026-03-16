@@ -178,7 +178,7 @@ def register_view(request):
 @login_required(login_url='login')
 def panel_usuario(request):
     """Vista del panel personal del usuario."""
-    return render(request, 'usuario/panel_usuario.html')
+    return render(request, 'panel_usuario.html')
 
 
 @login_required(login_url='login')
