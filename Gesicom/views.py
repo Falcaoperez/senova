@@ -161,7 +161,7 @@ def reportes(request):
         'estadisticas_categoria': estadisticas_categoria,
         'estadisticas_mensuales': estadisticas_mensuales,
     }
-    return render(request, 'admin/reportes.html', context)
+    return render(request, 'reportes.html', context)
 
 
 def reportes_csv(request):
