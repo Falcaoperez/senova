@@ -18,7 +18,7 @@ from .utils import (
     require_group, is_admin_or_group, apply_date_filters,
     calculate_stats, calculate_monthly_stats
 )
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 import csv
 import datetime
 import json
@@ -414,6 +414,9 @@ def evidencias_list(request):
         usuarios_data.append(u['total'])
     proyectos_guardados = list(Envio.objects.values_list('proyecto', flat=True).distinct())
     opciones_proyectos = [(p, choice_map.get(p, p)) for p in proyectos_guardados if p]
+    # Verificar si el usuario es administrador
+    es_admin = request.user.is_superuser or request.user.groups.filter(name='administrador').exists()
+
     context = {
         'envios': objeto_pagina,
         'proyecto': proyecto,
@@ -441,6 +444,7 @@ def evidencias_list(request):
         'pct_total_abs': pct_total_abs,
         'aprobadas_30d': aprobadas_30d,
         'home_url': home_url,
+        'es_admin': es_admin,
     }
     return render(request, 'evidencias_list.html', context)
 
@@ -530,3 +534,22 @@ def exportar_csv(request):
             (envio.observaciones or '').replace('\r\n', ' ').replace('\n', ' '),
         ])
     return respuesta
+
+@login_required
+def actualizar_observaciones(request, envio_id):
+    """Vista para actualizar observaciones de una evidencia. Solo administradores."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    # Verificar que el usuario sea administrador o superusuario
+    if not (request.user.is_superuser or request.user.groups.filter(name='administrador').exists()):
+        return JsonResponse({'error': 'No tienes permisos para editar observaciones'}, status=403)
+
+    try:
+        envio = get_object_or_404(Envio, id=envio_id)
+        observaciones = request.POST.get('observaciones', '').strip()
+        envio.observaciones = observaciones
+        envio.save()
+        return JsonResponse({'success': True, 'observaciones': observaciones})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

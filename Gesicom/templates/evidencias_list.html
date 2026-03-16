@@ -100,7 +100,25 @@
                         -
                     {% endif %}
                 </td>
-                <td>{{ envio.observaciones }}</td>
+                <td>
+                    {% if es_admin %}
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <textarea
+                                id="obs-{{ envio.id }}"
+                                style="width: 200px; min-height: 40px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                                placeholder="Agregar observaciones..."
+                            >{{ envio.observaciones }}</textarea>
+                            <button
+                                type="button"
+                                class="btn-save-obs"
+                                onclick="guardarObservaciones({{ envio.id }})"
+                                style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;"
+                            >Guardar</button>
+                        </div>
+                    {% else %}
+                        {{ envio.observaciones|default:"-" }}
+                    {% endif %}
+                </td>
                 <td>
                     {% if envio.aprobada %}
                         <span class="badge badge-approved">Aprobada</span>
@@ -145,6 +163,47 @@
     if(quartersVal) params.set('quarters', quartersVal); else params.delete('quarters');
     window.location.search = params.toString();
 });
+
+// Función para guardar observaciones via AJAX
+function guardarObservaciones(envioId) {
+    const textarea = document.getElementById('obs-' + envioId);
+    const observaciones = textarea.value.trim();
+    const btn = event.target;
+    const btnOriginalText = btn.textContent;
+
+    btn.textContent = 'Guardando...';
+    btn.disabled = true;
+
+    fetch('/evidencias/' + envioId + '/actualizar-observaciones/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: 'observaciones=' + encodeURIComponent(observaciones)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.textContent = '✓ Guardado';
+            btn.style.background = '#2196F3';
+            setTimeout(() => {
+                btn.textContent = btnOriginalText;
+                btn.style.background = '#4CAF50';
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo guardar'));
+            btn.textContent = btnOriginalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        alert('Error al guardar: ' + error);
+        btn.textContent = btnOriginalText;
+        btn.disabled = false;
+    });
+}
 
 </script>
 </body>
