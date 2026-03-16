@@ -33,6 +33,7 @@ urlpatterns = [
     path('evidencias/', gesicom_views.evidencias_list, name='evidencias_list'),
     path('evidencias/<int:pk>/ver/', gesicom_views.ver_evidencia, name='ver_evidencia'),
     path('evidencias/<int:pk>/set_aprobada/', gesicom_views.set_aprobada, name='set_aprobada'),
+    path('evidencias/<int:envio_id>/actualizar-observaciones/', gesicom_views.actualizar_observaciones, name='actualizar_observaciones'),
     
     path('access-denied/', gesicom_views.access_denied, name='access_denied'),
     path('administracion/', gesicom_views.admin_menu, name='admin_menu'),
