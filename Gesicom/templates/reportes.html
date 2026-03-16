@@ -1,0 +1,277 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GESICOM - Reportes</title>
+    <link rel="stylesheet" href="{% static 'CSS/reportes.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-brand">
+        <img src="{% static 'img/gesicom.png' %}" alt="GESICOM" class="logo">
+    </div>
+    <nav>
+        <a href="{% url 'home' %}">Inicio</a>
+        <a href="{% url 'evidencia' %}">Evidencia</a>
+        <a href="{% url 'reportes' %}" class="active">Reportes</a>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-nav">Cerrar sesión</button>
+        </form>
+    </nav>
+</header>
+
+<main>
+
+    <h1 class="page-title">Reportes de Evidencia</h1>
+
+    <!-- Filtros -->
+    <form method="GET" action="{% url 'reportes' %}" class="filtros-form">
+        <div class="filtro-group">
+            <label>Inicio</label>
+            <input type="date" name="start" value="{{ start }}" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label>Fin</label>
+            <input type="date" name="end" value="{{ end }}" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label>Categoría</label>
+            <select name="proyecto" class="filtro-input">
+                <option value="">Todas</option>
+                {% for p in opciones_proyectos %}
+                <option value="{{ p }}" {% if proyecto == p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn-filtrar">Filtrar</button>
+        <a href="{% url 'reportes' %}" class="btn-limpiar">Limpiar</a>
+    </form>
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--blue">📋</div>
+            <div class="stat-info">
+                <span class="stat-value">{{ total_envios }}</span>
+                <span class="stat-label">Total Evidencias</span>
+                {% if pct_total is not None %}
+                <span class="stat-pct {% if pct_total >= 0 %}up{% else %}down{% endif %}">
+                    {% if pct_total >= 0 %}▲{% else %}▼{% endif %} {{ pct_total_abs }}%
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--green">+</div>
+            <div class="stat-info">
+                <span class="stat-value">{{ nuevas_30d }}</span>
+                <span class="stat-label">Nuevas Evidencias</span>
+                {% if pct_nuevas is not None %}
+                <span class="stat-pct {% if pct_nuevas >= 0 %}up{% else %}down{% endif %}">
+                    {% if pct_nuevas >= 0 %}▲{% else %}▼{% endif %} {{ pct_nuevas_abs }}%
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon--teal">✓</div>
+            <div class="stat-info">
+                <span class="stat-value">{{ aprobadas }}</span>
+                <span class="stat-label">Evidencias Aprobadas</span>
+                {% if pct_aprobadas is not None %}
+                <span class="stat-pct {% if pct_aprobadas >= 0 %}up{% else %}down{% endif %}">
+                    {% if pct_aprobadas >= 0 %}▲{% else %}▼{% endif %} {{ pct_aprobadas_abs }}%
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficas fila 1 -->
+    <div class="charts-grid">
+
+        <div class="chart-card chart-card--wide">
+            <h3 class="chart-title">Evidencias por Trimestre</h3>
+            <div class="chart-container">
+                <canvas id="chartTrimestres"></canvas>
+            </div>
+            <div class="chart-legend">
+                <span class="legend-item legend-item--yellow">Nuevas</span>
+                <span class="legend-item legend-item--green">Aprobadas</span>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3 class="chart-title">Categorías de Evidencia</h3>
+            <div class="chart-container chart-container--donut">
+                <canvas id="chartCategorias"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Gráficas fila 2 -->
+    <div class="charts-grid">
+
+        <div class="chart-card chart-card--wide">
+            <h3 class="chart-title">Evidencias por Usuario</h3>
+            <div class="chart-container">
+                <canvas id="chartUsuarios"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3 class="chart-title">Estado de Evidencia</h3>
+            <div class="chart-container chart-container--donut">
+                <canvas id="chartEstado"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Exportar -->
+    <div class="export-section">
+        <a href="{% url 'reportes_csv' %}?proyecto={{ proyecto }}&start={{ start }}&end={{ end }}" class="btn-export">
+            ⬇ Descargar CSV
+        </a>
+        <a href="{% url 'reportes_trimestrales_csv' %}?proyecto={{ proyecto }}&start={{ start }}&end={{ end }}" class="btn-export btn-export--outline">
+            ⬇ CSV Trimestral
+        </a>
+    </div>
+
+</main>
+
+<script>
+    const trimestresLabels = {{ trimestres_labels_json|safe }};
+    const trimestresNuevas = {{ datos_trimestrales_nuevas_json|safe }};
+    const trimestresAprobadas = {{ datos_trimestrales_aprobadas_json|safe }};
+    const categoriasLabels = {{ categorias_labels_json|safe }};
+    const categoriasData = {{ categorias_data_json|safe }};
+    const usuariosLabels = {{ usuarios_labels_json|safe }};
+    const usuariosData = {{ usuarios_data_json|safe }};
+    const aprobadas = {{ aprobadas }};
+    const nuevas30d = {{ nuevas_30d }};
+    const rechazadas = {{ rechazadas }};
+
+    const coloresCategorias = ['#1D9E75','#FAC775','#378ADD','#D85A30','#7F77DD','#639922'];
+    const coloresUsuarios = ['#378ADD','#FAC775','#1D9E75','#D85A30','#7F77DD','#639922'];
+
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.color = '#6b7280';
+
+    // Trimestres
+    new Chart(document.getElementById('chartTrimestres'), {
+        type: 'bar',
+        data: {
+            labels: trimestresLabels,
+            datasets: [
+                {
+                    label: 'Nuevas',
+                    data: trimestresNuevas,
+                    backgroundColor: '#FAC775',
+                    borderRadius: 6,
+                },
+                {
+                    label: 'Aprobadas',
+                    data: trimestresAprobadas,
+                    backgroundColor: '#1D9E75',
+                    borderRadius: 6,
+                    type: 'line',
+                    borderColor: '#1D9E75',
+                    pointBackgroundColor: '#1D9E75',
+                    fill: false,
+                    tension: 0.3,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Categorías
+    new Chart(document.getElementById('chartCategorias'), {
+        type: 'doughnut',
+        data: {
+            labels: categoriasLabels,
+            datasets: [{
+                data: categoriasData,
+                backgroundColor: coloresCategorias,
+                borderWidth: 2,
+                borderColor: '#fff',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { boxWidth: 12, padding: 12, font: { size: 12 } }
+                }
+            }
+        }
+    });
+
+    // Usuarios
+    new Chart(document.getElementById('chartUsuarios'), {
+        type: 'bar',
+        data: {
+            labels: usuariosLabels,
+            datasets: [{
+                data: usuariosData,
+                backgroundColor: coloresUsuarios,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Estado
+    new Chart(document.getElementById('chartEstado'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Aprobadas', 'Nuevas', 'Rechazadas'],
+            datasets: [{
+                data: [aprobadas, nuevas30d, rechazadas],
+                backgroundColor: ['#1D9E75', '#FAC775', '#D85A30'],
+                borderWidth: 2,
+                borderColor: '#fff',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { boxWidth: 12, padding: 12, font: { size: 12 } }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
