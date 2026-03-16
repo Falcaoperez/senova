@@ -71,7 +71,7 @@ def home(request):
 
 @require_group('usuario')
 def role_usuario(request):
-    return render(request, 'home.html', {'is_basic_user': True})
+    return render(request, 'panel_usuario.html')
 
 
 def nosotros(request):
