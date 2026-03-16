@@ -10,7 +10,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.contrib.auth import logout
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from .models import Envio
 from .utils import (
     require_group, is_admin_or_group, apply_date_filters,
@@ -23,8 +25,38 @@ import json
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 
+@login_required
 def editar_perfil(request):
-    return render(request, 'editar_perfil/editar.html')
+    user = request.user
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        first_name = request.POST.get('nombre', '').strip()
+        last_name = request.POST.get('apellido', '').strip()
+        email = request.POST.get('correo', '').strip()
+        password = request.POST.get('contrasena', '').strip()
+
+        # Actualiza los datos del usuario
+        user.username = username
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+
+        if password:
+            if len(password) >= 8:
+                user.set_password(password)
+                # Mantiene la sesión del usuario después de cambiar la contraseña
+                update_session_auth_hash(request, user)
+            else:
+                messages.error(request, 'La contraseña debe tener al menos 8 caracteres.')
+                return render(request, 'editar_perfil/editar.html', {'user': user})
+
+        user.save()
+        messages.success(request, 'Perfil actualizado correctamente.')
+        # Redirige siempre al inicio después de guardar
+        return redirect('home')
+
+    return render(request, 'editar_perfil/editar.html', {'user': user})
 
 def index(request):
     return render(request, 'home.html')
@@ -201,8 +233,28 @@ def reportes_trimestrales_csv(request):
     return respuesta
 
 
+def _home_url_for_user(user):
+    """Devuelve la URL del panel de inicio correspondiente al rol del usuario."""
+    if user.is_superuser:
+        return reverse('admin_personalizado:dashboard')
+    if user.groups.filter(name='instructor').exists():
+        return reverse('role_instructor')
+    if user.groups.filter(name='investigador').exists():
+        return reverse('role_investigador')
+    if user.groups.filter(name='dinamizador').exists():
+        return reverse('role_dinamizador')
+    if user.groups.filter(name='coordinador').exists():
+        return reverse('role_coordinador')
+    if user.groups.filter(name='usuario').exists():
+        # En urls.py el nombre de esta ruta es 'usuario'
+        return reverse('usuario')
+    return reverse('home')
+
+
 @login_required
 def evidencia(request):
+    home_url = _home_url_for_user(request.user)
+
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         proyecto = request.POST.get('proyecto', '').strip()
@@ -235,6 +287,7 @@ def evidencia(request):
                 'tipos': tipos,
                 'enlace_archivo': enlace,
                 'observaciones': observaciones,
+                'home_url': home_url,
             })
         envio = Envio(
             usuario=request.user,
@@ -251,13 +304,15 @@ def evidencia(request):
             mensaje_exito += f'. Archivo guardado: {envio.archivo_evidencia.name}'
         return render(request, 'formulario.html', {
             'exito': True,
-            'mensaje_exito': mensaje_exito
+            'mensaje_exito': mensaje_exito,
+            'home_url': home_url,
         })
-    return render(request, 'formulario.html')
+    return render(request, 'formulario.html', {'home_url': home_url})
 
 
 @login_required
 def evidencias_list(request):
+    home_url = _home_url_for_user(request.user)
     consulta = Envio.objects.select_related('usuario').all()
     proyecto = request.GET.get('proyecto', '')
     inicio = request.GET.get('start', '')
@@ -385,6 +440,7 @@ def evidencias_list(request):
         'pct_aprobadas_abs': pct_aprobadas_abs,
         'pct_total_abs': pct_total_abs,
         'aprobadas_30d': aprobadas_30d,
+        'home_url': home_url,
     }
     return render(request, 'evidencias_list.html', context)
 
@@ -396,7 +452,10 @@ def tabla_instructor(request):
 @login_required
 def ver_evidencia(request, pk):
     envio = get_object_or_404(Envio, pk=pk)
-    return render(request, 'ver_evidencia.html', {'envio': envio})
+    archivo_url = None
+    if envio.archivo_evidencia:
+        archivo_url = request.build_absolute_uri(envio.archivo_evidencia.url)
+    return render(request, 'ver_evidencia.html', {'envio': envio, 'archivo_url': archivo_url})
 
 
 @login_required
