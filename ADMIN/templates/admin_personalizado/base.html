@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Panel de Administración{% endblock %} - GESICOM</title>
     <link rel="stylesheet" href="{% static 'admin_personalizado/css/admin_panel.css' %}">
+    <style>
+        .admin-footer {
+            padding: 1rem 1.5rem;
+            background: #f3f4f6;
+            text-align: center;
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -65,7 +74,7 @@
             <!-- Header -->
             <header class="admin-header">
                 <div class="admin-header-left">
-                    <img src="{% static 'CSS/img/logo_sena.svg' %}" alt="Logo SENA" class="admin-logo">
+                    <img src="{% static 'CSS/img/logo_sena.svg' %}" alt="Logo @SENA" class="admin-logo">
                     <h1 class="admin-title">Panel de Administrador de Usuarios</h1>
                 </div>
 
@@ -92,6 +101,9 @@
             <main class="admin-content">
                 {% block content %}{% endblock %}
             </main>
+            <footer class="admin-footer">
+                <div class="footer-copy">@SENA - Servicio Nacional de Aprendizaje</div>
+            </footer>
         </div>
     </div>
 
