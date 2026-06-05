@@ -13,18 +13,18 @@ def print_section(title):
     print(f"  {title}")
     print("=" * 80 + "\n")
 
-def run_command(cmd, description):
-    print(f"▶ {description}...")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"  ⚠️  {description} completado con advertencias")
-        if result.stderr:
-            print(f"     Error: {result.stderr[:200]}")
+def ejecutar_comando(comando, descripcion):
+    print(f"▶ {descripcion}...")
+    resultado = subprocess.run(comando, shell=True, capture_output=True, text=True)
+    if resultado.returncode != 0:
+        print(f"  ⚠️  {descripcion} completado con advertencias")
+        if resultado.stderr:
+            print(f"     Error: {resultado.stderr[:200]}")
     else:
-        print(f"  ✓ {description} completado exitosamente")
-    return result
+        print(f"  ✓ {descripcion} completado exitosamente")
+    return resultado
 
-def main():
+def principal():
     print("\n")
     print("╔" + "=" * 78 + "╗")
     print("║" + " " * 78 + "║")
@@ -42,36 +42,36 @@ def main():
     print_section("1️⃣  SINCRONIZANDO CAMBIOS DE GIT")
     
     # Limpiar cambios locales pequeños
-    run_command("git status", "Verificando estado de Git")
+    ejecutar_comando("git status", "Verificando estado de Git")
     
     # 2. Resolver migraciones
     print_section("2️⃣  APLICANDO MIGRACIONES DE BASE DE DATOS")
     
-    run_command("python manage.py migrate --verbosity=2", "Aplicando migraciones")
+    ejecutar_comando("python manage.py migrate --verbosity=2", "Aplicando migraciones")
     
     # 3. Limpiar caché de Django
     print_section("3️⃣  LIMPIANDO CACHÉS")
     
-    run_command("python manage.py clear_cache", "Limpiando caché de Django")
+    ejecutar_comando("python manage.py clear_cache", "Limpiando caché de Django")
     
     # Limpiar archivos .pyc
     print(f"▶ Eliminando archivos .pyc...")
-    for root, dirs, files in os.walk('.'):
-        for file in files:
-            if file.endswith('.pyc'):
+    for raiz, directorios, archivos in os.walk('.'):
+        for archivo in archivos:
+            if archivo.endswith('.pyc'):
                 try:
-                    os.remove(os.path.join(root, file))
+                    os.remove(os.path.join(raiz, archivo))
                 except:
                     pass
     print("  ✓ Archivos .pyc eliminados")
     
     # Limpiar __pycache__
     print(f"▶ Eliminando carpetas __pycache__...")
-    for root, dirs, files in os.walk('.'):
-        if '__pycache__' in dirs:
+    for raiz, directorios, archivos in os.walk('.'):
+        if '__pycache__' in directorios:
             try:
                 import shutil
-                shutil.rmtree(os.path.join(root, '__pycache__'))
+                shutil.rmtree(os.path.join(raiz, '__pycache__'))
             except:
                 pass
     print("  ✓ Carpetas __pycache__ eliminadas")
@@ -79,20 +79,20 @@ def main():
     # 4. Recolectar archivos estáticos
     print_section("4️⃣  RECOLECTANDO ARCHIVOS ESTÁTICOS")
     
-    run_command("python manage.py collectstatic --noinput", "Recolectando archivos estáticos")
+    ejecutar_comando("python manage.py collectstatic --noinput", "Recolectando archivos estáticos")
     
     # 5. Verificar integridad
     print_section("5️⃣  VERIFICANDO INTEGRIDAD DEL PROYECTO")
     
-    run_command("python manage.py check", "Verificando integridad del proyecto")
+    ejecutar_comando("python manage.py check", "Verificando integridad del proyecto")
     
     # Mostrar estado de migraciones
     print("\n▶ Estado de migraciones:")
     result = subprocess.run("python manage.py showmigrations --list", shell=True, capture_output=True, text=True)
-    lines = result.stdout.split('\n')
-    for line in lines:
-        if line.strip():
-            print(f"   {line}")
+    lineas = result.stdout.split('\n')
+    for linea in lineas:
+        if linea.strip():
+            print(f"   {linea}")
     
     # 6. Resumen final
     print_section("✅ SINCRONIZACIÓN COMPLETADA")
@@ -119,7 +119,7 @@ Tu proyecto está sincronizado correctamente. Puedes:
 
 if __name__ == '__main__':
     try:
-        main()
+        principal()
     except KeyboardInterrupt:
         print("\n\n⚠️  Script interrumpido por el usuario")
         sys.exit(1)

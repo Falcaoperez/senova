@@ -7,37 +7,37 @@ User = get_user_model()
 
 
 class PasswordResetToken(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
     token = models.CharField(max_length=255, unique=True, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(db_index=True)
-    used = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    expira_en = models.DateTimeField(db_index=True)
+    utilizado = models.BooleanField(default=False)
     
     class Meta:
         verbose_name = "Token de Restablecimiento"
         verbose_name_plural = "Tokens de Restablecimiento"
-        ordering = ['-created_at']
+        ordering = ['-creado_en']
         indexes = [
             models.Index(fields=['token']),
-            models.Index(fields=['expires_at', 'used']),
+            models.Index(fields=['expira_en', 'utilizado']),
         ]
     
     def __str__(self):
-        return f"Token para {self.user.email}"
+        return f"Token para {self.usuario.email}"
     
-    def is_valid(self):
-        return not self.used and timezone.now() < self.expires_at
+    def es_valido(self):
+        return not self.utilizado and timezone.now() < self.expira_en
     
     @classmethod
-    def create_for_user(cls, user):
+    def crear_para_usuario(cls, user):
         from django.contrib.auth.tokens import default_token_generator
         token = default_token_generator.make_token(user)
-        expires_at = timezone.now() + datetime.timedelta(hours=1)
+        expira_en = timezone.now() + datetime.timedelta(hours=1)
         
-        cls.objects.filter(user=user, used=False).delete()
+        cls.objects.filter(usuario=user, utilizado=False).delete()
         
         return cls.objects.create(
-            user=user,
+            usuario=user,
             token=token,
-            expires_at=expires_at
+            expira_en=expira_en
         )

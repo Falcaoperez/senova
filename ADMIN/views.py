@@ -40,7 +40,7 @@ def _validar_contraseña(contraseña):
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url='access_denied')
-def dashboard(request):
+def panel_control(request):
 	"""Panel principal del control de administración."""
 	total_usuarios = User.objects.count()
 	total_grupos = Group.objects.count()

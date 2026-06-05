@@ -9,7 +9,7 @@ from .models import PasswordResetToken
 import datetime
 import logging
 
-logger = logging.getLogger(__name__)
+registrador = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -25,7 +25,7 @@ def olvide_password(request):
         return JsonResponse({"error": "Si el correo existe, recibirás un mensaje"}, status=200)
     # Crear un token en la tabla para uso vía API
     try:
-        token_obj = PasswordResetToken.create_for_user(user)
+        token_obj = PasswordResetToken.crear_para_usuario(user)
     except Exception as e:
         return JsonResponse({"error": f"Error creando token: {str(e)}"}, status=500)
 
@@ -60,17 +60,17 @@ def restablecer_password(request):
 
     token_obj = PasswordResetToken.objects.filter(user=user, token=codigo).first()
     if not token_obj:
-        logger.warning(f"Código no existe en BD para {email}: codigo={codigo[:10]}...")
+        registrador.warning(f"Código no existe en BD para {email}: codigo={codigo[:10]}...")
         return JsonResponse({'error': 'Código inválido o expirado'}, status=400)
     
-    logger.info(f"Token encontrado para {email}: used={token_obj.used}, expires={token_obj.expires_at}, now={timezone.now()}")
+    registrador.info(f"Token encontrado para {email}: used={token_obj.utilizado}, expires={token_obj.expira_en}, now={timezone.now()}")
     
     if token_obj.used:
-        logger.warning(f"Código ya fue usado para {email}")
+        registrador.warning(f"Código ya fue usado para {email}")
         return JsonResponse({'error': 'Código ya fue utilizado'}, status=400)
     
     if timezone.now() >= token_obj.expires_at:
-        logger.warning(f"Código expirado para {email}: expires={token_obj.expires_at}, now={timezone.now()}")
+        registrador.warning(f"Código expirado para {email}: expires={token_obj.expira_en}, now={timezone.now()}")
         return JsonResponse({'error': 'Código expirado'}, status=400)
 
     try:
@@ -78,9 +78,9 @@ def restablecer_password(request):
         user.save()
         token_obj.used = True
         token_obj.save()
-        logger.info(f"Contraseña actualizada exitosamente para {email}")
+        registrador.info(f"Contraseña actualizada exitosamente para {email}")
     except Exception as e:
-        logger.error(f"Error actualizando contraseña para {email}: {str(e)}")
+        registrador.error(f"Error actualizando contraseña para {email}: {str(e)}")
         return JsonResponse({'error': f'Error actualizando contraseña: {str(e)}'}, status=500)
 
     return JsonResponse({'mensaje': 'Contraseña cambiada con éxito'}, status=200)
@@ -113,10 +113,10 @@ def debug_tokens(request):
         'tokens': [
             {
                 'token': t.token,
-                'created': str(t.created_at),
-                'expires': str(t.expires_at),
-                'valid': t.is_valid(),
-                'used': t.used,
+                'created': str(t.creado_en),
+                'expires': str(t.expira_en),
+                'valid': t.es_valido(),
+                'used': t.utilizado,
             }
             for t in tokens
         ]

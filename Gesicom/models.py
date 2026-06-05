@@ -8,10 +8,10 @@ class Rol(models.Model):
         return self.nombre
 
 class InstructorProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
     especialidad = models.CharField(max_length=100, blank=True, null=True)
     def __str__(self):
-        return f"Instructor: {self.user.get_full_name()}"
+        return f"Instructor: {self.usuario.get_full_name()}"
 
 class Envio(models.Model):
     PROYECTO_CHOICES = [

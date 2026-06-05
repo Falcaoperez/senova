@@ -33,7 +33,7 @@ urlpatterns = [
     path('portal/', gesicom_views.portal, name='portal'),
     
     path('roles/instructor/', gesicom_views.role_instructor, name='role_instructor'),
-    path('roles/instructor-table/', gesicom_views.instructor_table, name='instructor_table'),
+    path('roles/instructor-table/', gesicom_views.tabla_instructor, name='instructor_table'),
     path('roles/investigador/', gesicom_views.role_investigador, name='role_investigador'),
     path('roles/dinamizador/', gesicom_views.role_dinamizador, name='role_dinamizador'),
     path('roles/coordinador/', gesicom_views.role_coordinador, name='role_coordinador'),
