@@ -2,10 +2,12 @@ from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt
 from .models import PasswordResetToken
+from Gesicom.validators import ValidadorContraseñaOchoCarActualMayusNumEspecial
 import datetime
 import logging
 
@@ -58,25 +60,30 @@ def restablecer_password(request):
     if not user:
         return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
-    token_obj = PasswordResetToken.objects.filter(user=user, token=codigo).first()
+    token_obj = PasswordResetToken.objects.filter(usuario=user, token=codigo).first()
     if not token_obj:
         registrador.warning(f"Código no existe en BD para {email}: codigo={codigo[:10]}...")
         return JsonResponse({'error': 'Código inválido o expirado'}, status=400)
     
-    registrador.info(f"Token encontrado para {email}: used={token_obj.utilizado}, expires={token_obj.expira_en}, now={timezone.now()}")
+    registrador.info(f"Token encontrado para {email}: utilizado={token_obj.utilizado}, expires={token_obj.expira_en}, now={timezone.now()}")
     
-    if token_obj.used:
+    if token_obj.utilizado:
         registrador.warning(f"Código ya fue usado para {email}")
         return JsonResponse({'error': 'Código ya fue utilizado'}, status=400)
     
-    if timezone.now() >= token_obj.expires_at:
+    if timezone.now() >= token_obj.expira_en:
         registrador.warning(f"Código expirado para {email}: expires={token_obj.expira_en}, now={timezone.now()}")
         return JsonResponse({'error': 'Código expirado'}, status=400)
 
     try:
+        validator = ValidadorContraseñaOchoCarActualMayusNumEspecial()
+        try:
+            validator.validar(password)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
         user.set_password(password)
         user.save()
-        token_obj.used = True
+        token_obj.utilizado = True
         token_obj.save()
         registrador.info(f"Contraseña actualizada exitosamente para {email}")
     except Exception as e:
@@ -84,6 +91,14 @@ def restablecer_password(request):
         return JsonResponse({'error': f'Error actualizando contraseña: {str(e)}'}, status=500)
 
     return JsonResponse({'mensaje': 'Contraseña cambiada con éxito'}, status=200)
+
+
+@require_http_methods(["GET"])
+def password_reset_update(request):
+    email = request.GET.get('email', '').strip()
+    return render(request, 'Registro/password_reset_update.html', {
+        'email': email,
+    })
 
 
 @require_http_methods(["GET"])
@@ -107,7 +122,7 @@ def debug_tokens(request):
     if not user:
         return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
     
-    tokens = PasswordResetToken.objects.filter(user=user).order_by('-created_at')
+    tokens = PasswordResetToken.objects.filter(usuario=user).order_by('-creado_en')
     data = {
         'email': email,
         'tokens': [

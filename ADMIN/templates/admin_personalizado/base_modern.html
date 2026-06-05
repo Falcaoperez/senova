@@ -21,7 +21,7 @@
         .app-container {
             width: 100%;
             min-height: 100vh;
-            background: white;
+            background: #f3f4f6;
             overflow: hidden;
         }
 
@@ -45,7 +45,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 0.5rem;
+            padding: 0.25rem;
+        }
+
+        .logo-img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            border-radius: 8px;
         }
 
         .logo-text {
@@ -53,11 +60,21 @@
             font-size: 0.75rem;
             color: #6b7280;
             letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .admin-footer {
+            padding: 1.5rem 2rem;
+            background: #f3f4f6;
+            color: #4b5563;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 0.02em;
         }
 
         .app-title {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 2rem;
+            font-weight: 700;
             color: #374151;
         }
 
@@ -67,45 +84,81 @@
             gap: 1rem;
         }
 
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
         .user-avatar {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(255, 255, 255, 0.18);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
+            font-weight: 700;
             color: white;
-            font-size: 1.125rem;
+            font-size: 1rem;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
         }
 
         .user-info {
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .user-name {
-            font-weight: 600;
-            color: #374151;
+            font-weight: 700;
+            color: white;
             font-size: 0.95rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
-        .logout-link {
-            font-size: 0.875rem;
-            color: #6b7280;
+        .user-role {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .logout-form {
+            display: inline-block;
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: #2563eb;
+            color: white;
+            padding: 0.65rem 0.9rem;
+            border-radius: 999px;
+            box-shadow: 0 14px 35px rgba(37, 99, 235, 0.12);
+            border: none;
+            cursor: pointer;
             text-decoration: none;
-            transition: color 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            min-width: 220px;
+            max-width: 320px;
         }
 
-        .logout-link:hover {
-            color: #374151;
+        .logout-card {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logout-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 45px rgba(37, 99, 235, 0.16);
+            background: #1e40af;
+        }
+
+        .logout-card:hover .logout-hint {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .logout-card:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
         }
 
         .power-icon {
@@ -120,6 +173,135 @@
             color: #374151;
         }
 
+        .hero-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.1);
+            margin-bottom: 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .hero-card h2 {
+            font-size: 2.3rem;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+
+        .hero-card p {
+            color: #4b5563;
+            line-height: 1.9;
+            max-width: 760px;
+            font-size: 1rem;
+        }
+
+        .hero-badge {
+            background: #6b8e6b;
+            color: white;
+            padding: 0.85rem 1.2rem;
+            border-radius: 999px;
+            font-weight: 700;
+            box-shadow: 0 14px 32px rgba(107, 142, 107, 0.18);
+            white-space: nowrap;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 24px 55px rgba(15, 23, 42, 0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: inherit;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        }
+
+        .stat-card .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: inherit;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        }
+
+        .stat-card small {
+            color: inherit;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            border-radius: 18px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.04);
+            text-decoration: none;
+            color: #111827;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08);
+        }
+
+        .action-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .action-card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .action-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .action-card-text {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
         /* Layout */
         .app-layout {
             display: flex;
@@ -128,10 +310,14 @@
 
         /* Sidebar */
         .sidebar {
-            width: 260px;
+            width: 300px;
             background: linear-gradient(135deg, #d4e5d4 0%, #c8ddc8 100%);
-            padding: 1.5rem 0;
+            padding: 2rem 0;
             min-height: calc(100vh - 80px);
+            position: sticky;
+            top: 80px;
+            align-self: flex-start;
+            overflow-y: auto;
         }
 
         .sidebar-nav {
@@ -142,18 +328,19 @@
         .sidebar-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
+            gap: 1rem;
+            padding: 1.2rem 1.75rem;
             color: #374151;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 1.05rem;
             transition: all 0.2s;
             border-left: 4px solid transparent;
             position: relative;
         }
 
         .sidebar-item:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.35);
         }
 
         .sidebar-item.active {
@@ -171,12 +358,12 @@
             width: 0;
             height: 0;
             border-style: solid;
-            border-width: 12px 12px 12px 0;
+            border-width: 14px 14px 14px 0;
             border-color: transparent white transparent transparent;
         }
 
         .sidebar-icon {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
         }
 
         .sidebar-notifications {
@@ -464,35 +651,22 @@
         <!-- Header -->
         <header class="app-header">
             <div class="header-left">
-                <a href="{% url 'role_instructor' %}" class="back-arrow" title="Volver al Panel de Instructor" style="text-decoration: none; font-size: 1.5rem; margin-right: 1rem; color: #6b8e6b; display: flex; align-items: center;">←</a>
                 <div class="logo-container">
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                        <rect width="40" height="40" rx="8" fill="#6b8e6b"/>
-                        <text x="20" y="27" font-size="20" font-weight="bold" text-anchor="middle" fill="white">S</text>
-                    </svg>
-                    <span class="logo-text">SENA</span>
+                    <img src="{% static 'img/sena-logo-50.webp' %}" alt="SENA" class="logo-img" />
                 </div>
                 <h1 class="app-title">{% block page_title %}Panel de Administrador de Usuarios{% endblock %}</h1>
             </div>
             <div class="header-right">
-                <div class="user-profile">
-                    <div class="user-avatar">{{ request.user.username|slice:":2"|upper }}</div>
-                    <div class="user-info">
-                        <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-                        <form method="post" action="{% url 'logout' %}" style="display:inline">
-                            {% csrf_token %}
-                            <button type="submit" class="logout-link" style="background:none; border:none; padding:0; font:inherit; cursor:pointer; text-align:left;">Cerrar sesión</button>
-                        </form>
-                    </div>
-                    <form method="post" action="{% url 'logout' %}" style="display:flex; align-items:center;">
-                        {% csrf_token %}
-                        <button type="submit" style="background:none; border:none; padding:0; cursor:pointer; color:#6b7280;">
-                            <svg class="power-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px; height:24px;">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/>
-                            </svg>
-                        </button>
-                    </form>
-                </div>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="user-card logout-card">
+                        <div class="user-avatar">{{ request.user.username|slice:":2"|upper }}</div>
+                        <div class="user-info">
+                            <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                            <span class="user-role">Administrador del Sistema</span>
+                        </div>
+                    </button>
+                </form>
             </div>
         </header>
 
@@ -520,8 +694,9 @@
             <main class="main-content">
                 {% block content %}{% endblock %}
             </main>
-        </div>
-    </div>
+        </div>        <footer class="admin-footer">
+            <div class="footer-copy">@SENA - Servicio Nacional de Aprendizaje</div>
+        </footer>    </div>
 
     {% block extra_js %}{% endblock %}
 </body>

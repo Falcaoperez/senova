@@ -377,6 +377,16 @@ body.login-body {
     padding: 0.75rem 0.75rem;
   }
   
+  .input-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
   .input-row .input-icon.left,
   .input-row .toggle-password.left {
     width: 42px;
