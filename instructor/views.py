@@ -10,7 +10,7 @@ from django.db import transaction, IntegrityError
 logger = logging.getLogger(__name__)
 
 
-RUTAS_ROLES = {
+ROLE_ROUTES = {
     'instructor': 'role_instructor',
     'investigador': 'role_investigador',
     'dinamizador': 'role_dinamizador',
@@ -48,12 +48,12 @@ def _validar_contraseña(contraseña1, contraseña2=None):
 
 def login_view(request):
 	rol = request.GET.get('role') or request.POST.get('role') or ''
-	if rol not in RUTAS_ROLES:
+	if rol not in ROLE_ROUTES:
 		rol = ''
 
-	mensaje_exito = None
+	success_msg = None
 	if request.method == 'GET' and request.GET.get('created'):
-		mensaje_exito = 'Cuenta creada correctamente. Por favor inicia sesión.'
+		success_msg = 'Cuenta creada correctamente. Por favor inicia sesión.'
 
 	if request.method == 'POST':
 		entrada_usuario = (request.POST.get('username', '') or '').strip()
@@ -87,8 +87,8 @@ def login_view(request):
 				return redirect('role_instructor')
 
 			# 3. Si el rol viene por URL/POST y coincide con un grupo del usuario -> Redirigir a ese rol
-			if rol and rol in RUTAS_ROLES and rol in grupos_usuario:
-				return redirect(RUTAS_ROLES[rol])
+			if rol and rol in ROLE_ROUTES and rol in grupos_usuario:
+				return redirect(ROLE_ROUTES[rol])
 
 			# 4. Redirección por defecto basada en grupos prioritarios
 			if 'investigador' in grupos_usuario: return redirect('role_investigador')
@@ -105,8 +105,8 @@ def login_view(request):
 		})
 
 	context = {'role': rol}
-	if mensaje_exito:
-		context['success'] = mensaje_exito
+	if success_msg:
+		context['success'] = success_msg
 	return render(request, 'login.html', context)
 
 

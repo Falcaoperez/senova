@@ -349,7 +349,7 @@ def evidencias_list(request):
     aprobadas_30d = consulta.filter(aprobada=True, fecha_envio__gte=hace_30).count()
     aprobadas_prev_30d = consulta.filter(aprobada=True, fecha_envio__gte=hace_60, fecha_envio__lt=hace_30).count()
 
-    def cambio_porcentaje(current, previous):
+    def pct_change(current, previous):
         try:
             if previous == 0:
                 return None if current == 0 else 100.0
@@ -357,9 +357,9 @@ def evidencias_list(request):
         except Exception:
             return None
 
-    pct_nuevas = cambio_porcentaje(nuevas_30d, nuevas_prev_30d)
-    pct_aprobadas = cambio_porcentaje(aprobadas_30d, aprobadas_prev_30d)
-    pct_total = cambio_porcentaje(nuevas_30d, nuevas_prev_30d)
+    pct_nuevas = pct_change(nuevas_30d, nuevas_prev_30d)
+    pct_aprobadas = pct_change(aprobadas_30d, aprobadas_prev_30d)
+    pct_total = pct_change(nuevas_30d, nuevas_prev_30d)
     pct_nuevas_abs = abs(pct_nuevas) if pct_nuevas is not None else None
     pct_aprobadas_abs = abs(pct_aprobadas) if pct_aprobadas is not None else None
     pct_total_abs = abs(pct_total) if pct_total is not None else None
@@ -449,7 +449,7 @@ def evidencias_list(request):
     return render(request, 'evidencias_list.html', context)
 
 
-def tabla_instructor(request):
+def instructor_table(request):
     return render(request, 'instructor_table.html')
 
 
