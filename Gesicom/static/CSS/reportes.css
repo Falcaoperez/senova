@@ -364,3 +364,21 @@ main {
     header { padding: 0 1rem; }
     header nav a:not(.active) { display: none; }
 }
+
+/* Overrides responsivos conservadores: no destructivos */
+@media (max-width: 992px) {
+    .main, main { padding-left: 1rem; padding-right: 1rem; }
+    .stats-grid { gap: 1rem; }
+}
+
+@media (max-width: 768px) {
+    .filtros-form { padding: .9rem; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-container { height: 200px; }
+    .btn-filtrar, .btn-limpiar { width: 100%; }
+}
+
+@media (max-width: 480px) {
+    .page-title { font-size: 1.2rem; }
+    .stat-value { font-size: 1.4rem; }
+}

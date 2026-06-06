@@ -6,9 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crear cuenta · Usuarios</title>
   <link rel="stylesheet" href="{% static 'instructor/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+  <link rel="stylesheet" href="{% static 'css/modules/instructor-responsive.css' %}">
   <style>
-    html { height: 100%; }
-    body.login-body { min-height: 100vh; }
+    html { min-height: 100%; }
+    body.login-body { min-height: 100vh; width: 100%; }
   </style>
 </head>
 <body class="login-body">
@@ -62,14 +64,14 @@
       <div class="password-field">
         <label for="password1">Contraseña</label>
         <div class="input-row">
-          <input id="password1" name="password1" type="password" class="input password-with-icon" placeholder="8 caracteres, 1 mayúscula y número o especial" required />
+          <input id="password1" name="password1" type="password" class="input password-with-icon" placeholder="mínimo 8 caracteres" required />
         </div>
       </div>
 
       <div class="password-field">
         <label for="password2">Confirmar contraseña</label>
         <div class="input-row">
-          <input id="password2" name="password2" type="password" class="input password-with-icon" placeholder="Repite la contraseña" required />
+          <input id="password2" name="password2" type="password" class="input password-with-icon" placeholder="repetir contraseña" required />
         </div>
       </div>
 
@@ -80,7 +82,7 @@
     </form>
   </main>
   <footer class="auth-footer" role="contentinfo">
-    <div class="footer-copy">© SENA 2025 - Servicio Nacional de Aprendizaje</div>
+    <div class="footer-copy">@SENA - Servicio Nacional de Aprendizaje</div>
   </footer>
 </body>
 </html>

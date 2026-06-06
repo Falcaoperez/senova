@@ -2,90 +2,217 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GESICOM - Panel del Instructor</title>
-    <link rel="stylesheet" href="{% static 'instructor/panel_instructor.css' %}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GESICOM · Panel del Instructor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link rel="stylesheet" href="{% static 'instructor/panel_instructor.css' %}" />
 </head>
 <body>
 
-<header>
-    <div>
-        <h1>GESICOM</h1>
-        <small>Panel del Instructor</small>
-    </div>
+<div class="panel-root">
 
-    <nav>
-        <a href="{% url 'home' %}">Inicio</a>
-        <a href="{% url 'evidencia' %}">Enviar evidencia</a>
-        <a href="{% url 'evidencias_list' %}">Mis evidencias</a>
-        <a href="#perfil">Perfil</a>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-name">GESICOM</span>
+      <div class="brand-sep"></div>
+      <span class="brand-sub">SENA · Sistema de Gestión</span>
+    </div>
+    <div class="topbar-right">
+      <button class="notif-btn" aria-label="Notificaciones">
+        <i class="ti ti-bell"></i>
+        <span class="notif-dot"></span>
+      </button>
+      <div class="topbar-user">
+        <span class="topbar-user-name">{{ user.first_name|default:user.username }}</span>
+        <span class="topbar-user-role">Instructor</span>
+      </div>
+      <div class="topbar-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar" aria-label="Navegación principal">
+      <div class="sidebar-section-label">Principal</div>
+      <a class="nav-item active" href="{% url 'home' %}">
+        <i class="ti ti-layout-dashboard"></i> Panel
+      </a>
+
+      <div class="sidebar-section-label">Evidencias</div>
+      <a class="nav-item" href="{% url 'evidencia' %}">
+        <i class="ti ti-upload"></i> Enviar evidencia
+      </a>
+      <a class="nav-item" href="{% url 'evidencias_list' %}">
+        <i class="ti ti-files"></i> Mis evidencias
+      </a>
+
+      <div class="sidebar-section-label">Reportes</div>
+      <a class="nav-item" href="{% url 'reportes' %}">
+        <i class="ti ti-chart-bar"></i> Ver reportes
+      </a>
+
+      <div class="sidebar-section-label">Cuenta</div>
+      <a class="nav-item" href="{% url 'editar_perfil' %}">
+        <i class="ti ti-user-circle"></i> Editar perfil
+      </a>
+      <a class="nav-item" href="{% url 'logout' %}">
+        <i class="ti ti-logout"></i> Cerrar sesión
+      </a>
     </nav>
 
-    <div class="user-menu-container">
-        <div class="user-menu-toggle">
-            <img src="{% static 'instructor/usuario.png' %}" alt="Avatar" class="avatar">
-            <span>{{ user.first_name|default:user.username }}</span>
-            <ul class="user-dropdown">
-                <li><a href="#perfil">Perfil</a></li>
-                <li><a href="#configuracion">Configuración</a></li>
-                <li>
-                    <form method="post" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button type="submit">Cerrar sesión</button>
-                    </form>
-                </li>
-            </ul>
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <div class="page-title-group">
+          <div class="breadcrumb">
+            <i class="ti ti-home"></i>
+            Inicio · Panel
+          </div>
+          <h1 class="page-title">Panel del Instructor</h1>
         </div>
-    </div>
-</header>
+      </div>
 
-<main>
-
-    <section class="breadcrumb">
-        <button class="btn-inicio">inicio</button>
-        <h2>Panel del Instructor</h2>
-    </section>
-
-    <section class="welcome-section">
-        <div>
-            <img src="{% static 'instructor/usuario.png' %}" alt="avatar" class="welcome-avatar">
+      <!-- WELCOME CARD -->
+      <div class="welcome-card">
+        <div class="welcome-left">
+          <p class="welcome-greeting">Bienvenido de vuelta,</p>
+          <h2 class="welcome-name">{{ user.first_name|default:user.username }}</h2>
+          <p class="welcome-desc">Panel del Instructor · SENA Colombia</p>
         </div>
-        <div>
-            <h2>Bienvenido, {{ user.first_name|default:user.username }}</h2>
-            <p>Bienvenido al panel del Instructor</p>
+        <div class="welcome-badge">
+          <i class="ti ti-shield-check"></i>
+          Sesión activa
         </div>
-    </section>
+      </div>
 
-    <section class="cards-grid">
+      <!-- STATS GRID -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon-row">
+            <div class="stat-icon green"><i class="ti ti-upload"></i></div>
+            <span class="stat-trend up">↑ 12%</span>
+          </div>
+          <div class="stat-value">24</div>
+          <div class="stat-label">Evidencias enviadas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon-row">
+            <div class="stat-icon blue"><i class="ti ti-files"></i></div>
+            <span class="stat-trend up">↑ 5%</span>
+          </div>
+          <div class="stat-value">18</div>
+          <div class="stat-label">Evidencias aprobadas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon-row">
+            <div class="stat-icon amber"><i class="ti ti-clock"></i></div>
+            <span class="stat-trend down">Pendientes</span>
+          </div>
+          <div class="stat-value">6</div>
+          <div class="stat-label">En revisión</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon-row">
+            <div class="stat-icon rose"><i class="ti ti-chart-line"></i></div>
+            <span class="stat-trend up">Activo</span>
+          </div>
+          <div class="stat-value">5</div>
+          <div class="stat-label">Reportes generados</div>
+        </div>
+      </div>
 
-        <div class="card">
-            <h3>Enviar Evidencia</h3>
-            <p>Subir nuevos archivos</p>
-            <button type="button" class="btn-primary" onclick="location.href='{% url 'evidencia' %}'">Enviar</button>
+      <!-- BOTTOM GRID -->
+      <div class="bottom-grid">
+
+        <!-- ACCESOS RÁPIDOS -->
+        <div class="actions-card">
+          <div class="card-title">Accesos rápidos</div>
+          <div class="card-sub">Tus acciones más frecuentes</div>
+
+          <a class="action-item" href="{% url 'evidencia' %}">
+            <div class="action-icon g1"><i class="ti ti-upload"></i></div>
+            <div class="action-text">
+              <div class="action-label">Enviar evidencia</div>
+              <div class="action-hint">Adjunta archivos y documentos</div>
+            </div>
+            <i class="ti ti-arrow-right action-arrow"></i>
+          </a>
+
+          <a class="action-item" href="{% url 'evidencias_list' %}">
+            <div class="action-icon g2"><i class="ti ti-files"></i></div>
+            <div class="action-text">
+              <div class="action-label">Mis evidencias</div>
+              <div class="action-hint">Revisa el estado de tus envíos</div>
+            </div>
+            <i class="ti ti-arrow-right action-arrow"></i>
+          </a>
+
+          <a class="action-item" href="{% url 'reportes' %}">
+            <div class="action-icon g3"><i class="ti ti-chart-bar"></i></div>
+            <div class="action-text">
+              <div class="action-label">Ver reportes</div>
+              <div class="action-hint">Analiza tu desempeño</div>
+            </div>
+            <i class="ti ti-arrow-right action-arrow"></i>
+          </a>
+
+          <a class="action-item" href="{% url 'editar_perfil' %}">
+            <div class="action-icon g4"><i class="ti ti-user-circle"></i></div>
+            <div class="action-text">
+              <div class="action-label">Editar perfil</div>
+              <div class="action-hint">Actualiza tu información</div>
+            </div>
+            <i class="ti ti-arrow-right action-arrow"></i>
+          </a>
         </div>
 
-        <div class="card">
-            <h3>Evidencias</h3>
-            <p>Ver evidencias</p>
-            <button type="button" class="btn-secondary" onclick="location.href='{% url 'evidencias_list' %}'">Ver estado</button>
+        <!-- ACTIVIDAD RECIENTE -->
+        <div class="activity-card">
+          <div class="card-title">Actividad reciente</div>
+          <div class="card-sub">Últimas acciones registradas</div>
+
+          <div class="activity-item">
+            <span class="activity-dot green"></span>
+            <div>
+              <div class="activity-text"><strong>Evidencia enviada</strong> — Informe de competencias técnicas</div>
+              <div class="activity-time">Hace 2 horas</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <span class="activity-dot blue"></span>
+            <div>
+              <div class="activity-text"><strong>Evidencia aprobada</strong> — Plan de formación Q2</div>
+              <div class="activity-time">Ayer, 3:45 p.m.</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <span class="activity-dot amber"></span>
+            <div>
+              <div class="activity-text"><strong>En revisión</strong> — Registro de asistencia junio</div>
+              <div class="activity-time">Hace 3 días</div>
+            </div>
+          </div>
         </div>
 
-        <div class="card">
-            <h3>Perfil</h3>
-            <p>Editar información</p>
-            <button type="button" class="btn-secondary" onclick="location.href='{% url 'editar_perfil' %}'">Editar Perfil</button>
-        </div>
+      </div>
+    </main>
+  </div>
 
-        <div class="card">
-            <h3>Reportes</h3>
-            <p>Ver estadísticas</p>
-            <button type="button" class="btn-warning" onclick="location.href='{% url 'reportes' %}'">Ver Reportes</button>
-        </div>
+  <!-- FOOTER -->
+  <footer class="sena-footer">
+    <span class="sena-footer-text">© 2025 <span>SENA Colombia</span> · GESICOM v1.0</span>
+    <span class="sena-footer-text">Todos los derechos reservados</span>
+  </footer>
 
-    </section>
-
-</main>
+</div>
 
 </body>
 </html>

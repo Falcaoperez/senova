@@ -7,11 +7,16 @@ User = get_user_model()
 
 
 class PasswordResetToken(models.Model):
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='password_reset_tokens',
+        db_column='user_id'
+    )
     token = models.CharField(max_length=255, unique=True, db_index=True)
-    creado_en = models.DateTimeField(auto_now_add=True)
-    expira_en = models.DateTimeField(db_index=True)
-    utilizado = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True, db_column='created_at')
+    expira_en = models.DateTimeField(db_index=True, db_column='expires_at')
+    utilizado = models.BooleanField(default=False, db_column='used')
     
     class Meta:
         verbose_name = "Token de Restablecimiento"
