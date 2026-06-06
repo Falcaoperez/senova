@@ -136,3 +136,14 @@ main {
     .welcome-title { font-size: 1.6rem; }
     header { padding: 0 1rem; }
 }
+
+/* Overrides responsivos conservadores */
+@media (max-width: 768px) {
+    .user-profile { display: flex; flex-direction: column; gap: .5rem; }
+    .user-actions { display: flex; flex-direction: column; gap: .5rem; }
+}
+
+@media (max-width: 480px) {
+    .user-name { font-size: 1rem; }
+    .avatar { width: 64px; height: 64px; }
+}

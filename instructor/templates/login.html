@@ -7,11 +7,12 @@
   <title>Iniciar sesión · Usuarios</title>
   {% load static %}
   <link rel="stylesheet" href="{% static 'instructor/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+  <link rel="stylesheet" href="{% static 'css/modules/instructor-responsive.css' %}">
   <style>
-    html { height: 100%; overflow: hidden; }
+    html { min-height: 100%; overflow-x: hidden; }
     body.login-body { 
-      height: 100vh; 
-      overflow: hidden;
+      min-height: 100vh;
       width: 100%;
     }
   </style>
