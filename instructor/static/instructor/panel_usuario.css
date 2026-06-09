@@ -1,0 +1,33 @@
+/* Archivo creado para evitar 404: reglas conservadoras para panel_usuario */
+
+/* Reusa variables y aseguramos contenedores fluidos */
+body, .admin-main, .panel { box-sizing: border-box; }
+
+.container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.container, .cards-grid, .welcome-section { max-width: 100%; }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.welcome-section {
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+}
+
+.btn-primary, .btn-secondary { width: auto; }
+
+@media (max-width: 768px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .welcome-section { flex-direction: column; gap: .6rem; padding: 1rem; }
+  .btn-primary, .btn-secondary { width: 100%; }
+}
