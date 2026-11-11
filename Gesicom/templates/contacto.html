@@ -1,0 +1,39 @@
+{% extends "page_base.html" %}
+{% load ui %}
+{% block title %}Orientación · GESICOM SENA{% endblock %}
+{% block page_content %}
+  <div class="info-hero">
+    <p class="eyebrow">GESICOM / ORIENTACIÓN</p>
+    <h1>
+      Trabajamos mejor
+      <br>
+      cuando estamos conectados.
+    </h1>
+    <p>Para solicitar acceso, actualizar tu rol o resolver una consulta sobre tus evidencias, acude al administrador de tu centro.</p>
+  </div>
+  <div class="panel">
+    <h2>Prepara tu consulta</h2>
+    <div class="guide-step">
+      <span>1</span>
+      <div>
+        <strong>Identifica el proyecto</strong>
+        <p>Indica el proyecto y el nombre de la evidencia, si corresponde.</p>
+      </div>
+    </div>
+    <div class="guide-step">
+      <span>2</span>
+      <div>
+        <strong>Describe lo que necesitas</strong>
+        <p>Explica los pasos que realizaste y el resultado que obtuviste.</p>
+      </div>
+    </div>
+    <div class="guide-step">
+      <span>3</span>
+      <div>
+        <strong>Cuida tus datos</strong>
+        <p>No incluyas contraseñas ni códigos de recuperación en tu solicitud.</p>
+      </div>
+    </div>
+    <a class="button button-primary" href="{% url 'ayuda' %}">Consultar preguntas frecuentes {% icon 'arrow' %}</a>
+  </div>
+{% endblock %}

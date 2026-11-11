@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Notificaciones · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / NOTIFICACIONES</p>
+      <h1>Todo lo que necesitas saber.</h1>
+      <p class="page-description">Novedades, revisiones y recordatorios para mantener tu trabajo al día.</p>
+    </div>
+    <form method="post" action="{% url 'notificaciones:marcar_todas' %}">
+      {% csrf_token %}
+      <button class="button button-secondary" type="submit">{% icon 'check' %} Marcar todas como leídas</button>
+    </form>
+  </div>
+  <div class="form-layout">
+    <section class="panel">
+      <div class="table-toolbar">
+        <h2>Tu bandeja</h2>
+        <div class="heading-actions">
+          <a class="text-link" href="{% url 'notificaciones:bandeja' %}">Todas</a>
+          <a class="text-link" href="?estado=pendiente">Sin leer</a>
+        </div>
+      </div>
+      {% for aviso in avisos %}
+        <article class="notice-item {% if not aviso.leida_en %}notice-unread{% endif %}">
+          <span class="notice-icon">
+            {% if aviso.tipo == "vencimiento" %}
+              {% icon 'clock' %}
+            {% elif aviso.tipo == "evidencia" %}
+              {% icon 'file' %}
+            {% else %}
+              {% icon 'bell' %}
+            {% endif %}
+          </span>
+          <div>
+            <div class="notice-heading">
+              <h3>{{ aviso.titulo }}</h3>
+              {% if not aviso.leida_en %}
+                <span class="badge badge-success">Nueva</span>
+              {% endif %}
+            </div>
+            <small>{{ aviso.creada_en|date:'d M Y · H:i' }} · {{ aviso.get_tipo_display }}</small>
+            <p>{{ aviso.mensaje|linebreaksbr }}</p>
+            <form method="post" action="{% url 'notificaciones:abrir' aviso.pk %}">
+              {% csrf_token %}
+              <button class="button button-secondary button-sm" type="submit">Consultar {% icon 'arrow' %}</button>
+            </form>
+          </div>
+        </article>
+      {% empty %}
+        <div class="empty-state">
+          <span class="empty-symbol">{% icon 'bell' %}</span>
+          <h3>Estás al día.</h3>
+          <p>Aquí aparecerán las novedades y los avisos de tus reportes.</p>
+        </div>
+      {% endfor %}
+      {% include "notificaciones/paginacion.html" with pagina=avisos %}
+    </section>
+    <aside class="panel preferences-card">
+      <p class="eyebrow">A TU MANERA</p>
+      <h2>Preferencias de correo</h2>
+      <p class="page-description">Elige qué avisos quieres recibir por correo. Siempre estarán disponibles en esta bandeja.</p>
+      <form method="post" action="{% url 'notificaciones:preferencias' %}">
+        {% csrf_token %}
+        {% for field in preferencias_form %}
+          <label class="check-label">{{ field }} {{ field.label }}</label>
+        {% endfor %}
+        <button class="button button-primary button-block" type="submit">Guardar preferencias</button>
+      </form>
+    </aside>
+  </div>
+{% endblock %}

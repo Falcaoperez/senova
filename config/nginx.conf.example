@@ -1,0 +1,18 @@
+# Instalar detrás de HTTPS; cambiar el dominio y los certificados del despliegue.
+server {
+    listen 443 ssl;
+    server_name gesicom.example.com;
+    ssl_certificate /etc/letsencrypt/live/gesicom.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gesicom.example.com/privkey.pem;
+    client_max_body_size 12m;
+    location /static/ { alias /srv/gesicom/staticfiles/; expires 7d; }
+    # Los archivos privados pasan siempre por las vistas autenticadas de Django.
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+server { listen 80; server_name gesicom.example.com; return 301 https://$host$request_uri; }

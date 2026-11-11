@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}404 · GESICOM SENA{% endblock %}
+{% block content %}
+  <section class="panel empty-state">
+    <span class="empty-symbol">{% icon 'info' %}</span>
+    <p class="eyebrow">GESICOM / 404</p>
+    <h1>No encontramos este espacio.</h1>
+    <p style="margin-top:18px">El enlace puede haber cambiado. Puedes volver a tu espacio o consultar el centro de ayuda.</p>
+    <a class="button button-primary" href="{% url 'home' %}">Volver al inicio {% icon 'arrow' %}</a>
+  </section>
+{% endblock %}

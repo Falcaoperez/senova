@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Mi espacio · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / MI ESPACIO</p>
+      <h1>Tu trabajo construye conocimiento.</h1>
+      <p class="page-description">Hola, {{ user.first_name|default:user.username }}. Este es el resumen de tus actividades.</p>
+    </div>
+    <a class="button button-primary" href="{% url 'evidencia' %}">{% icon 'plus' %} Nueva evidencia</a>
+  </div>
+  <section class="welcome-banner">
+    <div>
+      <span class="overline">INVESTIGACIÓN · INNOVACIÓN · FORMACIÓN</span>
+      <h2>
+        De las ideas
+        <br>
+        a las evidencias.
+      </h2>
+      <p>Organiza tus aportes y acompaña el avance de los proyectos SENNOVA.</p>
+      <a href="{% url 'evidencias_list' %}" class="banner-link">Explorar evidencias {% icon 'arrow' %}</a>
+    </div>
+    <div class="banner-graphic" aria-hidden="true">
+      <div class="graphic-orbit orbit-one"></div>
+      <div class="graphic-orbit orbit-two"></div>
+      <div class="graphic-sheet">
+        {% icon 'file' %}
+        <span></span>
+        <span></span>
+        <span></span>
+        <b>
+          {% icon 'check' %}
+        </b>
+      </div>
+      <span class="graphic-spark spark-one">+</span>
+      <span class="graphic-spark spark-two">+</span>
+      <span class="graphic-caption">El conocimiento nos conecta.</span>
+    </div>
+  </section>
+  {% include "ui/stats.html" %}
+  <div class="dashboard-grid">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">SEGUIMIENTO</p>
+          <h2>Actividad reciente</h2>
+        </div>
+        <a class="text-link" href="{% url 'evidencias_list' %}">Ver todas {% icon 'arrow' %}</a>
+      </div>
+      {% if recientes %}
+        <div class="recent-list">
+          {% for envio in recientes %}
+            <a class="recent-item" href="{% url 'ver_evidencia' envio.pk %}">
+              <span class="document-icon">{% icon 'file' %}</span>
+              <span class="recent-info">
+                <strong>{{ envio.nombre|default:'Evidencia' }}</strong>
+                <small>{{ envio.proyecto }} <span>·</span> {{ envio.fecha_envio|date:'d M Y' }}</small>
+              </span>
+              {% include "ui/status.html" %}
+              <span class="recent-arrow">{% icon 'arrow' %}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <span class="empty-symbol">{% icon 'folder' %}</span>
+          <h3>Tu próxima idea empieza aquí</h3>
+          <p>Aún no hay evidencias en este espacio. Registra tu primer aporte.</p>
+          <a class="button button-secondary" href="{% url 'evidencia' %}">Enviar mi primera evidencia {% icon 'arrow' %}
+          </a>
+        </div>
+      {% endif %}
+    </section>
+    <aside class="panel quick-panel">
+      <p class="eyebrow">A UN CLIC</p>
+      <h2>Accesos rápidos</h2>
+      <a class="quick-link" href="{% url 'evidencia' %}">
+        <span class="quick-icon">{% icon 'upload' %}</span>
+        <span>
+          <strong>Enviar evidencia</strong>
+          <small>Comparte un nuevo aporte</small>
+        </span>
+        {% icon 'arrow' %}
+      </a>
+      <a class="quick-link" href="{% url 'reportes' %}">
+        <span class="quick-icon">{% icon 'chart' %}</span>
+        <span>
+          <strong>Consultar reportes</strong>
+          <small>Visualiza tus resultados</small>
+        </span>
+        {% icon 'arrow' %}
+      </a>
+      <a class="quick-link" href="{% url 'editar_perfil' %}">
+        <span class="quick-icon">{% icon 'user' %}</span>
+        <span>
+          <strong>Mi perfil</strong>
+          <small>Mantén tus datos al día</small>
+        </span>
+        {% icon 'arrow' %}
+      </a>
+      <div class="help-card">
+        {% icon 'help' %}
+        <h3>Te acompañamos</h3>
+        <p>Encuentra los pasos para enviar y consultar tus evidencias.</p>
+        <a href="{% url 'ayuda' %}">Ir al centro de ayuda {% icon 'arrow' %}</a>
+      </div>
+    </aside>
+  </div>
+  <section class="panel" style="margin-top:24px">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">ENTREGAS DEL EQUIPO</p>
+        <h2>Tus próximos plazos</h2>
+      </div>
+      <a class="text-link" href="{% url 'notificaciones:mis_plazos' %}">Ver todos {% icon 'arrow' %}</a>
+    </div>
+    <div class="deadline-list">
+      {% for plazo in proximos_plazos %}
+        <article class="deadline-card">
+          <strong>{{ plazo.titulo }}</strong>
+          <small>{{ plazo.proyecto|default:'Todos los proyectos' }} · {{ plazo.fecha_limite|date:'d M Y · H:i' }}</small>
+          <a class="button button-secondary button-sm"
+             href="{% url 'evidencia' %}?plazo={{ plazo.pk }}">Enviar reporte {% icon 'arrow' %}</a>
+        </article>
+      {% empty %}
+        <p class="password-help">No tienes entregas pendientes asignadas.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

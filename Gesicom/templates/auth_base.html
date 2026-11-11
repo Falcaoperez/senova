@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static ui %}
+{% block body_class %}auth-body{% endblock %}
+{% block layout %}
+  <div class="auth-layout">
+    <aside class="auth-story">
+      <a href="{% url 'home' %}" class="brand">
+        <img src="{% static 'img/brand/sena.svg' %}"
+             alt="SENA"
+             width="56"
+             height="56">
+        <span class="brand-divider"></span>
+        <span>
+          <strong>GESICOM</strong>
+          <small>Investigación y competencias</small>
+        </span>
+      </a>
+      <div class="auth-story-content">
+        <span class="overline">CONOCIMIENTO QUE TRANSFORMA</span>
+        <h1>
+          Las grandes ideas
+          <br>
+          merecen un
+          <br>
+          <em>gran futuro.</em>
+        </h1>
+        <p>Un espacio para conectar la investigación, las competencias y los proyectos que nos hacen avanzar.</p>
+        <div class="auth-benefits">
+          <span>{% icon 'folder' %} Tus evidencias, organizadas en un solo lugar.</span>
+          <span>{% icon 'chart' %} Información para acompañar cada proyecto.</span>
+          <span>{% icon 'shield' %} Un espacio de trabajo para cada rol.</span>
+        </div>
+      </div>
+      <div class="auth-story-footer">
+        <strong>SENA · SENNOVA</strong>
+        <span>Servicio Nacional de Aprendizaje</span>
+      </div>
+    </aside>
+    <main id="main-content" class="auth-main" tabindex="-1">
+      <div class="auth-top-link">
+        {% block auth_top %}¿Necesitas orientación? <a href="{% url 'ayuda' %}">Centro de ayuda {% icon 'arrow' %}</a>
+        {% endblock %}
+      </div>
+      <div class="auth-form-wrap">
+        <a class="brand auth-logo-mobile" href="{% url 'home' %}">
+          <img src="{% static 'img/brand/sena.svg' %}"
+               alt="SENA"
+               width="66"
+               height="66">
+          <span class="brand-divider"></span>
+          <strong>GESICOM</strong>
+        </a>
+        {% block auth_content %}{% endblock %}
+        <div class="auth-bottom">{% icon 'shield' %} GESICOM · Servicio Nacional de Aprendizaje</div>
+      </div>
+    </main>
+  </div>
+{% endblock %}

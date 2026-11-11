@@ -1,87 +1,67 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GESICOM - Inicio</title>
-    <link rel="stylesheet" href="{% static 'instructor/panel_instructor.css' %}">
-    <link rel="stylesheet" href="{% static 'instructor/panel_usuario.css' %}">
-    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
-    <link rel="stylesheet" href="{% static 'css/modules/instructor-responsive.css' %}">
-    <!-- Reutilizamos estilos existentes para mantener coherencia y responsividad -->
-</head>
-<body>
-
-<header>
+{% extends "page_base.html" %}
+{% load ui %}
+{% block title %}GESICOM · Investigación que transforma{% endblock %}
+{% block page_content %}
+  <div class="info-hero">
+    <p class="eyebrow">SENA / SENNOVA / GESICOM</p>
+    <h1>
+      El conocimiento crece
+      <br>
+      cuando lo compartimos.
+    </h1>
+    <p>Conectamos los aportes de nuestra comunidad con los proyectos de investigación y desarrollo. Un espacio para registrar, acompañar y reconocer lo que hacemos.</p>
+    <div class="heading-actions" style="margin-top:28px">
+      {% if user.is_authenticated %}
+        <a class="button button-primary" href="{{ ui_panel_url }}">Ir a mi espacio {% icon 'arrow' %}</a>
+      {% else %}
+        <a class="button button-primary" href="{% url 'login' %}">Ingresar a GESICOM {% icon 'arrow' %}</a>
+      {% endif %}
+      <a class="button button-secondary" href="{% url 'nosotros' %}">Conoce el sistema</a>
+    </div>
+  </div>
+  <section class="welcome-banner">
     <div>
-        <h1>GESICOM</h1>
-        <small>Panel del instructor</small>
+      <span class="overline">INVESTIGACIÓN · INNOVACIÓN · FORMACIÓN</span>
+      <h2>
+        Cada evidencia
+        <br>
+        es un paso adelante.
+      </h2>
+      <p>Documentamos el trabajo que impulsa el desarrollo y las competencias de nuestra comunidad.</p>
+      <a href="{% url 'ayuda' %}" class="banner-link">Descubre cómo empezar {% icon 'arrow' %}</a>
     </div>
-
- 
-
-    <div class="user-menu-container">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <div class="user-menu-toggle" style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: 600; color: #2a5c1a;">{{ user.get_full_name|default:user.username }}</span>
-            </div>
-            <form method="post" action="{% url 'logout' %}" style="display:inline">
-                {% csrf_token %}
-                <button type="submit" style="background: #ff6b6b; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;">Cerrar sesión</button>
-            </form>
-        </div>
+    <div class="banner-graphic" aria-hidden="true">
+      <div class="graphic-orbit orbit-one"></div>
+      <div class="graphic-orbit orbit-two"></div>
+      <div class="graphic-sheet">
+        {% icon 'file' %}
+        <span></span>
+        <span></span>
+        <span></span>
+        <b>
+          {% icon 'check' %}
+        </b>
+      </div>
     </div>
-</header>
-
-<main>
-
-    <section class="breadcrumb">
-        <button class="btn-inicio">inicio</button>
-        <h2>Panel del Instructor</h2>
-    </section>
-
-    <section class="welcome-section">
-        <div>
-            <img src="{% static 'img/instructor.png' %}" alt="avatar" class="welcome-avatar">
-        </div>
-        <div>
-            <h2>Bienvenido, {{ user.first_name|default:user.username }}</h2>
-            <p>Resumen general de actividades</p>
-        </div>
-    </section>
-
-    <section class="cards-grid">
-
-        <div class="card">
-            <h3>Enviar Evidencia</h3>
-            <p>Subir nuevos archivos</p>
-              <button type="button" class="btn-primary" onclick="location.href='{% url 'evidencia' %}'">Enviar</button>
-        </div>
-
-        <div class="card">
-            <h3>Evidencias</h3>
-            <p>Ver evidencias</p>
-            <button type="button" class="btn-secondary" onclick="location.href='{% url 'evidencias_list' %}'">Ver estado</button>
-        </div>
-
-        <div class="card">
-            <h3>Perfil</h3>
-            <p>Editar información</p>
-           <button type="button" class="btn-secondary" onclick="location.href='{% url 'editar_perfil' %}'">Editar Perfil</button>
-        </div>
-
-        <div class="card">
-            <h3>Reportes</h3>
-            <p>Ver estadísticas</p>
-            <button class="btn-warning">Ver Reportes</button>
-        </div>
-
-    </section>
-
-    
-
-</main>
-
-</body>
-</html>
+  </section>
+  <div class="info-grid">
+    <article class="panel info-card">
+      {% icon 'upload' %}
+      <h2>Comparte tu aporte</h2>
+      <p>Registra documentos, resultados y enlaces asociados a los proyectos.</p>
+      <a class="text-link" href="{% url 'evidencia' %}">Enviar evidencia {% icon 'arrow' %}</a>
+    </article>
+    <article class="panel info-card">
+      {% icon 'folder' %}
+      <h2>Acompaña el proceso</h2>
+      <p>Consulta el estado de las evidencias y las observaciones de su revisión.</p>
+      <a class="text-link" href="{% url 'evidencias_list' %}">Consultar evidencias {% icon 'arrow' %}</a>
+    </article>
+    <article class="panel info-card">
+      {% icon 'chart' %}
+      <h2>Comprende el avance</h2>
+      <p>Explora reportes por proyecto y período con la información de tus registros.</p>
+      <a class="text-link" href="{% url 'reportes' %}">Explorar reportes {% icon 'arrow' %}</a>
+    </article>
+  </div>
+{% endblock %}

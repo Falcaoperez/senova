@@ -1,0 +1,6 @@
+GESICOM · SENA
+
+Tu PIN para recuperar la contraseña es: {{ pin }}
+
+Caduca en {{ minutos }} minutos y solo puede utilizarse una vez.
+Si no solicitaste este cambio, ignora el mensaje y no compartas el PIN.
