@@ -1,0 +1,36 @@
+# Buzón de PRUEBAS: captura los mensajes; no entrega correos a Internet.
+services:
+  database:
+    ports:
+      - "127.0.0.1:3307:3306"
+  redis:
+    ports:
+      - "127.0.0.1:6380:6379"
+  mailpit:
+    image: axllent/mailpit@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
+    ports:
+      - "127.0.0.1:8025:8025"
+  app:
+    environment:
+      DJANGO_DEBUG: "True"
+      EMAIL_BACKEND: SENNOVA.email_backend.SMTPBackend
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: 1025
+      EMAIL_HOST_USER: ""
+      EMAIL_HOST_PASSWORD: ""
+      EMAIL_OAUTH2_ACCESS_TOKEN: ""
+      EMAIL_USE_TLS: "False"
+      EMAIL_USE_SSL: "False"
+    depends_on:
+      mailpit:
+        condition: service_started
+  worker:
+    environment:
+      EMAIL_BACKEND: SENNOVA.email_backend.SMTPBackend
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: 1025
+      EMAIL_HOST_USER: ""
+      EMAIL_HOST_PASSWORD: ""
+      EMAIL_OAUTH2_ACCESS_TOKEN: ""
+      EMAIL_USE_TLS: "False"
+      EMAIL_USE_SSL: "False"

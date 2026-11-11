@@ -1,4 +1,5 @@
 import re
+
 from django.core.exceptions import ValidationError
 
 
@@ -24,7 +25,7 @@ class ValidadorContraseñaOchoCarActualMayusNumEspecial:
             raise ValidationError("Debes ingresar por lo mínimo un carácter especial o un número.")
 
     def obtener_texto_ayuda(self):
-        return (
-            "La contraseña debe tener al menos 8 caracteres y "
-            "al menos un número o un carácter especial."
-        )
+        return "La contraseña debe tener al menos 8 caracteres y al menos un número o un carácter especial."
+
+    validate = validar
+    get_help_text = obtener_texto_ayuda

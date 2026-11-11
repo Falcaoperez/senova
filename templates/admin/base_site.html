@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% block title %}{{ title }} · Administración GESICOM SENA{% endblock %}
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/brand/sena.svg' %}">
+{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/sena-admin.css' %}">
+{% endblock %}
+{% block branding %}
+  <div id="site-name">
+    <a href="{% url 'admin:index' %}">
+      <img src="{% static 'img/brand/sena.svg' %}"
+           alt="SENA"
+           width="48"
+           height="48"> <strong>GESICOM</strong>
+      <span>Administración</span>
+    </a>
+  </div>
+{% endblock %}
+{% block nav-global %}
+  <a class="back-gesicom" href="{% url 'admin_personalizado:dashboard' %}">Volver a GESICOM →</a>
+{% endblock %}

@@ -1,134 +1,71 @@
-{% extends 'admin_personalizado/base.html' %}
-
-{% block title %}Gestión de Permisos{% endblock %}
-
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Permisos · GESICOM SENA{% endblock %}
 {% block content %}
-<h2 class="page-title">Gestión de Permisos</h2>
-
-<div class="permissions-section">
-    <form method="post" id="permissions-form">
-        {% csrf_token %}
-
-        <div class="section-header">
-            <label for="group-select" class="section-label">Seleccionar Grupo de Usuarios</label>
-            <select id="group-select" name="group" class="group-select" onchange="loadGroupPermissions(this.value)">
-                <option value="">-- Seleccionar Grupo --</option>
-                {% for group in groups %}
-                <option value="{{ group.id }}" {% if selected_group and selected_group.id == group.id %}selected{% endif %}>
-                    {{ group.name|title }}
-                </option>
-                {% endfor %}
-            </select>
+  {% include "ui/page_heading.html" with section="GESICOM / ADMINISTRACIÓN / PERMISOS" heading="Accesos claros. Trabajo organizado." description="Consulta y actualiza los permisos de los grupos del sistema." %}
+  <div class="form-layout">
+    <section class="panel">
+      <form method="get" class="filters">
+        <div class="field">
+          <label for="group-select">Grupo de usuarios</label>
+          <select id="group-select" name="group" required>
+            <option value="">Selecciona un grupo</option>
+            {% for group in grupos %}
+              <option value="{{ group.pk }}"
+                      {% if grupo_seleccionado.pk == group.pk %}selected{% endif %}>{{ group.name|capfirst }}</option>
+            {% endfor %}
+          </select>
         </div>
-
-        {% if selected_group %}
-        <div class="permissions-table-container">
-            <div class="permissions-table-title">
-                Permisos del Grupo {{ selected_group.name|title }}
+        <button class="button button-dark" type="submit">Consultar permisos {% icon 'arrow' %}</button>
+      </form>
+      {% if grupo_seleccionado %}
+        <hr>
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">GRUPO SELECCIONADO</p>
+            <h2>{{ grupo_seleccionado.name|capfirst }}</h2>
+          </div>
+          {% icon 'shield' %}
+        </div>
+        <form method="post" data-submit>
+          {% csrf_token %}
+          <input type="hidden" name="group" value="{{ grupo_seleccionado.pk }}">
+          {% for permission in permisos %}
+            <div class="permission-row">
+              <label for="perm_{{ forloop.counter }}">
+                <strong>{{ permission.etiqueta }}</strong>
+              </label>
+              <select id="perm_{{ forloop.counter }}"
+                      name="perm_{{ permission.nombre_codigo }}_1">
+                <option value="inherited"
+                        {% if permission.estado_1 == 'inherited' %}selected{% endif %}>Sin asignar</option>
+                <option value="allowed"
+                        {% if permission.estado_1 == 'allowed' %}selected{% endif %}>Permitido</option>
+                <option value="denied"
+                        {% if permission.estado_1 == 'denied' %}selected{% endif %}>Retirar permiso</option>
+              </select>
             </div>
-
-            <table class="permissions-table">
-                <thead>
-                    <tr>
-                        <th>Acción</th>
-                        <th>Permiso</th>
-                        <th>Permiso</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for permission_data in permissions %}
-                    <tr>
-                        <td class="permission-action">{{ permission_data.label }}</td>
-                        <td>
-                            <select name="perm_{{ permission_data.codename }}_1" class="permission-dropdown">
-                                <option value="inherited" {% if permission_data.status_1 == 'inherited' %}selected{% endif %}>Heredado</option>
-                                <option value="allowed" {% if permission_data.status_1 == 'allowed' %}selected{% endif %}>✓ Permitido</option>
-                                <option value="denied" {% if permission_data.status_1 == 'denied' %}selected{% endif %}>✗ Denegado</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select name="perm_{{ permission_data.codename }}_2" class="permission-dropdown locked-select">
-                                <option value="inherited" {% if permission_data.status_2 == 'inherited' %}selected{% endif %}>Heredado</option>
-                                <option value="allowed" {% if permission_data.status_2 == 'allowed' %}selected{% endif %}>✓ Permitido</option>
-                                <option value="denied" {% if permission_data.status_2 == 'denied' %}selected{% endif %}>✗ Denegado</option>
-                            </select>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+          {% endfor %}
+          <div class="form-actions">
+            <a class="button button-secondary"
+               href="{% url 'admin_personalizado:dashboard' %}">Volver</a>
+            <button class="button button-primary" type="submit">{% icon 'check' %} Guardar permisos</button>
+          </div>
+        </form>
+      {% else %}
+        <div class="empty-state">
+          <span class="empty-symbol">{% icon 'shield' %}</span>
+          <h3>Un grupo para comenzar</h3>
+          <p>Selecciona un grupo para consultar sus permisos actuales.</p>
         </div>
-
-        <div class="action-buttons">
-            <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url 'admin_personalizado:dashboard' %}'">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-                Cancelar
-            </button>
-
-            <button type="submit" class="btn btn-primary">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                Guardar
-            </button>
-        </div>
-        {% endif %}
-    </form>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function loadGroupPermissions(groupId) {
-    if (groupId) {
-        window.location.href = '{% url "admin_personalizado:permisos" %}?group=' + groupId;
-    }
-}
-
-function updatePermissionStyle(selectElement) {
-    const value = selectElement.value;
-
-    // Remover todas las clases de estado
-    selectElement.classList.remove('allowed', 'denied', 'inherited');
-
-    // Agregar la clase correspondiente al valor
-    if (value === 'allowed') {
-        selectElement.classList.add('allowed');
-    } else if (value === 'denied') {
-        selectElement.classList.add('denied');
-    } else {
-        selectElement.classList.add('inherited');
-    }
-
-    console.log('Select actualizado:', selectElement.name, '- Valor:', value);
-}
-
-// Aplicar estilos iniciales a todos los dropdowns cuando se carga la página
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Página cargada, inicializando selectores...');
-
-    const dropdowns = document.querySelectorAll('.permission-dropdown');
-    console.log('Selectores encontrados:', dropdowns.length);
-
-    dropdowns.forEach((dropdown, index) => {
-        // Asegurarse de que no esté disabled
-        dropdown.disabled = false;
-
-        // Aplicar estilo inicial
-        updatePermissionStyle(dropdown);
-
-        // Agregar evento de cambio
-        dropdown.addEventListener('change', function(e) {
-            console.log('Cambio detectado en selector', index);
-            updatePermissionStyle(e.target);
-        });
-
-        console.log('Selector', index, '- Name:', dropdown.name, '- Value:', dropdown.value, '- Disabled:', dropdown.disabled);
-    });
-});
-</script>
+      {% endif %}
+    </section>
+    <aside class="panel side-guide">
+      <p class="eyebrow">PERMISOS POR GRUPO</p>
+      <h3>Una administración consciente.</h3>
+      <p>Los permisos se asignan al grupo y se consultan desde Django. Las vistas de GESICOM conservan sus controles de acceso por rol.</p>
+      <hr>
+      <p>Asignar un permiso no cambia el rol del usuario ni lo convierte en administrador.</p>
+    </aside>
+  </div>
 {% endblock %}

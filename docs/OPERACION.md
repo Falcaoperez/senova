@@ -1,0 +1,59 @@
+# Operación
+
+## Notificaciones
+
+El alta de una novedad o plazo crea avisos en lotes y prepara la cola de correo. La petición web no espera el envío de mensajes a todos los destinatarios.
+
+```bash
+python manage.py procesar_notificaciones --continuo --intervalo 30 --lote 50
+```
+
+El trabajador genera recordatorios y vencimientos, omite usuarios que ya entregaron el reporte y reclama mensajes con bloqueos de MySQL. Dos trabajadores no toman el mismo lote activo. Los errores de envío se reintentan con espera creciente hasta cinco veces. Después pueden reactivarse desde la página administrativa de Novedades.
+
+El estado visible del procesador se guarda en Redis. La bandeja funciona aunque SMTP esté temporalmente indisponible. Las preferencias se vuelven a comprobar justo antes de enviar. El mismo trabajador procesa primero la cola de seguridad: PIN y avisos de cambios de credenciales. Mientras hay lotes listos, continúa sin esperar el intervalo de reposo.
+
+Los PIN no se envían dentro de la petición web. La respuesta de recuperación es genérica incluso si SMTP falla. La cola de seguridad reintenta tres veces con espera creciente, respeta la caducidad de 10 minutos y borra el contenido cifrado al enviar, cancelar o agotar los intentos. Un PIN caducado necesita una solicitud nueva; los errores ordinarios de novedades siguen el procedimiento de reactivación anterior.
+
+La cola ofrece entrega al menos una vez: un corte justo después de la aceptación del proveedor y antes de registrar el resultado puede producir una repetición. Los avisos internos por novedad/fase de plazo sí se deduplican con restricciones de la base de datos.
+
+## Plazos y entregas
+
+Las fechas se muestran en `America/Bogota`. El usuario puede asociar una evidencia a un plazo de su grupo y proyecto. Se conserva la fecha límite aplicable al registro y se identifica una entrega tardía. Entregar el reporte detiene los avisos pendientes de ese plazo; la aprobación se gestiona por separado.
+
+Cambiar la fecha de un plazo incrementa su versión y permite emitir los avisos de la nueva programación. Para una entrega distinta, crea otro plazo.
+
+## Correo de producción
+
+El remitente es `santiagoocoy2025@gmail.com` por `smtp.gmail.com:587`, con STARTTLS y una contraseña de aplicación de Google. Se requiere verificación en dos pasos. El perfil local de Mailpit captura correos; no valida la autenticación de Gmail ni envía mensajes reales. Para producción, usa `compose.yml` sin el perfil de desarrollo y añade la credencial privada.
+
+Si se utiliza OAuth2, la renovación del token corresponde al servicio de identidad del despliegue. Comprueba la conexión con `python manage.py comprobar_correo`; no imprime secretos ni envía mensajes.
+
+Las cuentas personales de Gmail tienen cuotas de envío. Dimensiona el volumen de avisos antes de usarlo con todos los usuarios; la cola no aumenta los límites del proveedor. Las direcciones `example.invalid` de las cuentas de revisión solo sirven con la captura local.
+
+## Sesiones y cambios de cuenta
+
+`/mi-cuenta/seguridad/` muestra las sesiones del usuario y permite cerrarlas mediante POST, CSRF y contraseña actual. La eliminación alcanza la caché y MySQL. El inicio de sesión registra la sesión antes de la primera navegación. `SESSION_IDLE_TIMEOUT` controla la caducidad por inactividad, con 1.800 segundos por defecto; la actividad visible se actualiza como máximo una vez por minuto para limitar escrituras.
+
+Al cambiar la contraseña desde el perfil se conserva la sesión actual y se cierran las demás. Una recuperación cierra todas las sesiones autenticadas y solicita ingresar de nuevo. Los cambios sensibles invalidan las solicitudes de recuperación y generan avisos al correo anterior y al actual.
+
+Ejecuta `python manage.py clearsessions` periódicamente para retirar sesiones caducadas de MySQL; sus registros asociados se eliminan en cascada.
+
+La primera instalación de esta política exige iniciar sesión de nuevo: las sesiones anteriores que todavía no estaban registradas no se aceptan, aunque quedaran en caché. Esto permite que el cierre de otras sesiones abarque todos los accesos admitidos por la nueva versión.
+
+Las consultas automáticas de la campana no prolongan la sesión. Cuando el servidor responde que el acceso terminó, la interfaz vuelve a la pantalla de ingreso.
+
+## Actualizar esta versión
+
+Instala las dependencias, ejecuta `python manage.py migrate --noinput` y `python manage.py collectstatic --noinput`, y reinicia aplicación y trabajador. Las migraciones añaden la cola, el registro de sesiones y la vinculación de las solicitudes a las credenciales. Los PIN anteriores a esa vinculación dejan de ser válidos: debe solicitarse uno nuevo. No se eliminan cuentas ni evidencias.
+
+## Capacidad
+
+`WEB_WORKERS` y `WEB_THREADS` acotan la concurrencia y las conexiones. Los listados se paginan y las estadísticas se agrupan en SQL. El número de cuentas almacenadas no se convierte en el número de procesos o conexiones abiertos.
+
+La capacidad real depende del hardware, consultas, conexiones SMTP y tamaño de archivos. Consulta las mediciones en `VERIFICACION.md` antes de ajustar el número de trabajadores o el límite de conexiones de MySQL.
+
+## Salud y copias
+
+`/health/` devuelve un estado mínimo tras comprobar base de datos y caché. No muestra credenciales ni detalles internos. Docker utiliza esta ruta para supervisar la aplicación.
+
+Realiza copias de MySQL y del volumen de medios. Verifica una restauración independiente antes de reemplazar datos de una instalación existente.

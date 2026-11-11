@@ -11,11 +11,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import os
+
+from decouple import AutoConfig
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-LOG_DIR = BASE_DIR / 'logs'
+env = AutoConfig(search_path=str(BASE_DIR))
+LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -23,84 +25,114 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-xjv@=pz08182&5z4y-5o*&!xl&na@yg#str+@u6--2&p_=&8s*')
+SECRET_KEY = env("DJANGO_SECRET_KEY", "django-insecure-xjv@=pz08182&5z4y-5o*&!xl&na@yg#str+@u6--2&p_=&8s*")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = env("DJANGO_DEBUG", default=True, cast=bool)
 
 # Allow hosts can be configured with comma-separated env var
-_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()] if _hosts else ['127.0.0.1', 'localhost', '0.0.0.0']
+_hosts = env("DJANGO_ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [h.strip() for h in _hosts.split(",") if h.strip()] if _hosts else ["127.0.0.1", "localhost", "0.0.0.0"]
 # Allow Django test client host used in tests
-if 'testserver' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append('testserver')
+if DEBUG and "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'Gesicom.apps.GesicomConfig',
-    'instructor.apps.UsuariosConfig',
-    'cuentas.apps.CuentasConfig',
-    'ADMIN.apps.AdminPersonalizadoConfig',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "Gesicom.apps.GesicomConfig",
+    "instructor.apps.UsuariosConfig",
+    "cuentas.apps.CuentasConfig",
+    "ADMIN.apps.AdminPersonalizadoConfig",
+    "notificaciones.apps.NotificacionesConfig",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'SENNOVA.middleware.MiddlewareLimiteVelocidad',
+    "django.middleware.security.SecurityMiddleware",
+    "SENNOVA.middleware.SecurityHeadersMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "cuentas.middleware.SesionesMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "SENNOVA.middleware.RateLimitMiddleware",
+    "SENNOVA.middleware.AuditMiddleware",
 ]
 
-ROOT_URLCONF = 'SENNOVA.urls'
+ROOT_URLCONF = "SENNOVA.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "Gesicom.context_processors.interface",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'SENNOVA.wsgi.application'
+WSGI_APPLICATION = "SENNOVA.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'gesicom-cache',
-        'OPTIONS': {
-            'MAX_ENTRIES': 10000
+DB_ENGINE = env("DB_ENGINE", default="mysql")
+if DB_ENGINE == "sqlite":
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": env("DB_NAME", default="senova"),
+            "USER": env("DB_USER", default="gesicom_app"),
+            "PASSWORD": env("DB_PASSWORD", default=""),
+            "HOST": env("DB_HOST", default="127.0.0.1"),
+            "PORT": env("DB_PORT", default="3306"),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "connect_timeout": 10,
+            },
+            "TEST": {"CHARSET": "utf8mb4"},
         }
     }
-}
+REDIS_URL = env("REDIS_URL", default="")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "KEY_PREFIX": "gesicom",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SOCKET_CONNECT_TIMEOUT": 2,
+                "SOCKET_TIMEOUT": 2,
+                "CONNECTION_POOL_KWARGS": {"max_connections": 100},
+            },
+        }
+    }
+else:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "gesicom-desarrollo"}}
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 
 # Password validation
@@ -108,19 +140,19 @@ CACHES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
     {
-        'NAME': 'Gesicom.validators.ValidadorContraseñaOchoCarActualMayusNumEspecial',
+        "NAME": "Gesicom.validators.ValidadorContraseñaOchoCarActualMayusNumEspecial",
     },
 ]
 
@@ -128,9 +160,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'es-es'
+LANGUAGE_CODE = "es-es"
 
-TIME_ZONE = 'America/Bogota'
+TIME_ZONE = "America/Bogota"
 
 USE_I18N = True
 
@@ -140,60 +172,43 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 # Incluir el directorio `static/` en la raíz del proyecto para desarrollo
-STATICFILES_DIRS = [ BASE_DIR / 'static' ]
+STATICFILES_DIRS = []  # Los recursos se descubren dentro de cada aplicación.
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
-# Email backend (configurable por variables de entorno)
-# Si se define EMAIL_HOST_USER, usa SMTP; si no, usa backend de consola
-if os.environ.get('EMAIL_HOST_USER'):
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
-    if EMAIL_USE_SSL:
-        EMAIL_USE_TLS = False
-    _domain = EMAIL_HOST_USER.split('@')[-1].lower() if '@' in EMAIL_HOST_USER else ''
-    _providers = {
-        'gmail.com': ('smtp.gmail.com', 587, True, False),
-        'outlook.com': ('smtp.office365.com', 587, True, False),
-        'hotmail.com': ('smtp.office365.com', 587, True, False),
-        'live.com': ('smtp.office365.com', 587, True, False),
-        'yahoo.com': ('smtp.mail.yahoo.com', 587, True, False),
-        'yahoo.es': ('smtp.mail.yahoo.com', 587, True, False),
-        'icloud.com': ('smtp.mail.me.com', 587, True, False),
-        'zoho.com': ('smtp.zoho.com', 587, True, False),
-        'proton.me': ('smtp.protonmail.ch', 587, True, False),
-        'protonmail.com': ('smtp.protonmail.ch', 587, True, False),
-    }
-    if os.environ.get('EMAIL_HOST'):
-        EMAIL_HOST = os.environ.get('EMAIL_HOST')
-        EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
-    else:
-        _fallback = _providers.get(_domain, ('smtp.gmail.com', 587, True, False))
-        EMAIL_HOST, EMAIL_PORT, EMAIL_USE_TLS, EMAIL_USE_SSL = _fallback
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@gesicom.local')
+# SMTP works with any recipient domain. Credentials belong in .env or the environment.
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env("EMAIL_PORT", default=587, cast=int)
+EMAIL_USE_SSL = env("EMAIL_USE_SSL", default=False, cast=bool)
+EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=not EMAIL_USE_SSL, cast=bool)
+EMAIL_TIMEOUT = env("EMAIL_TIMEOUT", default=20, cast=int)
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    default=("SENNOVA.email_backend.SMTPBackend" if EMAIL_HOST else "django.core.mail.backends.console.EmailBackend"),
+)
+EMAIL_OAUTH2_ACCESS_TOKEN = env("EMAIL_OAUTH2_ACCESS_TOKEN", default="")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "no-reply@gesicom.local")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Auth redirects
-LOGIN_REDIRECT_URL = '/home/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/home/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-AUTH_USER_MODEL = 'auth.User'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+AUTH_USER_MODEL = "auth.User"
 
 # Ensure log directory exists so FileHandler can open the file
-LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR = BASE_DIR / "logs"
 try:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 except Exception:
@@ -201,29 +216,68 @@ except Exception:
     pass
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "level": "ERROR",
+            "class": "logging.handlers.RotatingFileHandler",
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "filename": BASE_DIR / "logs" / "django.log",
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'ERROR',
-            'propagate': True,
+    "loggers": {
+        "django": {
+            "handlers": ["file"],
+            "level": "ERROR",
+            "propagate": True,
         },
     },
 }
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
 
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_HTTPONLY = True
 
 SECURE_SSL_REDIRECT = not DEBUG
+# El supervisor consulta esta ruta por la red interna del contenedor.
+SECURE_REDIRECT_EXEMPT = [r"^health/$"]
+
+PASSWORD_RESET_PIN_MINUTES = 10
+PASSWORD_RESET_MAX_ATTEMPTS = 5
+
+PUBLIC_BASE_URL = env("PUBLIC_BASE_URL", default="http://127.0.0.1:8000")
+RATE_LIMITS_ENABLED = env("RATE_LIMITS_ENABLED", default=True, cast=bool)
+TRUSTED_PROXY_IPS = [value.strip() for value in env("TRUSTED_PROXY_IPS", default="").split(",") if value.strip()]
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 8 * 60 * 60
+SESSION_IDLE_TIMEOUT = env("SESSION_IDLE_TIMEOUT", default=1800, cast=int)
+CSRF_COOKIE_SAMESITE = "Lax"
+X_FRAME_OPTIONS = "DENY"
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+if env("TRUST_PROXY_HTTPS", default=False, cast=bool):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+if not DEBUG:
+    from django.core.exceptions import ImproperlyConfigured
+
+    if SECRET_KEY.startswith("django-insecure") or len(SECRET_KEY) < 40:
+        raise ImproperlyConfigured("Configura una DJANGO_SECRET_KEY privada y aleatoria antes de producción.")
+    if not REDIS_URL:
+        raise ImproperlyConfigured("Configura REDIS_URL para sesiones y límites compartidos en producción.")
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+LOGIN_IP_LIMIT = env("LOGIN_IP_LIMIT", default=2000, cast=int)
+REGISTRATION_IP_LIMIT = env("REGISTRATION_IP_LIMIT", default=2000, cast=int)

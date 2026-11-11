@@ -1,0 +1,29 @@
+{% load ui %}
+<div class="stats-grid">
+  <article class="stat-card">
+    <span class="stat-symbol">{% icon 'folder' %}</span>
+    <span class="stat-label">Total de evidencias</span>
+    <strong class="stat-value">{{ total_envios|default:0 }}</strong>
+    <span class="stat-note">En tu espacio de trabajo</span>
+  </article>
+  <article class="stat-card">
+    <span class="stat-symbol success">{% icon 'check' %}</span>
+    <span class="stat-label">Aprobadas</span>
+    <strong class="stat-value">{{ aprobadas|default:0 }}</strong>
+    <span class="stat-note">
+      <span class="tiny-dot green"></span> Revisión completada</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-symbol pending">{% icon 'clock' %}</span>
+      <span class="stat-label">En revisión</span>
+      <strong class="stat-value">{{ pendientes|default:0 }}</strong>
+      <span class="stat-note">
+        <span class="tiny-dot amber"></span> Pendientes de respuesta</span>
+      </article>
+      <article class="stat-card">
+        <span class="stat-symbol danger">{% icon 'close' %}</span>
+        <span class="stat-label">Rechazadas</span>
+        <strong class="stat-value">{{ rechazadas|default:0 }}</strong>
+        <span class="stat-note">Consulta las observaciones</span>
+      </article>
+    </div>
