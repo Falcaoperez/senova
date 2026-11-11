@@ -4,6 +4,13 @@ Gestión de evidencias, reportes, novedades y plazos con Django 5.2 LTS, MySQL 8
 
 ## Inicio local con Docker
 
+Clona la rama de trabajo integrada y entra en el proyecto:
+
+```bash
+git clone --branch develop https://github.com/santiagoCoy2025/senova.git
+cd senova
+```
+
 Requiere Docker Compose y Python 3 para generar la configuración privada.
 
 ```bash
@@ -29,6 +36,10 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Registro y edición de perfil con validación de correo y contraseña.
 - Recuperación en tres pasos: solicitud, PIN de **6 dígitos**, y nueva contraseña después de verificarlo.
 - PIN válido durante 10 minutos, máximo 5 intentos, hash en la base de datos y autorización ligada a la sesión.
+- Envío del PIN mediante cola, con cifrado temporal y eliminación del contenido al terminar el envío.
+- Invalidación automática del PIN si cambian el correo o la contraseña de la cuenta.
+- Confirmación de contraseña actual para modificar usuario, correo o contraseña; aviso de los cambios al correo anterior y al nuevo.
+- Centro de seguridad con sesiones por dispositivo, cierre individual o de otras sesiones y caducidad por inactividad.
 - Evidencias mediante archivo de hasta 10 MB o enlace; búsqueda, filtros, estados y paginación.
 - Archivos protegidos: solo el propietario y los roles revisores pueden consultarlos.
 - Reportes con gráficos y descargas CSV que respetan los filtros y neutralizan fórmulas de hojas de cálculo.
@@ -51,13 +62,21 @@ Los paneles de evidencias reutilizan una sola plantilla. El panel administrativo
 
 ## Correo real
 
-El remitente confirmado es `noresponderGESICOM@soy.sena.edu.co` y se prepara `smtp.office365.com:587` con STARTTLS. Para enviar a direcciones reales, la cuenta debe existir y el administrador del tenant debe autorizar el método SMTP. Configura en `.env` o en las variables privadas del alojamiento:
+El remitente elegido es **`santiagoocoy2025@gmail.com`**. La configuración usa **`smtp.gmail.com:587` con STARTTLS**. Para activar el envío:
+
+1. Activa la verificación en dos pasos en la cuenta de Google.
+2. Crea una [contraseña de aplicación](https://myaccount.google.com/apppasswords) para GESICOM.
+3. Guarda esa contraseña, sin los espacios de presentación, en `EMAIL_HOST_PASSWORD` mediante la configuración privada del entorno. No uses la contraseña normal ni la publiques en Git o en el chat.
+4. Mantén `EMAIL_HOST_USER=santiagoocoy2025@gmail.com` y `DEFAULT_FROM_EMAIL=GESICOM <santiagoocoy2025@gmail.com>`.
+5. Comprueba configuración y autenticación con los comandos de abajo.
+
+También se admiten otros proveedores mediante estas variables:
 
 - `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS` o `EMAIL_USE_SSL`.
 - `EMAIL_HOST_USER` y `DEFAULT_FROM_EMAIL`.
 - `EMAIL_HOST_PASSWORD` autorizado por el proveedor, o `EMAIL_OAUTH2_ACCESS_TOKEN` válido para SMTP XOAUTH2.
 
-El token OAuth2 debe renovarse mediante el proveedor o un servicio externo; GESICOM no emite ni renueva tokens de Microsoft. Una contraseña normal puede no ser suficiente. El proveedor del destinatario no requiere configuración adicional.
+Si eliges OAuth2, el token SMTP debe estar vigente y renovarse mediante el proveedor o un servicio externo. El proveedor del destinatario no requiere configuración adicional. Gmail requiere que la cuenta autenticada coincida con el remitente configurado.
 
 ```bash
 python manage.py comprobar_correo --solo-configuracion
@@ -66,12 +85,16 @@ python manage.py comprobar_correo
 
 El segundo comando autentica la conexión sin enviar un mensaje ni mostrar secretos. Si faltan credenciales, el sistema lo indica y no confirma un envío real. Para producción utiliza `compose.yml`, sin el perfil de Mailpit.
 
+El trabajador `procesar_notificaciones` debe estar activo para enviar tanto los PIN como las novedades. El panel administrativo muestra pendientes, errores y señal del trabajador; la cola de seguridad detallada se consulta en el administrador de Django. Los mensajes de seguridad no se desactivan mediante las preferencias de novedades.
+
+Gmail personal impone [límites de envío](https://support.google.com/mail/answer/22839). Al crecer los avisos, comprueba que la cuota cubra a los destinatarios; una cuenta personal no garantiza envíos masivos para más de 1.000 usuarios. La bandeja interna sigue disponible cuando el proveedor demora o rechaza correo.
+
 ## Organización
 
 ```text
 SENNOVA/        configuración única, seguridad, salud y WSGI
 Gesicom/        evidencias, perfiles, reportes y componentes visuales
-cuentas/        cuentas, PIN de recuperación y auditoría
+cuentas/        cuentas, recuperación, cola cifrada de seguridad, sesiones y auditoría
 instructor/     entrada de autenticación y alias de paneles
 ADMIN/         administración de usuarios y permisos
 notificaciones/ novedades, plazos, bandeja y cola de correo
@@ -118,5 +141,11 @@ Para analizar el código: `pip install -r requirements-dev.txt` y `ruff check .`
 Configura HTTPS, un `DJANGO_SECRET_KEY` privado, `DJANGO_DEBUG=False`, los dominios permitidos y el correo real antes de publicar. Gunicorn usa por defecto 4 procesos y 2 hilos; Redis comparte sesiones y límites de acceso entre procesos. WhiteNoise sirve los recursos estáticos. Los archivos privados se entregan mediante Django y no deben exponerse con un alias público del servidor web.
 
 Lee [docs/OPERACION.md](docs/OPERACION.md), [docs/SEGURIDAD.md](docs/SEGURIDAD.md) y [database/README.md](database/README.md).
+
+## Ramas y revisiones
+
+El trabajo continúa en el fork `santiagoCoy2025/senova`. Cada bloque usa una rama nueva y un pull request a `develop`. Después de pasar las comprobaciones e integrar el PR, se elimina la rama de trabajo; `develop` y `main` se conservan. Las instrucciones están en [AGENTS.md](AGENTS.md).
+
+GitHub Actions ejecuta las comprobaciones con Python 3.12, MySQL y Redis: código, migraciones, pruebas, configuración de producción, estáticos y auditoría de dependencias. Las acciones externas se fijan por SHA. Los valores de autenticación que aparecen en el workflow pertenecen exclusivamente a servicios desechables del trabajo de CI.
 
 La referencia visual es el [Manual de Identidad Visual SENA 2024](https://www.sena.edu.co/es-co/Documents/MANUAL_IDENTIDAD_VISUAL_SENA_2024.pdf). Work Sans se distribuye localmente con su licencia SIL Open Font License y el logo conserva los trazados y el color del recurso oficial.

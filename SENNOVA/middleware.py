@@ -8,7 +8,9 @@ import time
 from django.conf import settings
 from django.core.cache import cache
 from django.db import DatabaseError
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
+from django.template.loader import render_to_string
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,9 @@ class RateLimitMiddleware:
         "olvide_password": (20, 900, 3),
         "verificar_pin": (40, 600, 10),
         "restablecer_password": (30, 600, 10),
+        "editar_perfil": (100, 600, 10),
+        "revocar_sesion": (100, 600, 10),
+        "cerrar_otras_sesiones": (100, 600, 10),
     }
 
     def __init__(self, get_response):
@@ -42,6 +47,30 @@ class RateLimitMiddleware:
 
     def __call__(self, request):
         return self.get_response(request)
+
+    @staticmethod
+    def _error(request, message, status):
+        name = request.resolver_match.url_name
+        if name in {
+            "olvide_password",
+            "verificar_pin",
+            "restablecer_password",
+        } or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"error": message}, status=status)
+        route = (
+            "centro_seguridad"
+            if name in {"revocar_sesion", "cerrar_otras_sesiones"}
+            else "editar_perfil"
+            if name == "editar_perfil"
+            else "register"
+            if name == "register"
+            else "login"
+        )
+        # Sin procesadores de contexto: esta pantalla también funciona si Redis falla.
+        html = render_to_string(
+            "cuentas/error_acceso.html", {"mensaje": message, "estado": status, "volver": reverse(route)}
+        )
+        return HttpResponse(html, status=status)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         if request.method != "POST" or not settings.RATE_LIMITS_ENABLED:
@@ -54,6 +83,17 @@ class RateLimitMiddleware:
             return None
         ip_limit, window, identity_limit = rule
         identity = (request.POST.get("email") or request.POST.get("username") or "").strip().casefold()
+        if name == "login" and identity:
+            from django.contrib.auth import get_user_model
+
+            usuarios = get_user_model().objects.only("pk")
+            cuenta = usuarios.filter(username__iexact=identity).first()
+            if cuenta is None and "@" in identity:
+                cuenta = usuarios.filter(email__iexact=identity).first()
+            if cuenta:
+                identity = f"usuario:{cuenta.pk}"
+        elif request.user.is_authenticated:
+            identity = f"usuario:{request.user.pk}"
         identities = [(f"ip:{client_ip(request)}", ip_limit)]
         if identity:
             identities.append((f"account:{identity}", identity_limit))
@@ -67,12 +107,10 @@ class RateLimitMiddleware:
                 else:
                     attempts = cache.incr(key)
             except Exception:
-                return JsonResponse(
-                    {"error": "El servicio de acceso está temporalmente ocupado. Intenta más tarde."}, status=503
-                )
+                return self._error(request, "El servicio de acceso está temporalmente ocupado. Intenta más tarde.", 503)
             if attempts > limit:
-                response = JsonResponse(
-                    {"error": "Demasiados intentos. Espera unos minutos antes de volver a intentarlo."}, status=429
+                response = self._error(
+                    request, "Demasiados intentos. Espera unos minutos antes de volver a intentarlo.", 429
                 )
                 response["Retry-After"] = str(window - int(time.time()) % window)
                 return response
@@ -84,6 +122,7 @@ class AuditMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        anterior = request.user if request.user.is_authenticated else None
         response = self.get_response(request)
         match = getattr(request, "resolver_match", None)
         if (
@@ -91,14 +130,26 @@ class AuditMiddleware:
             and match
             and (
                 match.namespace in {"admin_personalizado", "notificaciones"}
-                or match.url_name in {"verificar_pin", "restablecer_password", "set_aprobada"}
+                or match.url_name
+                in {
+                    "login",
+                    "login_root",
+                    "logout",
+                    "olvide_password",
+                    "verificar_pin",
+                    "restablecer_password",
+                    "set_aprobada",
+                    "editar_perfil",
+                    "revocar_sesion",
+                    "cerrar_otras_sesiones",
+                }
             )
         ):
             from cuentas.models import RegistroSeguridad
 
             try:
                 RegistroSeguridad.objects.create(
-                    actor=request.user if request.user.is_authenticated else None,
+                    actor=request.user if request.user.is_authenticated else anterior,
                     accion=f"{match.view_name}:{response.status_code}"[:80],
                     ruta=request.path[:255],
                     direccion_ip=client_ip(request),
@@ -126,4 +177,10 @@ class SecurityHeadersMiddleware:
         )
         response["Referrer-Policy"] = "same-origin"
         response["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        user = getattr(request, "user", None)
+        private = getattr(request, "_gesicom_private", False) or (user and user.is_authenticated)
+        recovery = request.path.startswith(("/password-reset/", "/reset/", "/api/"))
+        if (private or recovery) and "no-store" not in response.get("Cache-Control", ""):
+            response["Cache-Control"] = "private, no-store"
+            response["Pragma"] = "no-cache"
         return response

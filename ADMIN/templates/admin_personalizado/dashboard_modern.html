@@ -59,6 +59,17 @@
       <span class="stat-note">Accesos organizados</span>
     </article>
   </div>
+  <section class="panel security-overview">
+    <div class="panel-heading"><div><p class="eyebrow">COMUNICACIONES</p><h2>Estado del correo</h2></div>{% icon 'mail' %}</div>
+    <p class="mail-sender">{{ correo_remitente }}</p>
+    <div class="mail-status-grid">
+      <div><span class="stat-label">Envío</span><strong>{% if correo_pruebas %}Captura de pruebas{% elif correo_credencial %}Configurado · pendiente de validar{% else %}Falta la credencial de correo{% endif %}</strong></div>
+      <div><span class="stat-label">Trabajador de avisos</span><strong>{% if correo_trabajador %}Activo{% else %}Sin señal reciente{% endif %}</strong></div>
+      <div><span class="stat-label">Correos pendientes</span><strong>{{ correos_pendientes }}</strong></div>
+      <div><span class="stat-label">Errores de entrega</span><strong>{{ correos_errores }}</strong></div>
+    </div>
+    {% if correo_pruebas %}<p>Los mensajes de este entorno se capturan en el buzón local de pruebas.</p>{% endif %}
+  </section>
   <div class="dashboard-grid">
     <section class="panel">
       <div class="panel-heading">

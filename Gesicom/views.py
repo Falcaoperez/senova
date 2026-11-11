@@ -19,6 +19,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
 from .models import Envio
@@ -60,6 +61,7 @@ def ayuda(request):
     return render(request, "ayuda.html")
 
 
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect("login")
@@ -482,6 +484,7 @@ def ver_evidencia(request, pk):
 
 
 @login_required
+@sensitive_post_parameters()
 def editar_perfil(request):
     from .forms import ProfileForm
 
@@ -492,11 +495,19 @@ def editar_perfil(request):
         try:
             with transaction.atomic():
                 user = form.save()
+                if form.cambio_sensible:
+                    from cuentas.correos import encolar_aviso_cambio, invalidar_recuperaciones
+
+                    invalidar_recuperaciones(user)
+                    encolar_aviso_cambio(user, form.correo_anterior)
         except IntegrityError:
             form.add_error("correo", "Ese correo o nombre de usuario ya está registrado.")
         else:
             if form.cleaned_data["contrasena"]:
                 update_session_auth_hash(request, user)
+                from cuentas.sesiones import cerrar_sesiones
+
+                cerrar_sesiones(user, conservar=request.session.session_key)
             messages.success(request, "Perfil actualizado correctamente.")
             return redirect("editar_perfil")
     return render(request, "editar_perfil/editar.html", {"form": form})

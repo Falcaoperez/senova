@@ -1,9 +1,11 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, Permission, User
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 
@@ -30,6 +32,13 @@ def panel_control(request):
     total_usuarios = User.objects.count()
     total_grupos = Group.objects.count()
     usuarios_activos = User.objects.filter(is_active=True).count()
+    from cuentas.models import CorreoSeguridad
+    from notificaciones.models import CorreoPendiente
+
+    estados = {}
+    for model in (CorreoSeguridad, CorreoPendiente):
+        for row in model.objects.values("estado").annotate(total=Count("pk")):
+            estados[row["estado"]] = estados.get(row["estado"], 0) + row["total"]
 
     # Calcular porcentaje de usuarios activos
     if total_usuarios > 0:
@@ -43,6 +52,12 @@ def panel_control(request):
         "total_grupos": total_grupos,
         "usuarios_activos": usuarios_activos,
         "usuarios_activos_porcentaje": usuarios_activos_porcentaje,
+        "correo_remitente": settings.DEFAULT_FROM_EMAIL,
+        "correo_pruebas": settings.EMAIL_HOST in {"localhost", "127.0.0.1", "mailpit", "senova-mailpit"},
+        "correo_credencial": bool(settings.EMAIL_HOST_PASSWORD or settings.EMAIL_OAUTH2_ACCESS_TOKEN),
+        "correo_trabajador": bool(cache.get("notificaciones:trabajador")),
+        "correos_pendientes": estados.get("pendiente", 0) + estados.get("procesando", 0),
+        "correos_errores": estados.get("error", 0),
     }
     return render(request, "admin_personalizado/dashboard_modern.html", context)
 

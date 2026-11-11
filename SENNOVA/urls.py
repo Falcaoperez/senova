@@ -5,6 +5,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from cuentas import seguridad as seguridad_views
 from cuentas import views as cuentas_views
 from Gesicom import views as gesicom_views
 from instructor import views as usuarios_views
@@ -67,6 +68,9 @@ urlpatterns = [
     path("api/verificar_pin/", cuentas_views.verificar_pin, name="verificar_pin"),
     path("api/restablecer_password/", cuentas_views.restablecer_password, name="restablecer_password"),
     path("editar_perfil/", gesicom_views.editar_perfil, name="editar_perfil"),
+    path("mi-cuenta/seguridad/", seguridad_views.centro_seguridad, name="centro_seguridad"),
+    path("mi-cuenta/sesiones/<int:pk>/cerrar/", seguridad_views.revocar_sesion, name="revocar_sesion"),
+    path("mi-cuenta/sesiones/cerrar-otras/", seguridad_views.cerrar_otras_sesiones, name="cerrar_otras_sesiones"),
 ]
 
 if settings.DEBUG:

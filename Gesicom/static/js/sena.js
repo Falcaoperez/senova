@@ -290,6 +290,12 @@
           credentials: "same-origin",
           headers: { Accept: "application/json" },
         });
+        if (response.status === 401) {
+          const data = await response.json();
+          const login = data.login_url || "/login/";
+          location.assign(login.startsWith("/") && !login.startsWith("//") ? login : "/login/");
+          return;
+        }
         if (!response.ok) return;
         const data = await response.json();
         document.querySelectorAll("[data-unread-count]").forEach((el) => {

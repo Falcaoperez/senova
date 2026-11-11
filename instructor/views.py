@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.http import require_http_methods, require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,8 @@ def _validar_contraseña(contraseña1, contraseña2=None):
     return []
 
 
+@require_http_methods(["GET", "POST"])
+@sensitive_post_parameters()
 def login_view(request):
     rol = request.GET.get("role") or request.POST.get("role") or ""
     if rol not in RUTAS_ROLES:
@@ -102,6 +106,8 @@ def login_view(request):
     return render(request, "login.html", context)
 
 
+@require_http_methods(["GET", "POST"])
+@sensitive_post_parameters()
 def register_view(request):
     from cuentas.forms import RegistroForm
 
@@ -144,6 +150,7 @@ def panel_instructor(request):
     return render(request, "panel_instructor.html", _panel_context(request.user, "Instructor"))
 
 
+@require_POST
 def logout_view(request):
     """Cerrar sesión del usuario."""
     logout(request)

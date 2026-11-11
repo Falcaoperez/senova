@@ -16,6 +16,19 @@ class ProfileForm(forms.ModelForm):
         widget=forms.PasswordInput,
         help_text="Mínimo 8 caracteres, con un número o símbolo.",
     )
+    confirmar_contrasena = forms.CharField(
+        label="Confirma la nueva contraseña",
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
+    contrasena_actual = forms.CharField(
+        label="Contraseña actual",
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+        help_text="Necesaria para modificar tu correo, usuario o contraseña.",
+    )
 
     class Meta:
         model = User
@@ -24,6 +37,10 @@ class ProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.correo_anterior = self.instance.email
+        self.usuario_anterior = self.instance.username
+        self.cambio_sensible = False
+        self.fields["contrasena"].widget.attrs["autocomplete"] = "new-password"
         for alias, field in [("nombre", "first_name"), ("apellido", "last_name"), ("correo", "email")]:
             self.fields[alias].initial = getattr(self.instance, field)
         for field in self.fields.values():
@@ -37,6 +54,15 @@ class ProfileForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        self.cambio_sensible = (
+            bool(data.get("contrasena"))
+            or data.get("correo", "").casefold() != self.correo_anterior.casefold()
+            or data.get("username", "") != self.usuario_anterior
+        )
+        if self.cambio_sensible and not self.instance.check_password(data.get("contrasena_actual", "")):
+            self.add_error("contrasena_actual", "Confirma tu contraseña actual para realizar este cambio.")
+        if data.get("contrasena") and data.get("contrasena") != data.get("confirmar_contrasena"):
+            self.add_error("confirmar_contrasena", "Las contraseñas no coinciden.")
         self.instance.username = data.get("username", self.instance.username)
         self.instance.first_name = data.get("nombre", "")
         self.instance.last_name = data.get("apellido", "")
