@@ -1,46 +1,120 @@
-{% extends "admin_personalizado/base_modern.html" %}
-
-{% block title %}Dashboard - Panel Administrativo{% endblock %}
-
-{% block page_title %}Panel de Administrador de Usuarios{% endblock %}
-
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Administración · GESICOM SENA{% endblock %}
 {% block content %}
-<div class="hero-card">
+  <div class="page-heading">
     <div>
-        <h2>Bienvenido, {{ request.user.get_full_name|default:request.user.username }}</h2>
-        <p>Este es el panel de administración de usuarios del sistema SENNOVA. Desde aquí puedes gestionar todos los aspectos relacionados con los usuarios y sus permisos.</p>
-        <div style="background: #f9fafb; border-left: 4px solid #6b8e6b; padding: 1rem; border-radius: 12px; margin-top: 1rem; color: #374151; line-height: 1.6;">
-            <strong style="display: block; margin-bottom: 0.5rem;">💡 Consejo:</strong>
-            <p style="margin: 0; font-size: 0.95rem;">Usa la sección "Usuarios" para gestionar rápidamente los roles y estados de los usuarios del sistema.</p>
+      <p class="eyebrow">GESICOM / ADMINISTRACIÓN</p>
+      <h1>Una comunidad que avanza.</h1>
+      <p class="page-description">Hola, {{ user.first_name|default:user.username }}. Gestiona las personas que hacen posible el conocimiento.</p>
+    </div>
+    <a class="button button-primary"
+       href="{% url 'admin_personalizado:crear_usuario' %}">{% icon 'plus' %} Nuevo usuario</a>
+  </div>
+  <section class="welcome-banner">
+    <div>
+      <span class="overline">PERSONAS · ROLES · PROYECTOS</span>
+      <h2>
+        Conectamos talento.
+        <br>
+        Impulsamos ideas.
+      </h2>
+      <p>Organiza el acceso del equipo y acompaña los aportes de la comunidad SENNOVA.</p>
+      <a class="banner-link"
+         href="{% url 'admin_personalizado:gestionar_usuarios' %}">Gestionar usuarios {% icon 'arrow' %}</a>
+    </div>
+    <div class="banner-graphic" aria-hidden="true">
+      <div class="graphic-orbit orbit-one"></div>
+      <div class="graphic-orbit orbit-two"></div>
+      <div class="graphic-sheet">
+        {% icon 'users' %}
+        <span></span>
+        <span></span>
+        <span></span>
+        <b>
+          {% icon 'check' %}
+        </b>
+      </div>
+      <span class="graphic-spark spark-one">+</span>
+      <span class="graphic-caption">El conocimiento nos conecta.</span>
+    </div>
+  </section>
+  <div class="stats-grid admin-stats">
+    <article class="stat-card">
+      <span class="stat-symbol">{% icon 'users' %}</span>
+      <span class="stat-label">Usuarios registrados</span>
+      <strong class="stat-value">{{ total_usuarios }}</strong>
+      <span class="stat-note">Nuestra comunidad</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-symbol success">{% icon 'check' %}</span>
+      <span class="stat-label">Usuarios activos</span>
+      <strong class="stat-value">{{ usuarios_activos }}</strong>
+      <span class="stat-note">{{ usuarios_activos_porcentaje }}% del total</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-symbol pending">{% icon 'shield' %}</span>
+      <span class="stat-label">Grupos y roles</span>
+      <strong class="stat-value">{{ total_grupos }}</strong>
+      <span class="stat-note">Accesos organizados</span>
+    </article>
+  </div>
+  <div class="dashboard-grid">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">COMUNIDAD</p>
+          <h2>Últimos usuarios registrados</h2>
         </div>
-    </div>
-</div>
-
-<div class="grid-cards">
-    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <h3>Total de Usuarios</h3>
-        <div class="stat-number">{{ total_usuarios }}</div>
-        <small>Ver todos los usuarios en la sección Usuarios.</small>
-    </div>
-
-    <div class="stat-card" style="background: linear-gradient(135deg, #6b8e6b 0%, #5a7a5a 100%); color: white;">
-        <h3>Usuarios Activos</h3>
-        <div class="stat-number">{{ usuarios_activos }}</div>
-        <small>{{ usuarios_activos_porcentaje }}% del total</small>
-    </div>
-
-    <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
-        <h3>Grupos / Roles</h3>
-        <div class="stat-number">{{ total_grupos }}</div>
-        <small>Gestiona permisos y roles desde la sección Permisos.</small>
-    </div>
-</div>
-
-<style>
-    a[href]:hover {
-        border-color: #6b8e6b !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(107, 142, 107, 0.2);
-    }
-</style>
+        <a class="text-link"
+           href="{% url 'admin_personalizado:gestionar_usuarios' %}">Ver todos {% icon 'arrow' %}</a>
+      </div>
+      {% for member in usuarios_recientes %}
+        <a class="recent-item"
+           href="{% url 'admin_personalizado:detalle_usuario' member.pk %}">
+          <span class="avatar">{{ member.username|slice:':1'|upper }}</span>
+          <span class="recent-info">
+            <strong>{{ member.get_full_name|default:member.username }}</strong>
+            <small>{{ member.email|default:'Sin correo registrado' }}</small>
+          </span>
+          <span class="badge {% if member.is_active %}badge-success{% else %}badge-danger{% endif %}">
+            {% if member.is_active %}Activo{% else %}Inactivo{% endif %}
+          </span>
+        </a>
+      {% empty %}
+        <div class="empty-state">
+          <p>Aún no hay usuarios registrados.</p>
+        </div>
+      {% endfor %}
+    </section>
+    <aside class="panel quick-panel">
+      <p class="eyebrow">ADMINISTRACIÓN</p>
+      <h2>Accesos rápidos</h2>
+      <a class="quick-link"
+         href="{% url 'admin_personalizado:crear_usuario' %}">
+        <span class="quick-icon">{% icon 'users' %}</span>
+        <span>
+          <strong>Crear usuario</strong>
+          <small>Vincula una persona al equipo</small>
+        </span>
+        {% icon 'arrow' %}
+      </a>
+      <a class="quick-link" href="{% url 'admin_personalizado:permisos' %}">
+        <span class="quick-icon">{% icon 'shield' %}</span>
+        <span>
+          <strong>Gestionar permisos</strong>
+          <small>Organiza los accesos por grupo</small>
+        </span>
+        {% icon 'arrow' %}
+      </a>
+      <a class="quick-link" href="{% url 'evidencias_list' %}">
+        <span class="quick-icon">{% icon 'folder' %}</span>
+        <span>
+          <strong>Revisar evidencias</strong>
+          <small>Consulta los aportes del equipo</small>
+        </span>
+        {% icon 'arrow' %}
+      </a>
+    </aside>
+  </div>
 {% endblock %}

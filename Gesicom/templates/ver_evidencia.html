@@ -1,77 +1,134 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Previsualización - {{ envio.nombre }}</title>
-    <link rel="stylesheet" href="{% static 'CSS/panel_evidencias.css' %}">
-    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
-    <link rel="stylesheet" href="{% static 'css/modules/gesicom-responsive.css' %}">
-    <style>
-        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .preview-header { background: #007a3d; color: white; padding: 15px 25px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .back-btn { color: white; text-decoration: none; font-size: 24px; font-weight: bold; transition: transform 0.2s; }
-        .back-btn:hover { transform: translateX(-5px); }
-        .preview-title { font-size: 1.2rem; font-weight: 600; flex: 1; }
-        .preview-content { flex: 1; background: #f0f4ee; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: auto; }
-        .preview-frame { width: 100%; height: 100%; border: none; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .preview-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .no-preview { text-align: center; color: #666; }
-    </style>
-</head>
-<body>
-    <header class="preview-header">
-        <a href="javascript:history.back()" class="back-btn" title="Volver">←</a>
-        <div class="preview-title">Visualizando: {{ envio.nombre }} - {{ envio.proyecto }}</div>
-        <div style="font-size: 0.9rem; opacity: 0.9;">{{ envio.usuario.get_full_name|default:envio.usuario.username }}</div>
-    </header>
-
-    <main class="preview-content">
-        {% if envio.archivo_evidencia %}
-            {% with ext=envio.archivo_evidencia.name|lower %}
-                {% if ".jpg" in ext or ".jpeg" in ext or ".png" in ext or ".gif" in ext %}
-                    <img src="{{ envio.archivo_evidencia.url }}" class="preview-img" alt="Previsualización de imagen">
-                {% elif ".pdf" in ext %}
-                    <iframe src="{{ envio.archivo_evidencia.url }}" class="preview-frame"></iframe>
-                {% elif ".txt" in ext %}
-                    <pre id="txt-preview" class="preview-frame" style="padding:20px; overflow:auto; background:#fff;" aria-live="polite">Cargando contenido...</pre>
-                {% elif ".mp4" in ext or ".webm" in ext or ".ogg" in ext %}
-                    <video controls class="preview-frame">
-                        <source src="{{ envio.archivo_evidencia.url }}" type="video/{{ ext|slice:'1:' }}">
-                        Tu navegador no soporta video.
-                    </video>
-                {% elif ".mp3" in ext or ".wav" in ext or ".ogg" in ext %}
-                    <audio controls style="width:100%;">
-                        <source src="{{ envio.archivo_evidencia.url }}" type="audio/{{ ext|slice:'1:' }}">
-                        Tu navegador no soporta audio.
-                    </audio>
-                {% elif ".doc" in ext or ".docx" in ext or ".xls" in ext or ".xlsx" in ext or ".ppt" in ext or ".pptx" in ext or ".odt" in ext or ".ods" in ext or ".odp" in ext %}
-                    {% comment %}Usamos el visor de Office (requiere URL pública accesible) o el visor de Google Docs{% endcomment %}
-                    <iframe src="https://view.officeapps.live.com/op/embed.aspx?src={{ archivo_url|urlencode }}" class="preview-frame"></iframe>
-                {% else %}
-                    <div class="no-preview">
-                        <p>Este tipo de archivo no se puede previsualizar directamente.</p>
-                        <a href="{{ envio.archivo_evidencia.url }}" class="btn-view" style="margin-top: 15px; padding: 10px 20px; font-size: 1rem;">Descargar Archivo</a>
-                    </div>
-                {% endif %}
-            {% endwith %}
-        {% elif envio.link_evidencia %}
-            <iframe src="{{ envio.link_evidencia }}" class="preview-frame"></iframe>
-        {% else %}
-            <div class="no-preview">No hay archivo o link disponible para mostrar.</div>
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}{{ envio.nombre }} · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / EVIDENCIAS / DETALLE</p>
+      <h1>{{ envio.nombre }}</h1>
+      <p class="page-description">{{ envio.proyecto }} · Registrada el {{ envio.fecha_envio|date:'d M Y' }}</p>
+    </div>
+    <div class="heading-actions">
+      <a class="button button-secondary" href="{% url 'evidencias_list' %}">Volver a evidencias</a>
+      {% if envio.archivo_evidencia %}
+        <a class="button button-primary"
+           href="{{ archivo_url }}?descargar=1"
+           download>{% icon 'download' %} Descargar archivo</a>
+      {% elif envio.link_evidencia %}
+        <a class="button button-primary"
+           href="{{ envio.link_evidencia }}"
+           target="_blank"
+           rel="noopener noreferrer">{% icon 'external' %} Abrir enlace</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="preview-layout">
+    <section class="preview-surface">
+      {% if preview_kind == "image" %}
+        <img src="{{ archivo_url }}" alt="{{ envio.nombre }}">
+      {% elif preview_kind == "pdf" %}
+        <iframe src="{{ archivo_url }}"
+                title="Previsualización de {{ envio.nombre }}">
+        </iframe>
+      {% elif preview_kind == "text" %}
+        <pre data-text-preview="{{ archivo_url }}" aria-live="polite">Cargando contenido…</pre>
+      {% elif preview_kind == "video" %}
+        <video controls
+               style="width:100%;
+                      max-height:70vh"
+               aria-label="{{ envio.nombre }}">
+          <source src="{{ archivo_url }}">
+          Tu navegador no permite reproducir este video.
+        </video>
+      {% elif preview_kind == "audio" %}
+        <audio controls style="width:100%" aria-label="{{ envio.nombre }}">
+          <source src="{{ archivo_url }}">
+        Tu navegador no permite reproducir este audio.</audio>
+      {% elif preview_kind == "office" %}
+        <div class="empty-state">
+          <span class="empty-symbol">{% icon 'file' %}</span>
+          <h3>Tu documento está disponible</h3>
+          <p>Descárgalo para consultarlo en su aplicación. El archivo está protegido por el acceso a tu cuenta.</p>
+          <a class="button button-secondary"
+             href="{{ archivo_url }}?descargar=1">Descargar documento {% icon 'download' %}</a>
+        </div>
+      {% elif envio.link_evidencia and not envio.archivo_evidencia %}
+        <div class="empty-state">
+          <span class="empty-symbol">{% icon 'external' %}</span>
+          <h3>Consulta la evidencia en su origen</h3>
+          <p>Abre el enlace registrado para revisar el contenido completo.</p>
+          <a class="button button-primary"
+             href="{{ envio.link_evidencia }}"
+             target="_blank"
+             rel="noopener noreferrer">Abrir evidencia {% icon 'arrow' %}</a>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <span class="empty-symbol">{% icon 'file' %}</span>
+          <h3>{% if envio.archivo_evidencia %}Archivo listo para descargar{% else %}Sin archivo adjunto{% endif %}</h3>
+          <p>
+            {% if envio.archivo_evidencia %}Usa el botón de descarga para consultar este tipo de archivo.{% else %}Esta evidencia no tiene un archivo o enlace asociado.{% endif %}
+          </p>
+        </div>
+      {% endif %}
+    </section>
+    <aside class="panel preview-meta">
+      <p class="eyebrow">INFORMACIÓN DEL REGISTRO</p>
+      <h2>Detalle de evidencia</h2>
+      <dl class="file-meta">
+        <div>
+          <dt>Estado{% if envio.entrega_tardia %} · Entrega fuera de plazo{% endif %}</dt>
+          <dd>
+            {% include "ui/status.html" %}
+          </dd>
+        </div>
+        <div>
+          <dt>Registrada por</dt>
+          <dd>
+            {{ envio.usuario.get_full_name|default:envio.usuario.username }}
+          </dd>
+        </div>
+        <div>
+          <dt>Proyecto</dt>
+          <dd>
+            {{ envio.proyecto }}
+          </dd>
+        </div>
+        <div>
+          <dt>Tipo de evidencia</dt>
+          <dd>
+            {{ envio.tipo_evidencia }}
+          </dd>
+        </div>
+        <div>
+          <dt>Observaciones</dt>
+          <dd class="observations">
+            {{ envio.observaciones|default:'Sin observaciones registradas.' }}
+          </dd>
+        </div>
+        {% if envio.link_evidencia %}
+          <div>
+            <dt>Enlace asociado</dt>
+            <dd>
+              <a class="text-link"
+                 href="{{ envio.link_evidencia }}"
+                 target="_blank"
+                 rel="noopener noreferrer">Abrir enlace {% icon 'external' %}</a>
+            </dd>
+          </div>
         {% endif %}
-    </main>
-
-    <script>
-    // Cargar texto para archivos .txt
-    (function(){
-        const pre = document.getElementById('txt-preview');
-        if(!pre) return;
-        fetch('{{ envio.archivo_evidencia.url }}')
-            .then(r => r.text())
-            .then(t => { pre.textContent = t; })
-            .catch(() => { pre.textContent = 'No se pudo cargar el contenido del texto.'; });
-    })();
-    </script>
-</body>
-</html>
+      </dl>
+      {% if ui_reviewer %}
+        <hr>
+        <form method="post"
+              action="{% url 'set_aprobada' envio.pk %}"
+              class="review-actions">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" name="valor" value="1">Aprobar evidencia</button>
+          <button type="submit" name="valor" value="0">Rechazar evidencia</button>
+        </form>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

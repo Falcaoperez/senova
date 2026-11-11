@@ -78,3 +78,12 @@ htmlcov/
 # Security
 secrets.json
 credentials.json
+
+# Datos y credenciales locales de servicios
+.local/
+*.dump
+*.sql.gz
+
+.venv/
+.ruff_cache/
+.mypy_cache/

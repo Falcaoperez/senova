@@ -1,0 +1,49 @@
+{% extends "page_base.html" %}
+{% load ui %}
+{% block title %}Centro de ayuda · GESICOM SENA{% endblock %}
+{% block page_content %}
+  <div class="info-hero">
+    <p class="eyebrow">GESICOM / CENTRO DE AYUDA</p>
+    <h1>
+      Te acompañamos
+      <br>
+      en cada paso.
+    </h1>
+    <p>Encuentra respuestas para trabajar con tus evidencias y tu cuenta.</p>
+  </div>
+  <section class="panel faq-list">
+    <details class="faq-item" open>
+      <summary>¿Cómo empiezo a usar GESICOM? {% icon 'chevron' %}</summary>
+      <p>Crea una cuenta e inicia sesión con tu usuario o correo. Comenzarás con el rol de usuario. El administrador puede asignarte el rol que corresponda a tu trabajo.</p>
+    </details>
+    <details class="faq-item">
+      <summary>¿Cómo envío una evidencia? {% icon 'chevron' %}</summary>
+      <p>Entra a “Enviar evidencia”, indica el nombre y el proyecto, selecciona el tipo y añade un archivo o un enlace. Revisa los datos antes de enviarlos. El registro quedará disponible en “Evidencias”.</p>
+    </details>
+    <details class="faq-item">
+      <summary>¿Qué archivos puedo adjuntar? {% icon 'chevron' %}</summary>
+      <p>PDF, Word, Excel, PowerPoint, texto, JPG, PNG, ZIP y RAR, con un máximo de 10 MB. También puedes añadir un enlace HTTP o HTTPS. Comprueba que el equipo revisor pueda acceder al contenido.</p>
+    </details>
+    <details class="faq-item">
+      <summary>¿Qué significa el estado de mi evidencia? {% icon 'chevron' %}</summary>
+      <p>“En revisión” indica que el registro está pendiente. “Aprobada” confirma la revisión. Si aparece “Rechazada”, consulta las observaciones y contacta al equipo revisor para conocer los pasos a seguir.</p>
+    </details>
+    <details class="faq-item">
+      <summary>¿Cómo recupero mi contraseña? {% icon 'chevron' %}</summary>
+      <p>Selecciona “¿Olvidaste tu contraseña?” al iniciar sesión. Ingresa tu correo y utiliza el código recibido para elegir una nueva contraseña. El código es válido durante una hora y solo puede usarse una vez. Revisa también la carpeta de correo no deseado.</p>
+    </details>
+    <details class="faq-item">
+      <summary>¿Cómo descargo los reportes? {% icon 'chevron' %}</summary>
+      <p>Abre “Reportes”, elige el proyecto y el período, y aplica los filtros. Puedes descargar los registros en CSV o consultar el resumen trimestral. La información disponible depende de tu rol.</p>
+    </details>
+    <details class="faq-item">
+      <summary>¿Necesito cambiar mi rol o mis datos? {% icon 'chevron' %}</summary>
+      <p>Puedes actualizar tus datos en “Mi perfil”. Para cambiar de rol, solicita apoyo al administrador del centro. Nunca compartas tu contraseña.</p>
+    </details>
+  </section>
+  <div class="help-card">
+    <h3>¿Necesitas más orientación?</h3>
+    <p>El administrador de tu centro puede ayudarte con los accesos y la gestión de tu cuenta.</p>
+    <a href="{% url 'contacto' %}">Consultar orientación {% icon 'arrow' %}</a>
+  </div>
+{% endblock %}

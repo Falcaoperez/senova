@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}403 · GESICOM SENA{% endblock %}
+{% block content %}
+  <section class="panel empty-state">
+    <span class="empty-symbol">{% icon 'info' %}</span>
+    <p class="eyebrow">GESICOM / 403</p>
+    <h1>No pudimos validar esta solicitud.</h1>
+    <p style="margin-top:18px">Actualiza la página e intenta de nuevo. Si el problema continúa, consulta al administrador.</p>
+    <a class="button button-primary" href="{% url 'home' %}">Volver al inicio {% icon 'arrow' %}</a>
+  </section>
+{% endblock %}

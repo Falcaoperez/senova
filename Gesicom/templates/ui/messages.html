@@ -1,0 +1,15 @@
+{% load ui %}
+{% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" role="status">
+        {% icon 'info' %}
+        <span>{{ message }}</span>
+        <button class="icon-button"
+                type="button"
+                aria-label="Cerrar mensaje"
+                data-dismiss>{% icon 'close' %}</button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

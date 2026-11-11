@@ -1,0 +1,9 @@
+GESICOM · SENA
+
+Hola, {{ usuario.first_name|default:usuario.username }}.
+
+{{ notificacion.titulo }}
+{{ notificacion.mensaje }}
+
+Consultar en GESICOM: {{ enlace }}
+Puedes ajustar tus preferencias de correo desde la bandeja de notificaciones.

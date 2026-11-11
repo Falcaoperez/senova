@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+  <body style="margin:0;
+               background:#f5f7f9;
+               color:#193345;
+               font:15px Arial,sans-serif">
+    <div style="max-width:560px;
+                margin:30px auto;
+                padding:30px;
+                background:white;
+                border:1px solid #e3e9ed;
+                border-radius:12px">
+      <p style="color:#237500;font-weight:bold">SENA · GESICOM</p>
+      <h1 style="font-size:23px">{{ notificacion.titulo }}</h1>
+      <p>Hola, {{ usuario.first_name|default:usuario.username }}.</p>
+      <p style="white-space:pre-line;line-height:1.7">{{ notificacion.mensaje }}</p>
+      <a href="{{ enlace }}"
+         style="display:inline-block;
+                padding:13px 20px;
+                background:#237500;
+                color:white;
+                text-decoration:none;
+                border-radius:6px">Consultar en GESICOM</a>
+      <p style="font-size:11px;color:#697b89;margin-top:25px">Puedes ajustar tus preferencias de correo desde la bandeja de notificaciones.</p>
+    </div>
+  </body>
+</html>

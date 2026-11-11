@@ -1,22 +1,183 @@
-{% load static %}
+{% load static ui %}
 <!DOCTYPE html>
 <html lang="es">
-<head>
+  <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}GESICOM{% endblock %}</title>
-    <!-- <link rel="stylesheet" href="{% static 'CSS/editar.css' %}"> -->
-    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
-    <link rel="stylesheet" href="{% static 'css/modules/gesicom-responsive.css' %}">
-{% block extra_css %}{% endblock %}
-</head>
-<body>
-
-
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-
+    <meta name="theme-color" content="#00324d">
+    <title>{% block title %}GESICOM · SENA{% endblock %}</title>
+    <link rel="icon"
+          type="image/svg+xml"
+          href="{% static 'img/brand/sena.svg' %}">
+    <link rel="preload"
+          href="{% static 'fonts/work-sans/work-sans-400.ttf' %}"
+          as="font"
+          type="font/ttf"
+          crossorigin>
+    <link rel="stylesheet" href="{% static 'css/sena.css' %}">
+    {% block extra_css %}{% endblock %}
+    <script defer src="{% static 'js/sena.js' %}"></script>
+    {% block head %}{% endblock %}
+  </head>
+  <body class="{% block body_class %} {% if user.is_authenticated %}app-body{% else %}public-body{% endif %} {% endblock %}">
+    <a href="#main-content" class="skip-link">Saltar al contenido</a>
+    {% block layout %}
+      {% if user.is_authenticated %}
+        <div class="nav-backdrop" data-nav-close></div>
+        <aside class="sidebar"
+               id="main-navigation"
+               aria-label="Navegación principal">
+          <button class="icon-button mobile-nav-close"
+                  type="button"
+                  aria-label="Cerrar menú"
+                  data-nav-close>{% icon 'close' %}</button>
+          <a href="{{ ui_panel_url }}" class="brand">
+            <img src="{% static 'img/brand/sena.svg' %}"
+                 alt="SENA"
+                 width="52"
+                 height="52">
+            <span class="brand-divider"></span>
+            <span>
+              <strong>GESICOM</strong>
+              <small>Investigación y competencias</small>
+            </span>
+          </a>
+          <div class="workspace-label">
+            <span class="online-dot"></span> Espacio de {{ ui_role|lower }}
+          </div>
+          <p class="nav-caption">GESTIÓN</p>
+          <nav class="nav-list">
+            {% for item in ui_navigation %}
+              <a href="{{ item.url }}"
+                 class="nav-link {% if item.active %}is-active{% endif %}"
+                 {% if item.active %}aria-current="page"{% endif %}>
+                {% icon item.icon %}
+                <span>{{ item.label }}</span>
+                {% if item.active %}
+                  <span class="nav-active-dot"></span>
+                {% endif %}
+              </a>
+            {% endfor %}
+          </nav>
+          <div class="sidebar-bottom">
+            <a class="nav-link" href="{% url 'ayuda' %}">{% icon 'help' %} Centro de ayuda</a>
+            <a class="nav-link" href="{% url 'editar_perfil' %}">{% icon 'user' %} Mi perfil</a>
+            <div class="sidebar-note">
+              <span class="label">SENNOVA</span>
+              <p>Conocimiento que transforma.</p>
+              <small>Servicio Nacional de Aprendizaje</small>
+            </div>
+          </div>
+        </aside>
+      {% endif %}
+      <div class="app-frame">
+        <header class="topbar">
+          {% if user.is_authenticated %}
+            <div class="topbar-left">
+              <button class="icon-button nav-toggle"
+                      type="button"
+                      aria-label="Abrir menú de navegación"
+                      aria-controls="main-navigation"
+                      aria-expanded="false"
+                      data-nav-toggle>{% icon 'menu' %}</button>
+              <span class="topbar-product">Sistema de gestión <span class="muted">/</span> <strong>GESICOM</strong>
+              </span>
+            </div>
+            <form class="topbar-search"
+                  action="{% url 'evidencias_list' %}"
+                  method="get"
+                  role="search">
+              <label class="sr-only" for="global-search">Buscar evidencias</label>
+              {% icon 'search' %}
+              <input id="global-search"
+                     name="q"
+                     placeholder="Buscar una evidencia…"
+                     value="{{ q|default:'' }}">
+              <kbd>/</kbd>
+            </form>
+            <div class="topbar-actions">
+              <details class="notifications-menu"
+                       data-notifications-summary="{% url 'notificaciones:resumen' %}">
+                <summary class="icon-button" aria-label="Notificaciones">
+                  {% icon 'bell' %}
+                  <span class="notification-count"
+                        data-unread-count
+                        {% if not ui_notificaciones_pendientes %}hidden{% endif %}>{{ ui_notificaciones_pendientes }}</span>
+                </summary>
+                <div class="notification-dropdown">
+                  <h2>Notificaciones</h2>
+                  {% for aviso in ui_notificaciones_recientes %}
+                    <form class="notification-preview"
+                          method="post"
+                          action="{% url 'notificaciones:abrir' aviso.pk %}">
+                      {% csrf_token %}
+                      <button type="submit">
+                        <strong>{{ aviso.titulo }}</strong>
+                        <small>{{ aviso.creada_en|date:'d M · H:i' }}{% if not aviso.leida_en %} · Sin leer{% endif %}
+                        </small>
+                      </button>
+                    </form>
+                  {% empty %}
+                    <p class="password-help">Estás al día. Aquí aparecerán los nuevos avisos.</p>
+                  {% endfor %}
+                  <a class="text-link"
+                     href="{% url 'notificaciones:bandeja' %}">Ver todas las notificaciones {% icon 'arrow' %}</a>
+                </div>
+              </details>
+              <a class="icon-button"
+                 href="{% url 'ayuda' %}"
+                 aria-label="Centro de ayuda">{% icon 'help' %}</a>
+              <span class="topbar-separator"></span>
+              <details class="account-menu">
+                <summary>
+                  <span class="avatar">{{ user.first_name|default:user.username|slice:':1'|upper }}{{ user.last_name|slice:':1'|upper }}</span>
+                  <span class="account-label">
+                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                    <small>{{ ui_role }}</small>
+                  </span>
+                  {% icon 'chevron' %}
+                </summary>
+                <div class="account-dropdown">
+                  <a href="{% url 'editar_perfil' %}">{% icon 'user' %} Editar mi perfil</a>
+                  <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit">{% icon 'logout' %} Cerrar sesión</button>
+                  </form>
+                </div>
+              </details>
+            </div>
+          {% else %}
+            <a href="{% url 'home' %}" class="brand">
+              <img src="{% static 'img/brand/sena.svg' %}"
+                   alt="SENA"
+                   width="48"
+                   height="48">
+              <span class="brand-divider"></span>
+              <strong>GESICOM</strong>
+            </a>
+            <nav class="public-nav">
+              <a href="{% url 'nosotros' %}">Nosotros</a>
+              <a href="{% url 'ayuda' %}">Ayuda</a>
+              <a class="button button-primary button-sm" href="{% url 'login' %}">Ingresar {% icon 'arrow' %}</a>
+            </nav>
+          {% endif %}
+        </header>
+        <main id="main-content" class="main-content" tabindex="-1">
+          {% include "ui/messages.html" %}
+          {% block content %}{% endblock %}
+        </main>
+        <footer class="app-footer">
+          <span>
+            <strong>SENA</strong> · Servicio Nacional de Aprendizaje</span>
+          <span>GESICOM <span class="footer-dot">·</span> {% now "Y" %}
+          </span>
+        </footer>
+      </div>
+    {% endblock %}
+    <div class="toast-region"
+         aria-live="polite"
+         aria-atomic="true"
+         id="toast-region"></div>
     {% block extra_js %}{% endblock %}
-</body>
+  </body>
 </html>

@@ -1,0 +1,4 @@
+<span class="badge {% if envio.aprobada %}badge-success{% elif envio.rechazada %}badge-danger{% else %}badge-pending{% endif %}">
+  <span></span>
+  {% if envio.aprobada %}Aprobada{% elif envio.rechazada %}Rechazada{% else %}En revisión{% endif %}
+</span>

@@ -1,0 +1,105 @@
+@font-face {
+  font-family: "Work Sans";
+  src: url("../fonts/work-sans/work-sans-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Work Sans";
+  src: url("../fonts/work-sans/work-sans-600.ttf") format("truetype");
+  font-weight: 600 800;
+  font-display: swap;
+}
+:root {
+  --primary: #00324d;
+  --secondary: #00324d;
+  --accent: #b9e394;
+  --body-bg: #f5f7f9;
+  --body-fg: #193345;
+  --header-bg: #00324d;
+  --header-color: #f5f9f1;
+  --header-link-color: white;
+  --breadcrumbs-bg: #eaf3e4;
+  --breadcrumbs-fg: #193345;
+  --breadcrumbs-link-fg: #237500;
+  --link-fg: #237500;
+  --link-selected-fg: #00324d;
+  --button-bg: #237500;
+  --button-hover-bg: #1b5a00;
+  --default-button-bg: #00324d;
+  --default-button-hover-bg: #065777;
+  --font-family-primary: "Work Sans", Arial, sans-serif;
+}
+html[data-theme="dark"] {
+  --primary: #00324d;
+  --header-bg: #00324d;
+  --link-fg: #a4d681;
+  --link-selected-fg: #cbe6bb;
+  --breadcrumbs-bg: #00324d;
+  --breadcrumbs-fg: white;
+  --breadcrumbs-link-fg: #b9e394;
+}
+body,
+input,
+button,
+select,
+textarea {
+  font-family: "Work Sans", Arial, sans-serif;
+}
+#header {
+  padding: 18px 28px;
+}
+#site-name a {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+}
+#site-name img {
+  display: block;
+}
+#site-name strong {
+  font-size: 20px;
+  color: white;
+}
+#site-name span {
+  font-size: 12px;
+  color: #b2c5cf;
+  border-left: 1px solid #456777;
+  padding-left: 16px;
+}
+.back-gesicom {
+  font-size: 11px;
+  margin-left: 20px;
+  white-space: nowrap;
+}
+#content {
+  padding-top: 30px;
+}
+.module {
+  border-radius: 8px;
+  overflow: hidden;
+}
+h1 {
+  font-weight: 600;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #39a900;
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  #site-name strong {
+    font-size: 16px;
+  }
+  #site-name span {
+    display: none;
+  }
+  #header {
+    padding: 14px 18px;
+  }
+  .back-gesicom {
+    margin: 12px 0 0;
+  }
+}
