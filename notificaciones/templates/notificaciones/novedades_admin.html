@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Novedades · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / COMUNICACIÓN</p>
+      <h1>Una comunidad bien informada.</h1>
+      <p class="page-description">Publica novedades para todo el equipo o para grupos específicos.</p>
+    </div>
+    <a class="button button-primary"
+       href="{% url 'notificaciones:crear_novedad' %}">{% icon 'plus' %} Publicar novedad</a>
+  </div>
+  <div class="communication-status panel">
+    <span>
+      <strong>{{ correos_pendientes }}</strong> correos en cola</span>
+    <span>
+      <strong>{{ correos_error }}</strong> con envío pendiente de revisión</span>
+    <span class="badge {% if trabajador_activo %}badge-success{% else %}badge-pending{% endif %}">
+      {% if trabajador_activo %}Procesador activo{% else %}Procesador sin actividad reciente{% endif %}
+    </span>
+    {% if correos_error %}
+      <form method="post" action="{% url 'notificaciones:reintentar_correos' %}">
+        {% csrf_token %}
+        <button class="button button-secondary button-sm" type="submit">Reintentar envíos</button>
+      </form>
+    {% endif %}
+  </div>
+  <section class="panel">
+    {% for novedad in novedades %}
+      <article class="notice-item">
+        <span class="notice-icon">{% icon 'bell' %}</span>
+        <div>
+          <h3>{{ novedad.titulo }}</h3>
+          <small>{{ novedad.publicada_en|date:'d M Y · H:i' }} · {{ novedad.creada_por.get_full_name|default:novedad.creada_por.username }}</small>
+          <p>{{ novedad.contenido|linebreaksbr }}</p>
+          {% if novedad.enlace %}
+            <a class="text-link"
+               href="{{ novedad.enlace }}"
+               target="_blank"
+               rel="noopener noreferrer">Consultar enlace {% icon 'external' %}</a>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <div class="empty-state">
+        <span class="empty-symbol">{% icon 'bell' %}</span>
+        <h3>Comparte la próxima novedad.</h3>
+        <p>Los avisos se mostrarán en la bandeja de los destinatarios y se prepararán para envío por correo.</p>
+      </div>
+    {% endfor %}
+    {% include "notificaciones/paginacion.html" with pagina=novedades %}
+  </section>
+{% endblock %}

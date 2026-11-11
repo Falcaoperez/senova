@@ -1,0 +1,100 @@
+name: gesicom
+
+# Solo estas variables llegan a Django; las claves root y de Redis permanecen
+# en sus respectivos servicios.
+x-application-environment: &application-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Configura DJANGO_SECRET_KEY}
+  DJANGO_DEBUG: "${DJANGO_DEBUG:-True}"
+  DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}"
+  CSRF_TRUSTED_ORIGINS: "${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}"
+  PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://127.0.0.1:8000}"
+  TRUSTED_PROXY_IPS: "${TRUSTED_PROXY_IPS:-}"
+  TRUST_PROXY_HTTPS: "${TRUST_PROXY_HTTPS:-False}"
+  DB_ENGINE: mysql
+  DB_NAME: "${DB_NAME:-senova}"
+  DB_USER: "${DB_USER:-gesicom_app}"
+  DB_PASSWORD: ${DB_PASSWORD:?Configura DB_PASSWORD}
+  DB_HOST: database
+  DB_PORT: "3306"
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Configura REDIS_PASSWORD}@redis:6379/0
+  EMAIL_BACKEND: "${EMAIL_BACKEND:-SENNOVA.email_backend.SMTPBackend}"
+  EMAIL_HOST: "${EMAIL_HOST:-smtp.office365.com}"
+  EMAIL_PORT: "${EMAIL_PORT:-587}"
+  EMAIL_HOST_USER: "${EMAIL_HOST_USER:-}"
+  EMAIL_HOST_PASSWORD: "${EMAIL_HOST_PASSWORD:-}"
+  EMAIL_OAUTH2_ACCESS_TOKEN: "${EMAIL_OAUTH2_ACCESS_TOKEN:-}"
+  EMAIL_USE_TLS: "${EMAIL_USE_TLS:-True}"
+  EMAIL_USE_SSL: "${EMAIL_USE_SSL:-False}"
+  EMAIL_TIMEOUT: "${EMAIL_TIMEOUT:-20}"
+  DEFAULT_FROM_EMAIL: "${DEFAULT_FROM_EMAIL:-GESICOM SENA <noresponderGESICOM@soy.sena.edu.co>}"
+  WEB_WORKERS: "${WEB_WORKERS:-4}"
+  WEB_THREADS: "${WEB_THREADS:-2}"
+  RATE_LIMITS_ENABLED: "${RATE_LIMITS_ENABLED:-True}"
+  LOGIN_IP_LIMIT: "${LOGIN_IP_LIMIT:-2000}"
+  REGISTRATION_IP_LIMIT: "${REGISTRATION_IP_LIMIT:-2000}"
+
+services:
+  database:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-senova}
+      MYSQL_USER: ${DB_USER:-gesicom_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Configura DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Configura MYSQL_ROOT_PASSWORD}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--max-connections=200"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysqladmin ping -h localhost -uroot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Configura REDIS_PASSWORD}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction --requirepass \"$$REDIS_PASSWORD\""]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  app:
+    build: .
+    image: gesicom-sena:local
+    restart: unless-stopped
+    environment: *application-environment
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+      - private_data:/app/.local
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+  worker:
+    image: gesicom-sena:local
+    restart: unless-stopped
+    environment: *application-environment
+    command: ["python", "manage.py", "procesar_notificaciones", "--continuo", "--intervalo", "30", "--lote", "50"]
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  mysql_data:
+  redis_data:
+  media_data:
+  static_data:
+  private_data:

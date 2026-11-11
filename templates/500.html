@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}500 · GESICOM SENA{% endblock %}
+{% block content %}
+  <section class="panel empty-state">
+    <span class="empty-symbol">{% icon 'info' %}</span>
+    <p class="eyebrow">GESICOM / 500</p>
+    <h1>Estamos revisando lo ocurrido.</h1>
+    <p style="margin-top:18px">No pudimos completar la operación. Intenta nuevamente en unos minutos.</p>
+    <a class="button button-primary" href="{% url 'home' %}">Volver al inicio {% icon 'arrow' %}</a>
+  </section>
+{% endblock %}

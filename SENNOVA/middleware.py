@@ -1,36 +1,129 @@
-from django.http import JsonResponse
-from django.core.cache import cache
-from django.utils.deprecation import MiddlewareMixin
+"""Límites compartidos por identidad e IP, y trazabilidad sin cuerpos de petición."""
+
+import hashlib
+import ipaddress
+import logging
 import time
 
+from django.conf import settings
+from django.core.cache import cache
+from django.db import DatabaseError
+from django.http import JsonResponse
 
-class MiddlewareLimiteVelocidad(MiddlewareMixin):
-    INTENTOS_LIMITE_VELOCIDAD = 5
-    VENTANA_LIMITE_VELOCIDAD = 300
-    
-    def procesar_solicitud(self, request):
-        if request.path in ['/login/', '/register/']:
-            ip = self._obtener_ip_cliente(request)
-            rate_limit_key = f'rate_limit:{request.path}:{ip}'
-            
-            attempts = cache.get(rate_limit_key, 0)
-            
-            if attempts >= self.INTENTOS_LIMITE_VELOCIDAD:
+logger = logging.getLogger(__name__)
+
+
+def client_ip(request):
+    remote = request.META.get("REMOTE_ADDR", "")
+    if remote in settings.TRUSTED_PROXY_IPS:
+        candidate = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            pass
+    try:
+        return str(ipaddress.ip_address(remote))
+    except ValueError:
+        return "127.0.0.1"
+
+
+class RateLimitMiddleware:
+    RULES = {
+        "login": (settings.LOGIN_IP_LIMIT, 600, 10),
+        "login_root": (settings.LOGIN_IP_LIMIT, 600, 10),
+        "register": (settings.REGISTRATION_IP_LIMIT, 3600, 5),
+        "olvide_password": (20, 900, 3),
+        "verificar_pin": (40, 600, 10),
+        "restablecer_password": (30, 600, 10),
+    }
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        if request.method != "POST" or not settings.RATE_LIMITS_ENABLED:
+            return None
+        name = request.resolver_match.url_name
+        if name == "login_root":
+            name = "login"
+        rule = self.RULES.get(name)
+        if not rule:
+            return None
+        ip_limit, window, identity_limit = rule
+        identity = (request.POST.get("email") or request.POST.get("username") or "").strip().casefold()
+        identities = [(f"ip:{client_ip(request)}", ip_limit)]
+        if identity:
+            identities.append((f"account:{identity}", identity_limit))
+        # Contadores de ventana fija: add/incr son atómicos en Redis.
+        bucket = int(time.time()) // window
+        for subject, limit in identities:
+            key = "limite:" + hashlib.sha256(f"{name}:{subject}:{bucket}".encode()).hexdigest()
+            try:
+                if cache.add(key, 1, timeout=window + 1):
+                    attempts = 1
+                else:
+                    attempts = cache.incr(key)
+            except Exception:
                 return JsonResponse(
-                    {'error': 'Demasiados intentos. Intenta más tarde.'},
-                    status=429
+                    {"error": "El servicio de acceso está temporalmente ocupado. Intenta más tarde."}, status=503
                 )
-            
-            if request.method == 'POST':
-                cache.set(rate_limit_key, attempts + 1, self.VENTANA_LIMITE_VELOCIDAD)
-        
+            if attempts > limit:
+                response = JsonResponse(
+                    {"error": "Demasiados intentos. Espera unos minutos antes de volver a intentarlo."}, status=429
+                )
+                response["Retry-After"] = str(window - int(time.time()) % window)
+                return response
         return None
-    
-    @staticmethod
-    def _obtener_ip_cliente(request):
-        x_reenviado_para = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_reenviado_para:
-            ip = x_reenviado_para.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
+
+
+class AuditMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        match = getattr(request, "resolver_match", None)
+        if (
+            request.method == "POST"
+            and match
+            and (
+                match.namespace in {"admin_personalizado", "notificaciones"}
+                or match.url_name in {"verificar_pin", "restablecer_password", "set_aprobada"}
+            )
+        ):
+            from cuentas.models import RegistroSeguridad
+
+            try:
+                RegistroSeguridad.objects.create(
+                    actor=request.user if request.user.is_authenticated else None,
+                    accion=f"{match.view_name}:{response.status_code}"[:80],
+                    ruta=request.path[:255],
+                    direccion_ip=client_ip(request),
+                )
+            except DatabaseError:
+                logger.error("No se pudo guardar un evento de auditoría.")
+        return response
+
+
+# Alias para configuraciones anteriores, sin mantener un segundo limitador.
+MiddlewareLimiteVelocidad = RateLimitMiddleware
+
+
+class SecurityHeadersMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        response["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+            "frame-src 'self'; frame-ancestors 'self'; object-src 'none'; "
+            "base-uri 'self'; form-action 'self'"
+        )
+        response["Referrer-Policy"] = "same-origin"
+        response["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response

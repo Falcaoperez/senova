@@ -6,202 +6,155 @@ Incluye:
 - Reportes y exportación CSV
 - Control de acceso por grupos/roles
 """
-from django.shortcuts import render, redirect, get_object_or_404
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.contrib.auth import logout
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.decorators import login_required
-from django.urls import reverse
-from .models import Envio
-from .utils import (
-    require_group, is_admin_or_group, apply_date_filters,
-    calculate_stats, calculate_monthly_stats
-)
-from django.http import HttpResponse, JsonResponse
+
 import csv
 import datetime
-import json
-from django.views.decorators.http import require_POST
+
 from django.contrib import messages
+from django.contrib.auth import logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-@login_required
-def editar_perfil(request):
-    user = request.user
+from .models import Envio
+from .utils import (
+    apply_date_filters,
+    calculate_stats,
+    is_admin_or_group,
+    require_group,
+    safe_csv_cell,
+    user_roles,
+)
 
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        first_name = request.POST.get('nombre', '').strip()
-        last_name = request.POST.get('apellido', '').strip()
-        email = request.POST.get('correo', '').strip()
-        password = request.POST.get('contrasena', '').strip()
-
-        # Actualiza los datos del usuario
-        user.username = username
-        user.first_name = first_name
-        user.last_name = last_name
-        user.email = email
-
-        if password:
-            if len(password) >= 8:
-                user.set_password(password)
-                # Mantiene la sesión del usuario después de cambiar la contraseña
-                update_session_auth_hash(request, user)
-            else:
-                messages.error(request, 'La contraseña debe tener al menos 8 caracteres.')
-                return render(request, 'editar_perfil/editar.html', {'user': user})
-
-        user.save()
-        messages.success(request, 'Perfil actualizado correctamente.')
-        # Redirige siempre al inicio después de guardar
-        return redirect('home')
-
-    return render(request, 'editar_perfil/editar.html', {'user': user})
 
 def index(request):
-    return render(request, 'home.html')
+    return render(request, "home.html")
 
 
 def home(request):
     is_basic = False
     if request.user.is_authenticated:
-        is_basic = request.user.groups.filter(name='usuario').exists()
-    return render(request, 'home.html', {'is_basic_user': is_basic})
+        is_basic = request.user.groups.filter(name="usuario").exists()
+    return render(request, "home.html", {"is_basic_user": is_basic})
 
 
-@require_group('usuario')
+@require_group("usuario")
 def role_usuario(request):
-    return render(request, 'panel_usuario.html')
+    return render(request, "panel_usuario.html", _panel_context(request.user, "Usuario"))
 
 
 def nosotros(request):
-    return render(request, 'nosotros.html')
+    return render(request, "nosotros.html")
 
 
 def contacto(request):
-    return render(request, 'contacto.html')
+    return render(request, "contacto.html")
 
 
 def ayuda(request):
-    return render(request, 'ayuda.html')
+    return render(request, "ayuda.html")
 
 
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect("login")
 
 
-@require_group('instructor')
+@require_group("instructor")
 def role_instructor(request):
-    return render(request, 'panel_instructor.html')  # ← CAMBIO
+    return render(request, "panel_instructor.html", _panel_context(request.user, "Instructor"))
 
 
-@require_group('investigador')
+@require_group("investigador")
 def role_investigador(request):
-    return render(request, 'roles/investigador.html')
+    return render(request, "panel_instructor.html", _panel_context(request.user, "Investigador"))
 
 
-@require_group('dinamizador')
+@require_group("dinamizador")
 def role_dinamizador(request):
-    return render(request, 'roles/dinamizador.html')
+    return render(request, "panel_instructor.html", _panel_context(request.user, "Dinamizador"))
 
 
-@require_group('coordinador')
+@require_group("coordinador")
 def role_coordinador(request):
-    return render(request, 'roles/coordinador.html')
+    return render(request, "panel_instructor.html", _panel_context(request.user, "Coordinador"))
 
 
 def portal(request):
-    return redirect('home')
+    return redirect("home")
 
 
 def admin_menu(request):
-    return redirect('admin_personalizado:dashboard')
+    return redirect("admin_personalizado:dashboard")
 
+
+@login_required
 def proyecciones(request):
-    consulta = Envio.objects.all()
-    estadisticas_categoria, total_envios = calculate_stats(consulta, 'tipo_evidencia')
-    estadisticas_proyecto, _ = calculate_stats(consulta, 'proyecto')
+    consulta = _visible_envios(request.user)
+    estadisticas_categoria, total_envios = calculate_stats(consulta, "tipo_evidencia")
+    estadisticas_proyecto, _ = calculate_stats(consulta, "proyecto")
     estadisticas_categoria = [
-        {'tipo_evidencia': s['field_value'], 'total': s['total'], 'porcentaje': s['porcentaje']}
+        {"tipo_evidencia": s["field_value"], "total": s["total"], "porcentaje": s["porcentaje"]}
         for s in estadisticas_categoria
     ]
     estadisticas_proyecto = [
-        {'proyecto': s['field_value'], 'total': s['total'], 'porcentaje': s['porcentaje']}
+        {"proyecto": s["field_value"], "total": s["total"], "porcentaje": s["porcentaje"]}
         for s in estadisticas_proyecto
     ]
     context = {
-        'total_envios': total_envios,
-        'estadisticas_categoria': estadisticas_categoria,
-        'estadisticas_proyecto': estadisticas_proyecto,
+        "total_envios": total_envios,
+        "estadisticas_categoria": estadisticas_categoria,
+        "estadisticas_proyecto": estadisticas_proyecto,
     }
-    return render(request, 'admin/proyecciones.html', context)
+    return render(request, "admin/proyecciones.html", context)
 
 
+@login_required
 def reportes(request):
-    proyecto = request.GET.get('proyecto', '')
-    inicio = request.GET.get('start', '')
-    fin = request.GET.get('end', '')
-    consulta = Envio.objects.all()
-    if proyecto:
-        consulta = consulta.filter(proyecto=proyecto)
-    consulta = apply_date_filters(consulta, inicio, fin)
-    estadisticas_categoria, total_envios = calculate_stats(consulta, 'tipo_evidencia')
-    estadisticas_categoria = [
-        {'tipo_evidencia': s['field_value'], 'total': s['total'], 'porcentaje': s['porcentaje']}
-        for s in estadisticas_categoria
-    ]
-    estadisticas_mensuales, _ = calculate_monthly_stats(consulta)
-    opcion_proyectos = [p for p, _ in Envio.PROYECTO_CHOICES]
-    context = {
-        'proyecto': proyecto,
-        'start': inicio,
-        'end': fin,
-        'opciones_proyectos': opcion_proyectos,
-        'estadisticas_categoria': estadisticas_categoria,
-        'estadisticas_mensuales': estadisticas_mensuales,
-    }
-    return render(request, 'reportes.html', context)
+    context = _evidencias_context(request, incluir_graficos=True)
+    context["download_query"] = "?" + request.GET.urlencode() if request.GET else ""
+    context["opciones_proyectos"] = [code for code, label in Envio.PROYECTO_CHOICES]
+    return render(request, "reportes.html", context)
 
 
+@login_required
 def reportes_csv(request):
-    proyecto = request.GET.get('proyecto', '')
-    inicio = request.GET.get('start', '')
-    fin = request.GET.get('end', '')
-    consulta = Envio.objects.all()
-    if proyecto:
-        consulta = consulta.filter(proyecto=proyecto)
-    consulta = apply_date_filters(consulta, inicio, fin)
-    respuesta = HttpResponse(content_type='text/csv')
-    respuesta['Content-Disposition'] = 'attachment; filename="reportes.csv"'
+    consulta = _filtered_envios(request)
+    respuesta = HttpResponse(content_type="text/csv")
+    respuesta["Content-Disposition"] = 'attachment; filename="reportes.csv"'
     escritor = csv.writer(respuesta)
-    escritor.writerow(['fecha_envio', 'nombre', 'proyecto', 'tipo_evidencia', 'link_evidencia', 'observaciones'])
-    for envio in consulta.order_by('fecha_envio'):
-        escritor.writerow([
-            envio.fecha_envio.isoformat() if envio.fecha_envio else '',
-            envio.nombre,
-            envio.proyecto,
-            envio.tipo_evidencia,
-            envio.link_evidencia or '',
-            (envio.observaciones or '').replace('\r\n', ' ').replace('\n', ' '),
-        ])
+    escritor.writerow(["fecha_envio", "nombre", "proyecto", "tipo_evidencia", "link_evidencia", "observaciones"])
+    for envio in consulta.order_by("fecha_envio"):
+        escritor.writerow(
+            [
+                safe_csv_cell(value)
+                for value in [
+                    envio.fecha_envio.isoformat() if envio.fecha_envio else "",
+                    envio.nombre,
+                    envio.proyecto,
+                    envio.tipo_evidencia,
+                    envio.link_evidencia or "",
+                    (envio.observaciones or "").replace("\r\n", " ").replace("\n", " "),
+                ]
+            ]
+        )
     return respuesta
 
 
+@login_required
 def reportes_trimestrales_csv(request):
-    proyecto = request.GET.get('proyecto', '')
-    inicio = request.GET.get('start', '')
-    fin = request.GET.get('end', '')
     try:
-        num_quarters = int(request.GET.get('quarters', 4))
+        num_quarters = int(request.GET.get("quarters", 4))
     except Exception:
         num_quarters = 4
     num_quarters = max(1, min(24, num_quarters))
-    consulta = Envio.objects.all()
-    if proyecto:
-        consulta = consulta.filter(proyecto=proyecto)
-    consulta = apply_date_filters(consulta, inicio, fin)
-    hoy = datetime.date.today()
+    consulta = _filtered_envios(request)
+    hoy = timezone.localdate()
     current_year = hoy.year
     current_quarter = (hoy.month - 1) // 3 + 1
     q_list = []
@@ -213,11 +166,11 @@ def reportes_trimestrales_csv(request):
         if q == 0:
             q = 4
             y -= 1
-    respuesta = HttpResponse(content_type='text/csv')
-    respuesta['Content-Disposition'] = 'attachment; filename="reportes_trimestrales.csv"'
+    respuesta = HttpResponse(content_type="text/csv")
+    respuesta["Content-Disposition"] = 'attachment; filename="reportes_trimestrales.csv"'
     escritor = csv.writer(respuesta)
-    escritor.writerow(['Trimestre', 'Nuevas', 'Aprobadas'])
-    for (y, q) in q_list:
+    escritor.writerow(["Trimestre", "Nuevas", "Aprobadas"])
+    for y, q in q_list:
         start_month = (q - 1) * 3 + 1
         start_date = datetime.date(y, start_month, 1)
         end_month = start_month + 2
@@ -229,68 +182,109 @@ def reportes_trimestrales_csv(request):
         end_date = datetime.date(y, end_month, end_day)
         nuevas = consulta.filter(fecha_envio__gte=start_date, fecha_envio__lte=end_date).count()
         aprob = consulta.filter(fecha_envio__gte=start_date, fecha_envio__lte=end_date, aprobada=True).count()
-        escritor.writerow([f'Q{q} {y}', nuevas, aprob])
+        escritor.writerow([f"Q{q} {y}", nuevas, aprob])
     return respuesta
 
 
 def _home_url_for_user(user):
-    """Devuelve la URL del panel de inicio correspondiente al rol del usuario."""
-    if user.is_superuser:
-        return reverse('admin_personalizado:dashboard')
-    if user.groups.filter(name='instructor').exists():
-        return reverse('role_instructor')
-    if user.groups.filter(name='investigador').exists():
-        return reverse('role_investigador')
-    if user.groups.filter(name='dinamizador').exists():
-        return reverse('role_dinamizador')
-    if user.groups.filter(name='coordinador').exists():
-        return reverse('role_coordinador')
-    if user.groups.filter(name='usuario').exists():
-        # En urls.py el nombre de esta ruta es 'usuario'
-        return reverse('usuario')
-    return reverse('home')
+    if is_admin_or_group(user, []):
+        return reverse("admin_personalizado:dashboard")
+    roles = user_roles(user)
+    for role in ["instructor", "investigador", "dinamizador", "coordinador"]:
+        if role in roles:
+            return reverse("role_" + role)
+    return reverse("usuario") if "usuario" in roles else reverse("home")
 
 
 @login_required
 def evidencia(request):
     home_url = _home_url_for_user(request.user)
+    from notificaciones.services import plazos_para_usuario
 
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre', '').strip()
-        proyecto = request.POST.get('proyecto', '').strip()
-        tipos = request.POST.getlist('evidencias')
-        tipo_evidencia = ', '.join(tipos) if tipos else 'Sin especificar'
-        enlace = request.POST.get('linkArchivo', '').strip()
-        archivo = request.FILES.get('archivo')
-        observaciones = request.POST.get('observaciones', '').strip()
+    plazos = plazos_para_usuario(request.user)
+    extra = {
+        "home_url": home_url,
+        "plazos_evidencia": plazos,
+        "plazo_seleccionado": request.POST.get("plazo", request.GET.get("plazo", "")),
+    }
+
+    if request.method == "POST":
+        nombre = request.POST.get("nombre", "").strip()
+        proyecto = request.POST.get("proyecto", "").strip()
+        tipos = request.POST.getlist("evidencias")
+        tipo_evidencia = ", ".join(tipos) if tipos else "Sin especificar"
+        enlace = (request.POST.get("linkArchivo") or request.POST.get("link_evidencia", "")).strip()
+        archivo = request.FILES.get("archivo")
+        observaciones = request.POST.get("observaciones", "").strip()
         errores = []
+        plazo = None
+        plazo_id = request.POST.get("plazo", "")
+        if plazo_id:
+            plazo = (
+                plazos.filter(pk=int(plazo_id)).first()
+                if plazo_id.isascii() and plazo_id.isdigit() and len(plazo_id) <= 18
+                else None
+            )
+            if not plazo:
+                errores.append("Selecciona un plazo disponible para tu cuenta.")
+            elif plazo.proyecto and plazo.proyecto != proyecto:
+                errores.append("El proyecto debe coincidir con el plazo seleccionado.")
         if not (enlace or archivo):
-            errores.append('Debe proporcionar un enlace o adjuntar un archivo (al menos uno).')
+            errores.append("Debe proporcionar un enlace o adjuntar un archivo (al menos uno).")
         if not nombre:
-            errores.append('El nombre es obligatorio.')
-        if not proyecto:
-            errores.append('Debe seleccionar el proyecto.')
+            errores.append("El nombre es obligatorio.")
+        if proyecto not in dict(Envio.PROYECTO_CHOICES):
+            errores.append("Debe seleccionar un proyecto válido.")
+        if enlace:
+            from django.core.exceptions import ValidationError
+            from django.core.validators import URLValidator
+
+            try:
+                URLValidator(schemes=["http", "https"])(enlace)
+            except ValidationError:
+                errores.append("Ingresa un enlace válido que empiece por http:// o https://.")
         if archivo and archivo.size > 10 * 1024 * 1024:
-            errores.append('El archivo es demasiado grande. Tamaño máximo: 10MB.')
+            errores.append("El archivo es demasiado grande. Tamaño máximo: 10MB.")
         if archivo:
-            extensiones_permitidas = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-                                     '.txt', '.jpg', '.jpeg', '.png', '.zip', '.rar']
+            extensiones_permitidas = [
+                ".pdf",
+                ".doc",
+                ".docx",
+                ".xls",
+                ".xlsx",
+                ".ppt",
+                ".pptx",
+                ".txt",
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".zip",
+                ".rar",
+            ]
             nombre_archivo = archivo.name.lower()
             if not any(nombre_archivo.endswith(ext) for ext in extensiones_permitidas):
-                errores.append(f'Tipo de archivo no permitido. Extensiones permitidas: {", ".join(extensiones_permitidas)}')
+                errores.append(
+                    f"Tipo de archivo no permitido. Extensiones permitidas: {', '.join(extensiones_permitidas)}"
+                )
         if errores:
-            return render(request, 'formulario.html', {
-                'errores': errores,
-                'exito': False,
-                'nombre': nombre,
-                'proyecto': proyecto,
-                'tipos': tipos,
-                'enlace_archivo': enlace,
-                'observaciones': observaciones,
-                'home_url': home_url,
-            })
+            return render(
+                request,
+                "formulario.html",
+                {
+                    "errores": errores,
+                    "exito": False,
+                    "nombre": nombre,
+                    "proyecto": proyecto,
+                    "tipos": tipos,
+                    "enlace_archivo": enlace,
+                    "observaciones": observaciones,
+                    **extra,
+                },
+            )
         envio = Envio(
             usuario=request.user,
+            plazo=plazo,
+            limite_aplicado=plazo.fecha_limite if plazo else None,
             nombre=nombre,
             proyecto=proyecto,
             tipo_evidencia=tipo_evidencia,
@@ -299,55 +293,62 @@ def evidencia(request):
             observaciones=observaciones,
         )
         envio.save()
-        mensaje_exito = 'Evidencia enviada correctamente'
+        mensaje_exito = "Evidencia enviada correctamente"
         if archivo:
-            mensaje_exito += f'. Archivo guardado: {envio.archivo_evidencia.name}'
-        return render(request, 'formulario.html', {
-            'exito': True,
-            'mensaje_exito': mensaje_exito,
-            'home_url': home_url,
-        })
-    return render(request, 'formulario.html', {'home_url': home_url})
+            mensaje_exito += f". Archivo guardado: {envio.archivo_evidencia.name}"
+        return render(
+            request,
+            "formulario.html",
+            {
+                "exito": True,
+                "mensaje_exito": mensaje_exito,
+                **extra,
+            },
+        )
+    return render(request, "formulario.html", extra)
 
 
 @login_required
 def evidencias_list(request):
+    return render(request, "evidencias_list.html", _evidencias_context(request))
+
+
+def _evidencias_context(request, incluir_graficos=False):
     home_url = _home_url_for_user(request.user)
-    consulta = Envio.objects.select_related('usuario').all()
-    proyecto = request.GET.get('proyecto', '')
-    inicio = request.GET.get('start', '')
-    fin = request.GET.get('end', '')
-    if proyecto:
-        consulta = consulta.filter(proyecto=proyecto)
-    consulta = apply_date_filters(consulta, inicio, fin)
-    termino_busqueda = (request.GET.get('q') or '').strip()
-    if termino_busqueda:
-        consulta = consulta.filter(
-            Q(nombre__icontains=termino_busqueda) |
-            Q(tipo_evidencia__icontains=termino_busqueda) |
-            Q(observaciones__icontains=termino_busqueda)
-        )
-    orden = request.GET.get('order', 'fecha_envio')
-    direccion = request.GET.get('dir', 'desc')
-    permitidos = {'fecha_envio', 'nombre', 'proyecto', 'tipo_evidencia'}
+    consulta = _filtered_envios(request).select_related("usuario")
+    proyecto = request.GET.get("proyecto", "")
+    inicio = request.GET.get("start", "")
+    fin = request.GET.get("end", "")
+    termino_busqueda = (request.GET.get("q") or "").strip()
+    estado = request.GET.get("estado", "")
+    orden = request.GET.get("order", "fecha_envio")
+    direccion = request.GET.get("dir", "desc")
+    permitidos = {"fecha_envio", "nombre", "proyecto", "tipo_evidencia"}
     if orden in permitidos:
-        criterio_orden = orden if direccion == 'asc' else f'-{orden}'
-        consulta = consulta.order_by(criterio_orden)
+        criterio_orden = orden if direccion == "asc" else f"-{orden}"
+        consulta = consulta.order_by(criterio_orden, "-pk")
     else:
-        consulta = consulta.order_by('-fecha_envio')
+        consulta = consulta.order_by("-fecha_envio", "-pk")
     paginador = Paginator(consulta, 10)
-    numero_pagina = request.GET.get('page')
+    numero_pagina = request.GET.get("page")
     objeto_pagina = paginador.get_page(numero_pagina)
-    total_envios = consulta.count()
-    hoy = datetime.date.today()
+    hoy = timezone.localdate()
     hace_30 = hoy - datetime.timedelta(days=30)
     hace_60 = hoy - datetime.timedelta(days=60)
-    nuevas_30d = consulta.filter(fecha_envio__gte=hace_30).count()
-    nuevas_prev_30d = consulta.filter(fecha_envio__gte=hace_60, fecha_envio__lt=hace_30).count()
-    aprobadas = consulta.filter(aprobada=True).count()
-    rechazadas = consulta.filter(rechazada=True).count()
-    aprobadas_30d = consulta.filter(aprobada=True, fecha_envio__gte=hace_30).count()
-    aprobadas_prev_30d = consulta.filter(aprobada=True, fecha_envio__gte=hace_60, fecha_envio__lt=hace_30).count()
+    resumen = consulta.aggregate(
+        total=Count("pk"),
+        nuevas=Count("pk", filter=Q(fecha_envio__gte=hace_30)),
+        anteriores=Count("pk", filter=Q(fecha_envio__gte=hace_60, fecha_envio__lt=hace_30)),
+        aprobadas=Count("pk", filter=Q(aprobada=True)),
+        rechazadas=Count("pk", filter=Q(rechazada=True)),
+        aprobadas_recientes=Count("pk", filter=Q(aprobada=True, fecha_envio__gte=hace_30)),
+        aprobadas_anteriores=Count("pk", filter=Q(aprobada=True, fecha_envio__gte=hace_60, fecha_envio__lt=hace_30)),
+        pendientes=Count("pk", filter=Q(aprobada=False, rechazada=False)),
+    )
+    total_envios = resumen["total"]
+    nuevas_30d, nuevas_prev_30d = resumen["nuevas"], resumen["anteriores"]
+    aprobadas, rechazadas = resumen["aprobadas"], resumen["rechazadas"]
+    aprobadas_30d, aprobadas_prev_30d = resumen["aprobadas_recientes"], resumen["aprobadas_anteriores"]
 
     def cambio_porcentaje(current, previous):
         try:
@@ -363,193 +364,303 @@ def evidencias_list(request):
     pct_nuevas_abs = abs(pct_nuevas) if pct_nuevas is not None else None
     pct_aprobadas_abs = abs(pct_aprobadas) if pct_aprobadas is not None else None
     pct_total_abs = abs(pct_total) if pct_total is not None else None
-    proyectos_guardados = list(Envio.objects.values_list('proyecto', flat=True).distinct())
-    choice_map = {c[0]: c[1] for c in Envio.PROYECTO_CHOICES}
-    categorias_labels = []
-    categorias_data = []
-    for code, label in Envio.PROYECTO_CHOICES:
-        if code and code in proyectos_guardados:
-            categorias_labels.append(label)
-            categorias_data.append(consulta.filter(proyecto=code).count())
+    opciones_proyectos = list(Envio.PROYECTO_CHOICES)
     try:
-        num_quarters = int(request.GET.get('quarters', 4))
-    except Exception:
+        num_quarters = max(1, min(12, int(request.GET.get("quarters", 4))))
+    except (ValueError, TypeError):
         num_quarters = 4
-    num_quarters = max(1, min(12, num_quarters))
-    trimestres_labels = []
-    datos_trimestrales_nuevas = []
-    datos_trimestrales_aprobadas = []
-    current_year = hoy.year
-    current_quarter = (hoy.month - 1) // 3 + 1
-    q_list = []
-    y = current_year
-    q = current_quarter
-    for _ in range(num_quarters):
-        q_list.insert(0, (y, q))
-        q -= 1
-        if q == 0:
-            q = 4
-            y -= 1
-    for (y, q) in q_list:
-        start_month = (q - 1) * 3 + 1
-        start_date = datetime.date(y, start_month, 1)
-        end_month = start_month + 2
-        if end_month == 12:
-            end_day = 31
-        else:
-            next_month = end_month + 1
-            end_day = (datetime.date(y, next_month, 1) - datetime.timedelta(days=1)).day
-        end_date = datetime.date(y, end_month, end_day)
-        trimestres_labels.append(f"Q{q} {y}")
-        datos_trimestrales_nuevas.append(consulta.filter(fecha_envio__gte=start_date, fecha_envio__lte=end_date).count())
-        datos_trimestrales_aprobadas.append(consulta.filter(fecha_envio__gte=start_date, fecha_envio__lte=end_date, aprobada=True).count())
-    top_users_qs = consulta.values('usuario__first_name', 'usuario__last_name', 'usuario__username').annotate(total=Count('id')).order_by('-total')[:6]
-    usuarios_labels = []
-    usuarios_data = []
-    for u in top_users_qs:
-        name = u.get('usuario__first_name') or u.get('usuario__username') or 'Usuario'
-        if u.get('usuario__last_name'):
-            name = f"{name} {u.get('usuario__last_name')}"
-        usuarios_labels.append(name)
-        usuarios_data.append(u['total'])
-    proyectos_guardados = list(Envio.objects.values_list('proyecto', flat=True).distinct())
-    opciones_proyectos = [(p, choice_map.get(p, p)) for p in proyectos_guardados if p]
-    # Verificar si el usuario es administrador
-    es_admin = request.user.is_superuser or request.user.groups.filter(name='administrador').exists()
+    categorias_labels, categorias_data = [], []
+    trimestres_labels, datos_trimestrales_nuevas, datos_trimestrales_aprobadas = [], [], []
+    usuarios_labels, usuarios_data = [], []
+    if incluir_graficos:
+        from django.db.models.functions import ExtractQuarter, ExtractYear
+
+        proyectos = dict(
+            consulta.values("proyecto").annotate(total=Count("pk")).order_by().values_list("proyecto", "total")
+        )
+        for code, label in Envio.PROYECTO_CHOICES:
+            if proyectos.get(code):
+                categorias_labels.append(label)
+                categorias_data.append(proyectos[code])
+        trimestral = (
+            consulta.annotate(anio=ExtractYear("fecha_envio"), trimestre=ExtractQuarter("fecha_envio"))
+            .values("anio", "trimestre")
+            .annotate(nuevas=Count("pk"), aprobadas=Count("pk", filter=Q(aprobada=True)))
+            .order_by()
+        )
+        mapa = {(row["anio"], row["trimestre"]): row for row in trimestral}
+        serial = hoy.year * 4 + (hoy.month - 1) // 3
+        for valor in range(serial - num_quarters + 1, serial + 1):
+            anio, trimestre = valor // 4, valor % 4 + 1
+            row = mapa.get((anio, trimestre), {})
+            trimestres_labels.append(f"Q{trimestre} {anio}")
+            datos_trimestrales_nuevas.append(row.get("nuevas", 0))
+            datos_trimestrales_aprobadas.append(row.get("aprobadas", 0))
+        top = (
+            consulta.values("usuario__first_name", "usuario__last_name", "usuario__username")
+            .annotate(total=Count("pk"))
+            .order_by("-total")[:6]
+        )
+        for row in top:
+            nombre = (
+                " ".join(filter(None, [row["usuario__first_name"], row["usuario__last_name"]]))
+                or row["usuario__username"]
+                or "Usuario"
+            )
+            usuarios_labels.append(nombre)
+            usuarios_data.append(row["total"])
+    es_admin = is_admin_or_group(request.user, [])
 
     context = {
-        'envios': objeto_pagina,
-        'proyecto': proyecto,
-        'order': orden,
-        'dir': direccion,
-        'start': inicio,
-        'end': fin,
-        'opciones_proyectos': opciones_proyectos,
-        'total_envios': total_envios,
-        'nuevas_30d': nuevas_30d,
-        'aprobadas': aprobadas,
-        'rechazadas': rechazadas,
-        'categorias_labels_json': json.dumps(categorias_labels, ensure_ascii=False),
-        'categorias_data_json': json.dumps(categorias_data),
-        'trimestres_labels_json': json.dumps(trimestres_labels, ensure_ascii=False),
-        'datos_trimestrales_nuevas_json': json.dumps(datos_trimestrales_nuevas),
-        'datos_trimestrales_aprobadas_json': json.dumps(datos_trimestrales_aprobadas),
-        'usuarios_labels_json': json.dumps(usuarios_labels, ensure_ascii=False),
-        'usuarios_data_json': json.dumps(usuarios_data),
-        'pct_nuevas': pct_nuevas,
-        'pct_aprobadas': pct_aprobadas,
-        'pct_total': pct_total,
-        'pct_nuevas_abs': pct_nuevas_abs,
-        'pct_aprobadas_abs': pct_aprobadas_abs,
-        'pct_total_abs': pct_total_abs,
-        'aprobadas_30d': aprobadas_30d,
-        'home_url': home_url,
-        'es_admin': es_admin,
+        "envios": objeto_pagina,
+        "proyecto": proyecto,
+        "order": orden,
+        "dir": direccion,
+        "start": inicio,
+        "end": fin,
+        "opciones_proyectos": opciones_proyectos,
+        "total_envios": total_envios,
+        "nuevas_30d": nuevas_30d,
+        "aprobadas": aprobadas,
+        "rechazadas": rechazadas,
+        "pendientes": resumen["pendientes"],
+        "categorias_labels_json": categorias_labels,
+        "categorias_data_json": categorias_data,
+        "trimestres_labels_json": trimestres_labels,
+        "datos_trimestrales_nuevas_json": datos_trimestrales_nuevas,
+        "datos_trimestrales_aprobadas_json": datos_trimestrales_aprobadas,
+        "usuarios_labels_json": usuarios_labels,
+        "usuarios_data_json": usuarios_data,
+        "pct_nuevas": pct_nuevas,
+        "pct_aprobadas": pct_aprobadas,
+        "pct_total": pct_total,
+        "pct_nuevas_abs": pct_nuevas_abs,
+        "pct_aprobadas_abs": pct_aprobadas_abs,
+        "pct_total_abs": pct_total_abs,
+        "aprobadas_30d": aprobadas_30d,
+        "home_url": home_url,
+        "es_admin": es_admin,
+        "puede_revisar": is_admin_or_group(request.user, ["coordinador", "dinamizador"]),
+        "q": termino_busqueda,
+        "estado": estado,
+        "quarters": num_quarters,
+        "next_direction": "desc" if direccion == "asc" else "asc",
+        "status_chart": [aprobadas, resumen["pendientes"], rechazadas],
     }
-    return render(request, 'evidencias_list.html', context)
+    return context
 
 
 def tabla_instructor(request):
-    return render(request, 'instructor_table.html')
+    return redirect("evidencias_list")
 
 
 @login_required
 def ver_evidencia(request, pk):
-    envio = get_object_or_404(Envio, pk=pk)
+    envio = get_object_or_404(_visible_envios(request.user), pk=pk)
     archivo_url = None
     if envio.archivo_evidencia:
-        archivo_url = request.build_absolute_uri(envio.archivo_evidencia.url)
-    return render(request, 'ver_evidencia.html', {'envio': envio, 'archivo_url': archivo_url})
+        archivo_url = reverse("archivo_evidencia", args=[envio.pk])
+    from pathlib import Path
+
+    suffix = Path(envio.archivo_evidencia.name or "").suffix.lower()
+    kind = (
+        "image"
+        if suffix in {".jpg", ".jpeg", ".png", ".gif"}
+        else "pdf"
+        if suffix == ".pdf"
+        else "text"
+        if suffix == ".txt"
+        else "office"
+        if suffix in {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"}
+        else "video"
+        if suffix in {".mp4", ".webm", ".ogg"}
+        else "audio"
+        if suffix in {".mp3", ".wav"}
+        else "other"
+    )
+    return render(request, "ver_evidencia.html", {"envio": envio, "archivo_url": archivo_url, "preview_kind": kind})
 
 
 @login_required
 def editar_perfil(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        correo = request.POST.get('correo')
-        contrasena = request.POST.get('contrasena')
+    from .forms import ProfileForm
 
-        user = request.user
-        
-        # Verificar si el nuevo username ya existe (y no es el del usuario actual)
-        from django.contrib.auth.models import User
-        if username != user.username and User.objects.filter(username=username).exists():
-            messages.error(request, 'El nombre de usuario ya está en uso.')
-            return redirect('editar_perfil')
+    form = ProfileForm(request.POST or None, instance=request.user)
+    if request.method == "POST" and form.is_valid():
+        from django.db import IntegrityError, transaction
 
-        user.username = username
-        user.first_name = nombre
-        user.last_name = apellido
-        user.email = correo
-        
-        if contrasena and len(contrasena) == 8:
-            user.set_password(contrasena)
-            user.save()
-            from django.contrib.auth import update_session_auth_hash
-            update_session_auth_hash(request, user)
+        try:
+            with transaction.atomic():
+                user = form.save()
+        except IntegrityError:
+            form.add_error("correo", "Ese correo o nombre de usuario ya está registrado.")
         else:
-            user.save()
-            
-        messages.success(request, 'Perfil actualizado correctamente.')
-        return redirect('editar_perfil')
+            if form.cleaned_data["contrasena"]:
+                update_session_auth_hash(request, user)
+            messages.success(request, "Perfil actualizado correctamente.")
+            return redirect("editar_perfil")
+    return render(request, "editar_perfil/editar.html", {"form": form})
 
-    return render(request, 'editar_perfil/editar.html')
 
-
+@require_group("administrador", "coordinador", "dinamizador")
 @require_POST
 def set_aprobada(request, pk):
-    envio = get_object_or_404(Envio, pk=pk)
-    valor = request.POST.get('valor')
-    if valor == '1':
+    from notificaciones.services import notificar_revision
+
+    envio = get_object_or_404(_visible_envios(request.user), pk=pk)
+    estado_anterior = (envio.aprobada, envio.rechazada)
+    valor = request.POST.get("valor")
+    if valor not in {"0", "1"}:
+        return JsonResponse({"error": "Estado inválido"}, status=400)
+    if valor == "1":
         envio.aprobada = True
         envio.rechazada = False
     else:
         envio.aprobada = False
         envio.rechazada = True
     envio.save()
-    messages.success(request, 'Estado de evidencia actualizado.')
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/evidencias/'
+    if estado_anterior != (envio.aprobada, envio.rechazada):
+        notificar_revision(envio)
+    messages.success(request, "Estado de evidencia actualizado.")
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/evidencias/"
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    if not url_has_allowed_host_and_scheme(next_url, {request.get_host()}, require_https=request.is_secure()):
+        next_url = reverse("evidencias_list")
     return redirect(next_url)
 
 
 def access_denied(request):
-    return render(request, 'access_denied.html')
+    return render(request, "access_denied.html", status=403)
 
 
+@login_required
 def exportar_csv(request):
-    consulta = Envio.objects.select_related('usuario').all().order_by('-fecha_envio')
-    respuesta = HttpResponse(content_type='text/csv')
-    respuesta['Content-Disposition'] = 'attachment; filename="envios.csv"'
+    consulta = _visible_envios(request.user).select_related("usuario").order_by("-fecha_envio")
+    respuesta = HttpResponse(content_type="text/csv")
+    respuesta["Content-Disposition"] = 'attachment; filename="envios.csv"'
     escritor = csv.writer(respuesta)
-    escritor.writerow(['fecha_envio', 'nombre', 'proyecto', 'tipo_evidencia', 'link_evidencia', 'observaciones'])
+    escritor.writerow(["fecha_envio", "nombre", "proyecto", "tipo_evidencia", "link_evidencia", "observaciones"])
     for envio in consulta:
-        escritor.writerow([
-            envio.fecha_envio.isoformat() if envio.fecha_envio else '',
-            envio.nombre,
-            envio.proyecto,
-            envio.tipo_evidencia,
-            envio.link_evidencia or '',
-            (envio.observaciones or '').replace('\r\n', ' ').replace('\n', ' '),
-        ])
+        escritor.writerow(
+            [
+                safe_csv_cell(value)
+                for value in [
+                    envio.fecha_envio.isoformat() if envio.fecha_envio else "",
+                    envio.nombre,
+                    envio.proyecto,
+                    envio.tipo_evidencia,
+                    envio.link_evidencia or "",
+                    (envio.observaciones or "").replace("\r\n", " ").replace("\n", " "),
+                ]
+            ]
+        )
     return respuesta
+
 
 @login_required
 def actualizar_observaciones(request, envio_id):
     """Vista para actualizar observaciones de una evidencia. Solo administradores."""
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    if request.method != "POST":
+        return JsonResponse({"error": "Método no permitido"}, status=405)
 
     # Verificar que el usuario sea administrador o superusuario
-    if not (request.user.is_superuser or request.user.groups.filter(name='administrador').exists()):
-        return JsonResponse({'error': 'No tienes permisos para editar observaciones'}, status=403)
+    if not (request.user.is_superuser or request.user.groups.filter(name="administrador").exists()):
+        return JsonResponse({"error": "No tienes permisos para editar observaciones"}, status=403)
 
+    envio = get_object_or_404(Envio, id=envio_id)
+    anterior = envio.observaciones or ""
+    envio.observaciones = request.POST.get("observaciones", "").strip()
+    envio.save(update_fields=["observaciones"])
+    if anterior != envio.observaciones:
+        from notificaciones.services import notificar_revision
+
+        notificar_revision(envio)
+    return JsonResponse({"success": True, "observaciones": envio.observaciones})
+
+
+def _visible_envios(user):
+    queryset = Envio.objects.all()
+    if is_admin_or_group(user, ["coordinador", "dinamizador"]):
+        return queryset
+    return queryset.filter(usuario=user)
+
+
+def _panel_context(user, role):
+    from notificaciones.services import plazos_para_usuario
+
+    envios = _visible_envios(user)
+    resumen = envios.aggregate(
+        total=Count("pk"),
+        aprobadas=Count("pk", filter=Q(aprobada=True)),
+        pendientes=Count("pk", filter=Q(aprobada=False, rechazada=False)),
+        rechazadas=Count("pk", filter=Q(rechazada=True)),
+    )
+    return {
+        "panel_role": role,
+        "total_envios": resumen["total"],
+        "aprobadas": resumen["aprobadas"],
+        "pendientes": resumen["pendientes"],
+        "rechazadas": resumen["rechazadas"],
+        "recientes": envios.order_by("-fecha_envio", "-pk")[:5],
+        "proximos_plazos": plazos_para_usuario(user).filter(fecha_limite__gte=timezone.now())[:3],
+    }
+
+
+def _filtered_envios(request):
+    queryset = _visible_envios(request.user)
+    proyecto = request.GET.get("proyecto", "")
+    if proyecto:
+        queryset = queryset.filter(proyecto=proyecto)
+    queryset = apply_date_filters(queryset, request.GET.get("start", ""), request.GET.get("end", ""))
+    query = (request.GET.get("q") or "").strip()
+    if query:
+        queryset = queryset.filter(
+            Q(nombre__icontains=query) | Q(tipo_evidencia__icontains=query) | Q(observaciones__icontains=query)
+        )
+    estado = request.GET.get("estado", "")
+    if estado == "aprobada":
+        queryset = queryset.filter(aprobada=True)
+    elif estado == "rechazada":
+        queryset = queryset.filter(rechazada=True)
+    elif estado == "pendiente":
+        queryset = queryset.filter(aprobada=False, rechazada=False)
+    return queryset
+
+
+@login_required
+def archivo_evidencia(request, pk):
+    import mimetypes
+
+    from django.http import FileResponse, Http404
+
+    envio = get_object_or_404(_visible_envios(request.user), pk=pk)
+    if not envio.archivo_evidencia:
+        raise Http404("El archivo no está disponible.")
     try:
-        envio = get_object_or_404(Envio, id=envio_id)
-        observaciones = request.POST.get('observaciones', '').strip()
-        envio.observaciones = observaciones
-        envio.save()
-        return JsonResponse({'success': True, 'observaciones': observaciones})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        archivo = envio.archivo_evidencia.open("rb")
+    except FileNotFoundError:
+        raise Http404("El archivo no está disponible.")
+    from pathlib import Path
+
+    nombre = Path(envio.archivo_evidencia.name).name
+    extension = Path(nombre).suffix.lower()
+    inline = (
+        extension in {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".txt", ".mp4", ".webm", ".ogg", ".mp3", ".wav"}
+        and request.GET.get("descargar") != "1"
+    )
+    response = FileResponse(
+        archivo,
+        as_attachment=not inline,
+        filename=nombre,
+        content_type=mimetypes.guess_type(nombre)[0] or "application/octet-stream",
+    )
+    response["X-Frame-Options"] = "SAMEORIGIN"
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@login_required
+def archivo_por_ruta(request, ruta):
+    envio = get_object_or_404(_visible_envios(request.user), archivo_evidencia=ruta)
+    return archivo_evidencia(request, envio.pk)

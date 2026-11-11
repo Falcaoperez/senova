@@ -1,0 +1,37 @@
+{% extends "page_base.html" %}
+{% load ui %}
+{% block title %}Nosotros · GESICOM SENA{% endblock %}
+{% block page_content %}
+  <div class="info-hero">
+    <p class="eyebrow">SENA / GESICOM</p>
+    <h1>
+      Un espacio para las ideas
+      <br>
+      que se convierten en aportes.
+    </h1>
+    <p>GESICOM reúne evidencias de proyectos de investigación y competencias de la comunidad SENNOVA.</p>
+  </div>
+  <section class="panel">
+    <h2>Organizar. Compartir. Acompañar.</h2>
+    <p class="page-description">El sistema permite registrar evidencias, consultar su estado y construir reportes a partir de la información disponible. Cada persona accede a las herramientas que corresponden a su rol.</p>
+    <hr>
+    <div class="info-grid">
+      <div class="info-card">
+        {% icon 'upload' %}
+        <h2>Registro</h2>
+        <p>Instructores, investigadores y usuarios comparten sus resultados.</p>
+      </div>
+      <div class="info-card">
+        {% icon 'shield' %}
+        <h2>Acompañamiento</h2>
+        <p>Coordinadores, dinamizadores y administradores revisan los aportes.</p>
+      </div>
+      <div class="info-card">
+        {% icon 'chart' %}
+        <h2>Información</h2>
+        <p>Los reportes permiten consultar el avance de los proyectos.</p>
+      </div>
+    </div>
+    <a class="button button-primary" href="{% url 'login' %}">Entrar a GESICOM {% icon 'arrow' %}</a>
+  </section>
+{% endblock %}

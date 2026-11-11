@@ -1,212 +1,165 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Estado de Evidencias</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'CSS/panel_evidencias.css' %}"> <!-- panel personalizado -->
-    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
-    <link rel="stylesheet" href="{% static 'css/modules/gesicom-responsive.css' %}">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style> /* ajustes rápidos responsive */
-        .container { max-width:1100px; margin:20px auto; padding:12px; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="page-header">
-        <a href="{{ home_url|default:'/' }}" class="back-arrow" title="Volver al panel" style="text-decoration: none; font-size: 1.5rem; margin-right: 1rem; color: white;">←</a>
-        <div class="brand">GESICOM</div>
-        <div style="margin-left:auto; display: flex; align-items: center; gap: 15px;">
-            <div style="text-align: right; opacity:0.95">
-                {{ request.user.get_full_name }} <br>
-                <small style="opacity:0.9">{{ request.user.email }}</small>
-            </div>
-        </div>
+{% extends "base.html" %}
+{% load ui highlight %}
+{% block title %}Evidencias · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / EVIDENCIAS</p>
+      <h1>El registro de lo que hacemos.</h1>
+      <p class="page-description">
+        {% if ui_reviewer %}Consulta los aportes de los proyectos y acompaña su revisión.{% else %}Consulta tus aportes, su estado y las observaciones del equipo.{% endif %}
+      </p>
     </div>
-
-    <div class="filter-card">
-        <div class="filter-col">
-            <div>
-                <label>Categoria</label>
-                <select id="categoria" name="proyecto">
-                    <option value="">Todas</option>
-                    {% for val,label in opciones_proyectos %}
-                        <option value="{{ val }}" {% if proyecto == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="filter-actions">
-            <button id="btn_filtrar" class="btn">Filtrar</button>
-        </div>
+    <a class="button button-primary" href="{% url 'evidencia' %}">{% icon 'plus' %} Nueva evidencia</a>
+  </div>
+  {% include "ui/stats.html" %}
+  <section class="panel">
+    <form class="filters" method="get">
+      <div class="field search-field">
+        <label for="q">Buscar evidencia</label>
+        <input id="q"
+               name="q"
+               value="{{ q }}"
+               placeholder="Nombre, tipo u observaciones…">
+      </div>
+      <div class="field">
+        <label for="categoria">Proyecto</label>
+        <select id="categoria" name="proyecto">
+          <option value="">Todos los proyectos</option>
+          {% for val,label in opciones_proyectos %}
+            <option value="{{ val }}" {% if proyecto == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="estado">Estado</label>
+        <select id="estado" name="estado">
+          <option value="">Todos los estados</option>
+          <option value="pendiente" {% if estado == 'pendiente' %}selected{% endif %}>En revisión</option>
+          <option value="aprobada" {% if estado == 'aprobada' %}selected{% endif %}>Aprobada</option>
+          <option value="rechazada" {% if estado == 'rechazada' %}selected{% endif %}>Rechazada</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f_start">Desde</label>
+        <input type="month" id="f_start" name="start" value="{{ start }}">
+      </div>
+      <div class="field">
+        <label for="f_end">Hasta</label>
+        <input type="month" id="f_end" name="end" value="{{ end }}">
+      </div>
+      <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
+      <a class="button button-secondary" href="{% url 'evidencias_list' %}">Limpiar</a>
+    </form>
+    <div class="table-toolbar">
+      <div>
+        <h2>
+          Lista de evidencias <span class="table-count">{{ total_envios }}</span>
+        </h2>
+        <p>Información actualizada de tus registros</p>
+      </div>
+      <a class="text-link"
+         href="{% url 'reportes' %}
+{% querystring page=None %}">Ver reportes {% icon 'arrow' %}</a>
     </div>
-
-    <div class="cards">
-        <div class="card">
-            <div class="card-center"><div class="card-icon">📁</div><div>
-                <div class="card-value">{{ total_envios|default:0 }}</div>
-                <div class="card-label">Total Evidencias</div>
-            </div></div>
-            <div class="card-foot">{{ nuevas_30d }} nuevas (30 días) {% if pct_total is not None %}{% if pct_total >= 0 %}<span class="up">▲ {{ pct_total }}%</span>{% else %}<span class="down">▼ {{ pct_total_abs }}%</span>{% endif %}{% endif %}</div>
-        </div>
-        <div class="card card-emphasized">
-            <div class="card-center"><div class="card-icon">➕</div><div>
-                <div class="card-value">{{ nuevas_30d|default:0 }}</div>
-                <div class="card-label">Nuevas Evidencias</div>
-            </div></div>
-            <div class="card-foot">Últimos 30 días {% if pct_nuevas is not None %}{% if pct_nuevas >= 0 %}<span class="up">▲ {{ pct_nuevas }}%</span>{% else %}<span class="down">▼ {{ pct_nuevas_abs }}%</span>{% endif %}{% endif %}</div>
-        </div>
-        <div class="card">
-            <div class="card-center"><div class="card-icon">✅</div><div>
-                <div class="card-value">{{ aprobadas|default:0 }}</div>
-                <div class="card-label">Evidencias Aprobadas</div>
-            </div></div>
-            <div class="card-foot">Últimos 30 días: {{ aprobadas_30d }} {% if pct_aprobadas is not None %}{% if pct_aprobadas >= 0 %}<span class="up">▲ {{ pct_aprobadas }}%</span>{% else %}<span class="down">▼ {{ pct_aprobadas_abs }}%</span>{% endif %}{% endif %}</div>
-        </div>
-        <div class="card">
-            <div class="card-center"><div class="card-icon">❌</div><div>
-                <div class="card-value" style="color: #ff6b6b;">{{ rechazadas|default:0 }}</div>
-                <div class="card-label">Evidencias Rechazadas</div>
-            </div></div>
-            <div class="card-foot">Requieren corrección</div>
-        </div>
-    </div>
-
-    <h2>Lista de Evidencias</h2>
-
     {% if envios %}
-    <table class="table-evidencias">
-        <thead>
+      <div class="table-wrapper"
+           role="region"
+           aria-label="Lista de evidencias"
+           tabindex="0">
+        <table class="data-table">
+          <thead>
             <tr>
-                <th>Fecha</th>
-                <th>Nombre</th>
-                <th>Proyecto</th>
-                <th>Tipo</th>
-                <th>Link / Archivo</th>
-                <th>Observaciones</th>
-                <th>Estado</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for envio in envios %}
-            <tr>
-                <td>{{ envio.fecha_envio }}</td>
-                <td>{{ envio.nombre }}</td>
-                <td>{{ envio.proyecto }}</td>
-                <td>{{ envio.tipo_evidencia }}</td>
-                <td>
-                    {% if envio.link_evidencia or envio.archivo_evidencia %}
-                        <button type="button" class="btn-view" onclick="location.href='{% url 'ver_evidencia' envio.id %}'">Ver estado</button>
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if es_admin %}
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <textarea
-                                id="obs-{{ envio.id }}"
-                                style="width: 200px; min-height: 40px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
-                                placeholder="Agregar observaciones..."
-                            >{{ envio.observaciones }}</textarea>
-                            <button
-                                type="button"
-                                class="btn-save-obs"
-                                onclick="guardarObservaciones({{ envio.id }})"
-                                style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;"
-                            >Guardar</button>
-                        </div>
-                    {% else %}
-                        {{ envio.observaciones|default:"-" }}
-                    {% endif %}
-                </td>
-                <td>
-                    {% if envio.aprobada %}
-                        <span class="badge badge-approved">Aprobada</span>
-                    {% elif envio.rechazada %}
-                        <span class="badge badge-rejected" style="background: #FF6B6B; color: #fff; padding: 4px 8px; border-radius: 999px; font-weight: 700;">Rechazada</span>
-                    {% else %}
-                        <span class="badge badge-pending">Pendiente</span>
-                    {% endif %}
-                </td>
+              <th>
+                <a class="sort-link"
+                   href="{% querystring order='nombre' dir=next_direction page=None %}">Evidencia ↕</a>
+              </th>
+              <th>Proyecto</th>
+              <th>
+                <a class="sort-link"
+                   href="{% querystring order='fecha_envio' dir=next_direction page=None %}">Fecha ↕</a>
+              </th>
+              <th>Estado</th>
+              <th>Observaciones</th>
+              <th>Acciones</th>
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="pagination">
-        {% if envios.has_previous %}
-            <a href="?page={{ envios.previous_page_number }}">Anterior</a>
-        {% endif %}
-        <span>Página {{ envios.number }} de {{ envios.paginator.num_pages }}</span>
-        {% if envios.has_next %}
-            <a href="?page={{ envios.next_page_number }}">Siguiente</a>
-        {% endif %}
-    </div>
-
+          </thead>
+          <tbody>
+            {% for envio in envios %}
+              <tr>
+                <td>
+                  <div class="table-title-cell">
+                    <span class="document-icon">{% icon 'file' %}</span>
+                    <div>
+                      <strong>{{ envio.nombre|highlight:q }}</strong>
+                      <small>{{ envio.tipo_evidencia }}{% if envio.entrega_tardia %} · Fuera de plazo{% endif %}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge">{{ envio.proyecto }}</span>
+                </td>
+                <td>{{ envio.fecha_envio|date:'d M Y' }}</td>
+                <td>
+                  {% include "ui/status.html" %}
+                  {% if puede_revisar %}
+                    <form method="post"
+                          action="{% url 'set_aprobada' envio.pk %}"
+                          class="review-actions">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" name="valor" value="1">Aprobar</button>
+                      <button type="submit" name="valor" value="0">Rechazar</button>
+                    </form>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if es_admin %}
+                    <form class="observation-editor"
+                          method="post"
+                          action="{% url 'actualizar_observaciones' envio.pk %}"
+                          data-observation-form>
+                      {% csrf_token %}
+                      <label class="sr-only" for="obs-{{ envio.pk }}">Observaciones de {{ envio.nombre }}</label>
+                      <textarea id="obs-{{ envio.pk }}"
+                                name="observaciones"
+                                placeholder="Añade una observación…">{{ envio.observaciones|default:'' }}</textarea>
+                      <button class="icon-button"
+                              type="submit"
+                              aria-label="Guardar observaciones de {{ envio.nombre }}">{% icon 'check' %}</button>
+                    </form>
+                  {% else %}
+                    <span title="{{ envio.observaciones|default:'' }}">{{ envio.observaciones|default:'Sin observaciones'|truncatechars:55 }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a class="icon-button"
+                     href="{% url 'ver_evidencia' envio.pk %}"
+                     aria-label="Ver {{ envio.nombre }}">{% icon 'eye' %}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <nav class="pagination" aria-label="Paginación de evidencias">
+        <span>Página {{ envios.number }} de {{ envios.paginator.num_pages }} · {{ total_envios }} registros</span>
+        <div class="pagination-links">
+          {% if envios.has_previous %}
+            <a href="{% querystring page=envios.previous_page_number %}">Anterior</a>
+          {% endif %}
+          {% if envios.has_next %}
+            <a href="{% querystring page=envios.next_page_number %}">Siguiente</a>
+          {% endif %}
+        </div>
+      </nav>
     {% else %}
-    <p>No hay evidencias registradas.</p>
+      <div class="empty-state">
+        <span class="empty-symbol">{% icon 'search' %}</span>
+        <h3>Aún no hay evidencias para mostrar</h3>
+        <p>Prueba con otros filtros o registra un nuevo aporte.</p>
+        <a class="button button-secondary" href="{% url 'evidencia' %}">Enviar evidencia {% icon 'arrow' %}</a>
+      </div>
     {% endif %}
-
-</div>
-
-<script>
-// Filtrar (envía query params simples)
-    document.getElementById('btn_filtrar').addEventListener('click', ()=>{
-    const start = document.getElementById('f_start').value;
-    const end = document.getElementById('f_end').value;
-    const proyectoVal = document.getElementById('categoria').value;
-    const quartersVal = document.getElementById('select_quarters') ? document.getElementById('select_quarters').value : null;
-    const params = new URLSearchParams(window.location.search);
-    if(start) params.set('start', start); else params.delete('start');
-    if(end) params.set('end', end); else params.delete('end');
-    if(proyectoVal) params.set('proyecto', proyectoVal); else params.delete('proyecto');
-    if(quartersVal) params.set('quarters', quartersVal); else params.delete('quarters');
-    window.location.search = params.toString();
-});
-
-// Función para guardar observaciones via AJAX
-function guardarObservaciones(envioId) {
-    const textarea = document.getElementById('obs-' + envioId);
-    const observaciones = textarea.value.trim();
-    const btn = event.target;
-    const btnOriginalText = btn.textContent;
-
-    btn.textContent = 'Guardando...';
-    btn.disabled = true;
-
-    fetch('/evidencias/' + envioId + '/actualizar-observaciones/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: 'observaciones=' + encodeURIComponent(observaciones)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            btn.textContent = '✓ Guardado';
-            btn.style.background = '#2196F3';
-            setTimeout(() => {
-                btn.textContent = btnOriginalText;
-                btn.style.background = '#4CAF50';
-                btn.disabled = false;
-            }, 2000);
-        } else {
-            alert('Error: ' + (data.error || 'No se pudo guardar'));
-            btn.textContent = btnOriginalText;
-            btn.disabled = false;
-        }
-    })
-    .catch(error => {
-        alert('Error al guardar: ' + error);
-        btn.textContent = btnOriginalText;
-        btn.disabled = false;
-    });
-}
-
-</script>
-</body>
-</html>
+  </section>
+{% endblock %}
