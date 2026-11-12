@@ -88,3 +88,7 @@ El workflow conserva el contenedor Python y las conexiones internas a MySQL/Redi
 La comprobación externa de `smtp.gmail.com:587` devolvió `ENETUNREACH` (red inaccesible) antes de autenticar. No se enviaron mensajes reales y la credencial no quedó validada frente a Google. El comando ahora distingue ese fallo de un rechazo de contraseña. La configuración privada sigue fuera del historial Git; las pruebas de correo utilizan transporte local.
 
 Los datos de navegador fueron temporales: dos cuentas, un plazo y dos evidencias, con sus movimientos y adjunto. Se retiraron al finalizar. Se conservan las seis cuentas y los datos de revisión previos; el registro de evidencia anterior cuenta ahora con su movimiento histórico.
+
+## Estabilidad de las pruebas de límites
+
+La ejecución posterior a integrar el PR de evidencias cruzó una frontera de diez minutos durante la prueba de usuario/correo: el contador entró en otra ventana y la expectativa anterior dejó de corresponder con esa petición. La prueba ahora fija únicamente el reloj del middleware, manteniendo real el de la caché. Un caso adicional comprueba el bloqueo al final de una ventana, `Retry-After: 1` y el acceso en la siguiente. La batería completa consta de 148 pruebas; el comportamiento del servidor no se modifica con esta corrección.
