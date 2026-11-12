@@ -101,3 +101,14 @@ class EscalaMilUsuariosTests(TestCase):
                 response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 200)
             self.assertLessEqual(len(queries), 22)
+
+    def test_report_export_streams_all_records_with_bounded_queries(self):
+        self.client.force_login(self.admin)
+        inicio = perf_counter()
+        with CaptureQueriesContext(connection) as consultas:
+            response = self.client.get(reverse("reportes_csv"))
+            self.assertTrue(response.streaming)
+            filas = sum(chunk.count(b"\n") for chunk in response.streaming_content)
+        self.assertEqual(filas, 12001)
+        self.assertLessEqual(len(consultas), 10)
+        print(f"ESCALA CSV 12000 evidencias: {len(consultas)} consultas, {(perf_counter() - inicio) * 1000:.1f} ms")

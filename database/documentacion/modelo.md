@@ -6,6 +6,10 @@ Las migraciones de cada aplicación son la definición del esquema. No se mantie
 erDiagram
     USER ||--o{ USER_GROUP : pertenece
     GROUP ||--o{ USER_GROUP : asigna
+    GROUP ||--o{ GROUP_PERMISSION : concede
+    PERMISSION ||--o{ GROUP_PERMISSION : autoriza
+    USER ||--o{ USER_PERMISSION : recibe
+    PERMISSION ||--o{ USER_PERMISSION : autoriza
     USER ||--o{ ENVIO : entrega
     ENVIO ||--o{ MOVIMIENTO_EVIDENCIA : historial
     USER o|--o{ MOVIMIENTO_EVIDENCIA : realiza
@@ -31,6 +35,7 @@ erDiagram
 | Área | Tablas principales | Integridad y consulta |
 | --- | --- | --- |
 | Identidad | `auth_user`, `auth_group`, `auth_user_groups` | Correo normalizado único; contraseñas con hash; permisos de Django |
+| Permisos | `auth_permission`, `auth_group_permissions`, `auth_user_user_permissions` | Tablas nativas de Django; actualización transaccional por grupo y revisión calculada, sin tablas duplicadas |
 | Evidencias | `Gesicom_envio` | Propietario y plazo con claves foráneas; estados compatibles; índices por usuario, proyecto, estado, fecha y plazo/usuario/primera entrega |
 | Historial de evidencia | `Gesicom_movimientoevidencia` | Actor opcional; unicidad por evidencia/versión; orden cronológico por versión |
 | Agenda | `notificaciones_plazoreporte` y tabla intermedia de grupos | Índice de activo/fecha; revisión de edición y versión de avisos; cada envío conserva el límite aplicado |

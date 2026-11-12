@@ -73,6 +73,7 @@ class ArchivosProtegidosTests(TestCase):
         import csv
         import io
 
-        rows = list(csv.reader(io.StringIO(response.content.decode())))
+        contenido = b"".join(response.streaming_content).decode("utf-8-sig")
+        rows = list(csv.reader(io.StringIO(contenido)))
         row = next(row for row in rows if row[1].startswith("'="))
         self.assertTrue(row[5].startswith("' @"))
