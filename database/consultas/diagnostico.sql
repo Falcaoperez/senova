@@ -29,3 +29,6 @@ SELECT tipo, estado, COUNT(*) AS total FROM cuentas_correoseguridad GROUP BY tip
 SELECT COUNT(*) AS sesiones_caducadas FROM django_session WHERE expire_date <= UTC_TIMESTAMP();
 SELECT COUNT(*) AS recuperaciones_caducadas
 FROM cuentas_passwordresettoken WHERE used = 0 AND expires_at <= UTC_TIMESTAMP();
+
+SELECT accion, estado, COUNT(*) AS movimientos
+FROM Gesicom_movimientoevidencia GROUP BY accion, estado;

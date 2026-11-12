@@ -93,7 +93,7 @@
               </thead>
               <tbody>
                 {% for envio in envios %}
-                  <tr>
+                  <tr data-evidence-record>
                     <td>
                       <div class="table-title-cell">
                         <span class="document-icon">{% icon 'file' %}</span>
@@ -114,6 +114,7 @@
                               action="{% url 'set_aprobada' envio.pk %}"
                               class="review-actions">
                           {% csrf_token %}
+                          <input type="hidden" name="version" value="{{ envio.version }}">
                           <input type="hidden" name="next" value="{{ request.get_full_path }}">
                           <button type="submit" name="valor" value="1">Aprobar</button>
                           <button type="submit" name="valor" value="0">Rechazar</button>
@@ -127,9 +128,11 @@
                               action="{% url 'actualizar_observaciones' envio.pk %}"
                               data-observation-form>
                           {% csrf_token %}
+                          <input type="hidden" name="version" value="{{ envio.version }}">
                           <label class="sr-only" for="obs-{{ envio.pk }}">Observaciones de {{ envio.nombre }}</label>
                           <textarea id="obs-{{ envio.pk }}"
                                     name="observaciones"
+                                    maxlength="2000"
                                     placeholder="Añade una observación…">{{ envio.observaciones|default:'' }}</textarea>
                           <button class="icon-button"
                                   type="submit"
@@ -143,6 +146,11 @@
                       <a class="icon-button"
                          href="{% url 'ver_evidencia' envio.pk %}"
                          aria-label="Ver {{ envio.nombre }}">{% icon 'eye' %}</a>
+                      {% if envio.usuario_id == user.pk and not envio.aprobada %}
+                        <a class="icon-button"
+                           href="{% url 'corregir_evidencia' envio.pk %}"
+                           aria-label="Corregir {{ envio.nombre }}">{% icon 'edit' %}</a>
+                      {% endif %}
                     </td>
                   </tr>
                 {% endfor %}
