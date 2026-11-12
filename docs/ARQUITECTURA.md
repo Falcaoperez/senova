@@ -7,10 +7,15 @@
 | `Gesicom/` | Evidencias, reportes, páginas y recursos visuales compartidos |
 | `Gesicom/forms.py` | Validaciones compartidas de creación y corrección, con compatibilidad para el enlace histórico |
 | `Gesicom/services.py` | Transacciones de evidencia, control de versiones, historial y ciclo de sustitución de adjuntos |
+| `Gesicom/filtros.py` | Validación y normalización de filtros compartidos, con errores visibles y descarga cerrada ante parámetros inválidos |
+| `Gesicom/reportes.py` | Series históricas, resúmenes autorizados y filas exportables |
+| `Gesicom/exportaciones.py` | Respuesta CSV común con Unicode, neutralización de fórmulas y transmisión del documento |
 | `Gesicom/selectors.py` | Consultas reutilizadas por vistas, reportes y búsqueda; visibilidad por rol |
 | `Gesicom/busqueda.py` | Búsqueda autenticada, limitada por cuenta y con resultados acotados |
 | `ADMIN/` | Administración de la comunidad |
 | `ADMIN/selectors.py` | Agregaciones y consultas del centro de operaciones |
+| `ADMIN/permisos.py` | Catálogo de permisos, protección de grupos, revisión y transacciones compartidas con Django admin |
+| `ADMIN/admin.py` | Formularios nativos de grupo con confirmación, revisión y conservación de los roles del sistema |
 | `ADMIN/services.py` | Cambios de estado y roles, protección de cuentas y auditoría |
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
@@ -28,3 +33,5 @@ Los filtros usan las mismas vistas GET con o sin JavaScript. La mejora interacti
 Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js. Los módulos `workspace.js`, `admin-dashboard.js` y `operations.css` separan las nuevas interacciones de los estilos y comportamientos generales.
 
 `Gesicom/admin.py` utiliza las mismas reglas de versiones y registro de movimientos. El formulario de corrección reutiliza `formulario.html`; no añade un segundo panel de evidencias. Los estilos de ese flujo están en `evidencias.css`. La tabla de movimientos es de solo lectura en la administración.
+
+`reports.js` destruye las instancias anteriores de Chart.js al actualizar resultados y reconstruye cuatro gráficos con el estado autorizado del servidor. Las tablas se generan en HTML y se usan sin JavaScript y al imprimir. No se mantienen consultas trimestrales distintas para pantalla y CSV.

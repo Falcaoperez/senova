@@ -38,3 +38,7 @@ SELECT activo, COUNT(*) AS plazos, SUM(fecha_limite <= UTC_TIMESTAMP()) AS venci
 FROM notificaciones_plazoreporte GROUP BY activo;
 SELECT tipo, COUNT(*) AS avisos, SUM(leida_en IS NOT NULL) AS leidos
 FROM notificaciones_notificacion GROUP BY tipo;
+
+-- Asignaciones nativas: solo contadores, sin nombres ni permisos individuales.
+SELECT COUNT(*) AS permisos_asignados, COUNT(DISTINCT group_id) AS grupos_con_permisos
+FROM auth_group_permissions;

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% load static ui %}
 {% block title %}Reportes · GESICOM SENA{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/reports.css' %}">
+{% endblock %}
 {% block head %}
   <script defer src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
   <script defer src="{% static 'js/reports.js' %}"></script>
@@ -9,96 +12,249 @@
   <div class="page-heading">
     <div>
       <p class="eyebrow">GESICOM / REPORTES</p>
-      <h1>Los datos cuentan nuestra historia.</h1>
-      <p class="page-description">Explora el avance de las evidencias y convierte la información en decisiones.</p>
+      <h1>Del registro a las decisiones.</h1>
+      <p class="page-description">Consulta avances, compara períodos y descarga la información de tu espacio de trabajo.</p>
     </div>
     <button class="button button-secondary" type="button" data-print>{% icon 'download' %} Imprimir reporte</button>
   </div>
-  <section class="panel">
-    <form class="filters" method="get" style="margin-bottom:0">
-      <input type="hidden" name="plazo" value="{{ plazo_scope }}">
-      <input type="hidden" name="usuario" value="{{ usuario_scope }}">
-      <div class="field">
-        <label for="start">Desde</label>
-        <input type="month" id="start" name="start" value="{{ start }}">
-      </div>
-      <div class="field">
-        <label for="end">Hasta</label>
-        <input type="month" id="end" name="end" value="{{ end }}">
-      </div>
-      <div class="field">
-        <label for="proyecto">Proyecto</label>
-        <select id="proyecto" name="proyecto">
-          <option value="">Todos los proyectos</option>
-          {% for p in opciones_proyectos %}
-            <option value="{{ p }}" {% if proyecto == p %}selected{% endif %}>{{ p }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="quarters">Trimestres</label>
-        <select id="quarters" name="quarters">
-          <option value="4" {% if quarters == 4 %}selected{% endif %}>Últimos 4</option>
-          <option value="8" {% if quarters == 8 %}selected{% endif %}>Últimos 8</option>
-          <option value="12" {% if quarters == 12 %}selected{% endif %}>Últimos 12</option>
-        </select>
-      </div>
-      <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
-      <a class="button button-secondary" href="{% url 'reportes' %}">Limpiar</a>
-    </form>
-  </section>
-  <div style="margin-top:24px">{% include "ui/stats.html" %}</div>
-  {% if total_envios == 0 %}
-    <div class="alert">
-    {% icon 'info' %}No hay evidencias en el período seleccionado. Los gráficos se actualizarán al registrar nuevos aportes o cambiar los filtros.</div>
-  {% endif %}
-  <div class="charts-grid">
-    <section class="panel chart-panel">
-      <h2>Evidencias por trimestre</h2>
-      <p>Compara los registros y las aprobaciones por período.</p>
-      <div class="chart-box">
-        <canvas id="chartTrimestres"
-                role="img"
-                aria-label="Evidencias enviadas y aprobadas por trimestre">
-        </canvas>
-      </div>
+  <div data-live-scope class="reports-workspace">
+    <section class="panel report-filters">
+      <form class="filters"
+            method="get"
+            action="{% url 'reportes' %}"
+            data-live-form>
+        {{ filtros_form.plazo }}{{ filtros_form.usuario }}{{ filtros_form.order }}{{ filtros_form.dir }}
+        <div class="field search-field">{{ filtros_form.q.label_tag }}{{ filtros_form.q }}</div>
+        <div class="field">{{ filtros_form.proyecto.label_tag }}{{ filtros_form.proyecto }}</div>
+        <div class="field">{{ filtros_form.estado.label_tag }}{{ filtros_form.estado }}</div>
+        <div class="field">{{ filtros_form.start.label_tag }}{{ filtros_form.start }}</div>
+        <div class="field">{{ filtros_form.end.label_tag }}{{ filtros_form.end }}</div>
+        <div class="field">{{ filtros_form.quarters.label_tag }}{{ filtros_form.quarters }}</div>
+        <button class="button button-dark" type="submit">{% icon 'filter' %} Aplicar filtros</button>
+        <a class="text-link" href="{% url 'reportes' %}" data-live-link>Limpiar</a>
+      </form>
     </section>
-    <section class="panel chart-panel">
-      <h2>Distribución por proyecto</h2>
-      <p>Los proyectos que reúnen nuestros aportes.</p>
-      <div class="chart-box">
-        <canvas id="chartCategorias"
-                role="img"
-                aria-label="Distribución de evidencias por proyecto">
-        </canvas>
+    <div data-live-region="reports" data-report-results>
+      {% include "ui/filtros_errores.html" %}
+      <section class="report-scope" aria-label="Consulta actual">
+        <div>
+          <p class="eyebrow">ALCANCE DE LA CONSULTA</p>
+          <p>
+            {% if ui_reviewer %}Evidencias del equipo{% else %}Mis evidencias{% endif %}{% if filtros_form.start.value %} · Desde {{ filtros_form.start.value }}{% endif %}{% if filtros_form.end.value %} · Hasta {{ filtros_form.end.value }}{% endif %}{% if not filtros_form.start.value and not filtros_form.end.value %} · Todo el historial{% endif %}{% if filtros_form.plazo.value %} · Plazo #{{ filtros_form.plazo.value }}{% endif %}{% if filtros_form.usuario.value %} · Cuenta #{{ filtros_form.usuario.value }}{% endif %}
+          </p>
+        </div>
+        <small>Generado {{ generado_en|date:'d M Y · H:i' }} · Colombia</small>
+      </section>
+      {% include "ui/stats.html" %}
+      {% if not total_envios and not filtros_form.errors %}
+        <div class="action-notice">
+          {% icon 'info' %}
+          <p>No hay evidencias con estos filtros. Prueba otro período, proyecto o estado.</p>
+        </div>
+      {% endif %}
+      <div class="report-actions">
+        <a class="button button-primary"
+           href="{% url 'reportes_csv' %}{{ download_query }}"
+           {% if filtros_form.errors %}aria-disabled="true" tabindex="-1"{% endif %}>
+        {% icon 'download' %} Descargar evidencias CSV</a>
+        <a class="button button-secondary" href="{{ detalle_url }}">{% icon 'folder' %} Consultar registros</a>
+        <span>Los gráficos y las descargas respetan el mismo acceso y los mismos filtros.</span>
       </div>
-    </section>
-    <section class="panel chart-panel">
-      <h2>Aportes por usuario</h2>
-      <p>Participación en los registros del período seleccionado.</p>
-      <div class="chart-box">
-        <canvas id="chartUsuarios"
-                role="img"
-                aria-label="Cantidad de evidencias por usuario">
-        </canvas>
-      </div>
-    </section>
-    <section class="panel chart-panel">
+      <div class="charts-grid">
+        <section class="panel chart-panel report-chart-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">EVOLUCIÓN</p>
+              <h2>Evidencias por trimestre</h2>
+              <p>{% if serie_trimestral %}{{ serie_trimestral.0.etiqueta }} — {{ ultimo_trimestre }}{% endif %}</p>
+            </div>
+          </div>
+          <p class="report-chart-note">La serie termina en el mes final elegido; sin fecha final, termina en el trimestre actual. Las aprobadas reflejan el estado actual de las evidencias registradas en cada trimestre. {% if serie_total != total_envios %}Representa {{ serie_total }} de {{ total_envios }} registros de esta consulta.{% endif %}
+          </p>
+          <div class="chart-box" data-chart-shell hidden>
+            <canvas id="chartTrimestres"
+                    role="img"
+                    aria-label="Evidencias registradas y aprobadas por trimestre"
+                    aria-describedby="quarter-table">
+            </canvas>
+          </div>
+          <details class="chart-data" open>
+            <summary>Ver datos por trimestre {% icon 'chevron' %}</summary>
+            <div class="table-wrapper"
+                 role="region"
+                 aria-label="Datos por trimestre"
+                 tabindex="0">
+              <table class="data-table report-data-table" id="quarter-table">
+                <caption class="sr-only">Serie trimestral de la consulta actual</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Trimestre</th>
+                    <th scope="col">Registradas</th>
+                    <th scope="col">Aprobadas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for fila in serie_trimestral %}
+                    <tr>
+                      <th scope="row">{{ fila.etiqueta }}</th>
+                      <td>{{ fila.nuevas }}</td>
+                      <td>{{ fila.aprobadas }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="3">Corrige los filtros para consultar la serie.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <a class="text-link chart-export"
+             href="{% url 'reportes_trimestrales_csv' %}{{ download_query }}">
+          {% icon 'download' %} Descargar esta serie CSV</a>
+        </section>
+        <section class="panel chart-panel report-chart-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">PROYECTOS</p>
+              <h2>Distribución de los aportes</h2>
+              <p>Selecciona un proyecto para consultar sus evidencias.</p>
+            </div>
+          </div>
+          <div class="chart-box" data-chart-shell hidden>
+            <canvas id="chartCategorias"
+                    role="img"
+                    aria-label="Cantidad de evidencias por proyecto"
+                    aria-describedby="project-table">
+            </canvas>
+          </div>
+          <details class="chart-data" open>
+            <summary>Ver datos por proyecto {% icon 'chevron' %}</summary>
+            <div class="table-wrapper"
+                 role="region"
+                 aria-label="Datos por proyecto"
+                 tabindex="0">
+              <table class="data-table report-data-table" id="project-table">
+                <caption class="sr-only">Proyectos en la consulta actual</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Proyecto</th>
+                    <th scope="col">Evidencias</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for fila in proyectos_resumen %}
+                    <tr>
+                      <th scope="row">
+                        <a href="{% querystring proyecto=fila.codigo page=None %}"
+                           data-live-link>{{ fila.nombre }}</a>
+                      </th>
+                      <td>{{ fila.total }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="2">No hay aportes en esta consulta.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+        <section class="panel chart-panel report-chart-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">PARTICIPACIÓN</p>
+              <h2>Aportes por persona</h2>
+              <p>Las seis cuentas con más registros dentro de la consulta.</p>
+            </div>
+          </div>
+          <div class="chart-box" data-chart-shell hidden>
+            <canvas id="chartUsuarios"
+                    role="img"
+                    aria-label="Cantidad de evidencias por persona"
+                    aria-describedby="people-table">
+            </canvas>
+          </div>
+          <details class="chart-data" open>
+            <summary>Ver datos por persona {% icon 'chevron' %}</summary>
+            <div class="table-wrapper"
+                 role="region"
+                 aria-label="Datos por persona"
+                 tabindex="0">
+              <table class="data-table report-data-table" id="people-table">
+                <caption class="sr-only">Participación de las primeras seis cuentas</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Persona</th>
+                    <th scope="col">Evidencias</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for fila in usuarios_resumen %}
+                    <tr>
+                      <th scope="row">{{ fila.nombre }}{% if fila.usuario %}
+                        <small>{{ fila.usuario }}</small>
+                  {% endif %}
+                </th>
+                <td>{{ fila.total }}</td>
+              </tr>
+{% empty %}
+  <tr>
+    <td colspan="2">No hay aportes en esta consulta.</td>
+  </tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+</section>
+<section class="panel chart-panel report-chart-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="eyebrow">REVISIÓN</p>
       <h2>Estado de las evidencias</h2>
-      <p>Un vistazo al avance de la revisión.</p>
-      <div class="chart-box">
-        <canvas id="chartEstado"
-                role="img"
-                aria-label="Evidencias aprobadas, en revisión y rechazadas">
-        </canvas>
-      </div>
-    </section>
+      <p>Selecciona un estado para enfocar la consulta.</p>
+    </div>
   </div>
-  <div class="panel chart-downloads">
-    <a class="button button-primary"
-       href="{% url 'reportes_csv' %}{{ download_query }}">{% icon 'download' %} Descargar CSV</a>
-    <a class="button button-secondary"
-       href="{% url 'reportes_trimestrales_csv' %}{{ download_query }}">{% icon 'download' %} CSV trimestral</a>
+  <div class="chart-box" data-chart-shell hidden>
+    <canvas id="chartEstado"
+            role="img"
+            aria-label="Evidencias aprobadas, en revisión y rechazadas"
+            aria-describedby="state-table">
+    </canvas>
   </div>
-  {{ trimestres_labels_json|json_script:'trimestres_labels_json' }}{{ datos_trimestrales_nuevas_json|json_script:'datos_trimestrales_nuevas_json' }}{{ datos_trimestrales_aprobadas_json|json_script:'datos_trimestrales_aprobadas_json' }}{{ categorias_labels_json|json_script:'categorias_labels_json' }}{{ categorias_data_json|json_script:'categorias_data_json' }}{{ usuarios_labels_json|json_script:'usuarios_labels_json' }}{{ usuarios_data_json|json_script:'usuarios_data_json' }}{{ status_chart|json_script:'status_chart' }}
+  <details class="chart-data" open>
+    <summary>Ver datos por estado {% icon 'chevron' %}</summary>
+    <div class="table-wrapper"
+         role="region"
+         aria-label="Datos por estado"
+         tabindex="0">
+      <table class="data-table report-data-table" id="state-table">
+        <caption class="sr-only">Estado de las evidencias en la consulta</caption>
+        <thead>
+          <tr>
+            <th scope="col">Estado</th>
+            <th scope="col">Evidencias</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in estados_resumen %}
+            <tr>
+              <th scope="row">
+                <a href="{% querystring estado=fila.codigo page=None %}" data-live-link>{{ fila.nombre }}</a>
+              </th>
+              <td>{{ fila.total }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+</div>
+{{ trimestres_labels_json|json_script:'trimestres_labels_json' }}{{ datos_trimestrales_nuevas_json|json_script:'datos_trimestrales_nuevas_json' }}{{ datos_trimestrales_aprobadas_json|json_script:'datos_trimestrales_aprobadas_json' }}{{ categorias_labels_json|json_script:'categorias_labels_json' }}{{ categorias_data_json|json_script:'categorias_data_json' }}{{ proyectos_codes|json_script:'proyectos_codes' }}{{ usuarios_labels_json|json_script:'usuarios_labels_json' }}{{ usuarios_data_json|json_script:'usuarios_data_json' }}{{ status_chart|json_script:'status_chart' }}
+</div>
+<p class="sr-only" data-live-status role="status"></p>
+</div>
 {% endblock %}
