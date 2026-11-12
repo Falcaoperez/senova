@@ -36,3 +36,11 @@ Con `DJANGO_DEBUG=False` se exigen una clave privada y Redis. Se activan cookies
 Se registran operaciones administrativas, verificaciones de PIN y cambios de revisión sin guardar datos de formularios ni secretos. Los logs rotan para limitar el uso de disco.
 
 Las dependencias de ejecución están fijadas y se revisaron con `pip-audit`. Esta auditoría identifica vulnerabilidades conocidas de esos paquetes; no equivale a una prueba de penetración ni garantiza capacidad ilimitada.
+
+## Administración y búsqueda
+
+Los cambios de roles, estado, datos o contraseña de cuentas existentes requieren la contraseña actual del administrador, POST y CSRF. Los intentos se limitan por cuenta y por IP; los campos de contraseña se marcan como sensibles para los informes de errores. Los lotes admiten hasta 100 cuentas y se validan dentro de una transacción antes de aplicar cambios. Una cuenta de administración no puede desactivarse a sí misma ni retirar su propio rol; los usuarios con `is_staff` o `is_superuser` solo pueden modificarse desde este panel por un superusuario. El servidor aplica estas reglas también a las rutas históricas de cambios individuales.
+
+Desactivar revoca las sesiones y cancela las recuperaciones pendientes, de modo que reactivar la cuenta no restaura esos accesos. Cambiar una contraseña desde el panel usa los validadores de Django con el usuario como contexto, invalida los PIN, cierra las otras sesiones y encola un aviso. Un cambio de correo se notifica a ambas direcciones.
+
+La búsqueda global exige sesión válida, aplica la visibilidad de evidencias y limita avisos a su destinatario y plazos a sus grupos. Solo los administradores pueden buscar otras cuentas. Cada tipo devuelve pocos resultados y cada cuenta admite 60 búsquedas por minuto; un fallo del contador devuelve un error temporal sin ejecutar las consultas. Los resultados son privados, no se almacenan en cachés de respuesta y se insertan en el navegador con `textContent`. Abrir un resultado no ejecuta operaciones sensibles.

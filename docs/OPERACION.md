@@ -57,3 +57,18 @@ La capacidad real depende del hardware, consultas, conexiones SMTP y tamaño de 
 `/health/` devuelve un estado mínimo tras comprobar base de datos y caché. No muestra credenciales ni detalles internos. Docker utiliza esta ruta para supervisar la aplicación.
 
 Realiza copias de MySQL y del volumen de medios. Verifica una restauración independiente antes de reemplazar datos de una instalación existente.
+
+## Validación de GitHub Actions
+
+El workflow vigente es `.github/workflows/validacion.yml`. El trabajo corre dentro de `python:3.12-bookworm`; los servicios MySQL y Redis se resuelven como `mysql` y `redis`. No necesita publicar sus puertos en el servidor de GitHub ni buscar contenedores con `docker ps`.
+
+Esta configuración evita que la instalación de las bibliotecas de MySQL interactúe con un servidor MySQL preinstalado del runner. La preparación de `test_senova` usa el cliente dentro del contenedor de trabajo. No se ocultan fallos de paquetes con `dpkg --configure -a || true`: si una dependencia no se instala, la validación debe detenerse.
+
+Las claves que empiezan por `ci-` solo pertenecen a servicios efímeros de pruebas. Los secretos de la instalación y la contraseña de revisión no se incluyen en el workflow. Cada PR a `develop` verifica Ruff, migraciones, pruebas MySQL, configuración de producción, estáticos y dependencias antes de integrarse.
+
+## Interacciones del espacio de trabajo
+
+- `Ctrl K`, `Cmd K` o `/` abre la búsqueda; flechas y Enter eligen un resultado y Escape cierra.
+- Los filtros de usuarios y evidencias conservan su estado en la URL y permiten volver con el navegador. Los formularios GET continúan funcionando sin JavaScript.
+- El centro de operaciones permite períodos de 7, 30 o 90 días. El gráfico cuenta la fecha de envío de las evidencias y ofrece una tabla de datos accesible, también sin JavaScript.
+- La selección de cuentas se limita a la página visible. El cambio de roles solo afecta los desplegables modificados; puede conservar varios roles existentes. Las cuentas protegidas no se pueden modificar por un administrador sin privilegios de superusuario.

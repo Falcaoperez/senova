@@ -95,8 +95,8 @@ Gmail personal impone [límites de envío](https://support.google.com/mail/answe
 SENNOVA/        configuración única, seguridad, salud y WSGI
 Gesicom/        evidencias, perfiles, reportes y componentes visuales
 cuentas/        cuentas, recuperación, cola cifrada de seguridad, sesiones y auditoría
-instructor/     entrada de autenticación y alias de paneles
-ADMIN/         administración de usuarios y permisos
+instructor/     entrada, registro y salida de autenticación
+ADMIN/         centro de operaciones, usuarios y permisos
 notificaciones/ novedades, plazos, bandeja y cola de correo
 config/         Gunicorn y ejemplo de proxy HTTPS
 docker/         arranque del contenedor
@@ -105,7 +105,7 @@ docs/           operación, seguridad y resultados de verificación
 scripts/        configuración, respaldo y prueba de carga
 ```
 
-`core/` conserva alias a la configuración de `SENNOVA/`. Los nombres históricos de las aplicaciones se mantienen para conservar las migraciones. Se retiraron estilos sin uso, pantallas prototipo, fixtures con cuentas fijas y scripts de limpieza destructiva.
+`core/` conserva alias a la configuración de `SENNOVA/`. La separación de consultas y operaciones, y las relaciones de MySQL, se describen en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) y [database/documentacion/modelo.md](database/documentacion/modelo.md). Los nombres históricos de las aplicaciones se mantienen para conservar las migraciones. Se retiraron estilos sin uso, pantallas prototipo, fixtures con cuentas fijas y scripts de limpieza destructiva.
 
 ## Desarrollo sin contenedor de aplicación
 

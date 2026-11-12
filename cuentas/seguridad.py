@@ -1,6 +1,5 @@
 from importlib import import_module
 
-from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -11,24 +10,9 @@ from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
+from .forms import ConfirmarPasswordForm
 from .models import SesionUsuario
 from .sesiones import cerrar_sesiones
-
-
-class ConfirmarPasswordForm(forms.Form):
-    contrasena_actual = forms.CharField(
-        label="Contraseña actual", strip=False, widget=forms.PasswordInput(attrs={"autocomplete": "current-password"})
-    )
-
-    def __init__(self, *args, usuario, **kwargs):
-        self.usuario = usuario
-        super().__init__(*args, **kwargs)
-
-    def clean_contrasena_actual(self):
-        value = self.cleaned_data["contrasena_actual"]
-        if not self.usuario.check_password(value):
-            raise forms.ValidationError("La contraseña actual no es correcta.")
-        return value
 
 
 def _contexto(request, error=None):

@@ -6,7 +6,6 @@ from functools import wraps
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.db.models.functions import TruncMonth
 from django.shortcuts import render
 
 
@@ -132,34 +131,6 @@ def calculate_stats(queryset, value_field, count_field="id"):
             "porcentaje": round((item["total"] / total_count) * 100, 2) if total_count else 0,
         }
         for item in stats_qs
-    ]
-
-    return stats, total_count
-
-
-def calculate_monthly_stats(queryset, date_field="fecha_envio"):
-    """Calcula estadísticas mensuales.
-
-    Args:
-        queryset: Django QuerySet
-        date_field: Campo de fecha (default: 'fecha_envio')
-
-    Returns:
-        Tupla (stats_list, total_count)
-    """
-    total_count = queryset.count()
-
-    monthly_qs = (
-        queryset.annotate(month=TruncMonth(date_field)).values("month").annotate(total=Count("id")).order_by("month")
-    )
-
-    stats = [
-        {
-            "month": item["month"],
-            "total": item["total"],
-            "porcentaje": round((item["total"] / total_count) * 100, 2) if total_count else 0,
-        }
-        for item in monthly_qs
     ]
 
     return stats, total_count

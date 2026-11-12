@@ -62,3 +62,17 @@ python scripts/prueba_carga_http.py
 ```
 
 Las pruebas de concurrencia requieren MySQL y utilizan una base de pruebas independiente. Los archivos de resultados y las credenciales locales se guardan en `.local/`, fuera del repositorio.
+
+## Centro de operaciones e interacciones — 12 de noviembre de 2026
+
+- 117 pruebas automatizadas con MySQL, incluidas las 96 de la revisión anterior. Se añadieron regresiones de aislamiento de búsqueda, autorización tras retirar roles, limitación por cuenta, caída del contador, transacciones masivas, cuentas protegidas, revocación al desactivar y datos históricos sin propietario o autor.
+- 40 comprobaciones de navegador: seis roles en escritorio y móvil, y administración a 320, 768 y 1.440 píxeles. Sin errores JavaScript, CSP ni desbordamientos.
+- Cierre de la búsqueda con Escape incluso con texto escrito y devolución de foco al botón.
+- Gráfico real de 7/30/90 días, actualización sin recarga y navegación con Atrás; búsqueda con teclado, selección de resultados y cierre; filtros, paginación y observaciones tras sustituir filas; selección, cancelación, activación, desactivación y cambio de roles con confirmación.
+- Filtros y formularios de administración comprobados con JavaScript desactivado. La tabla de datos del gráfico se genera en el servidor.
+- Ruff, comprobación de migraciones, configuración de producción y recopilación de estáticos completados. No se requiere una migración nueva.
+- Las nueve consultas de `database/consultas/diagnostico.sql` se ejecutaron contra MySQL; solo consultan metadatos y contadores.
+
+La revisión utilizó dos cuentas, 33 evidencias y un plazo temporales. Se eliminaron al terminar; permanecen las seis cuentas y los datos de revisión previos. La contraseña solicitada para el administrador solo se aplicó a la base local y al archivo privado de credenciales. No forma parte del código, del workflow ni de la configuración SMTP.
+
+El workflow conserva el contenedor Python y las conexiones internas a MySQL/Redis ya corregidas. La imagen de aplicación y la medición HTTP de capacidad descritas arriba corresponden a la revisión anterior; este bloque se comprobó con Gunicorn, MySQL y Redis, además de la validación automática del PR.

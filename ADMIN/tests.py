@@ -24,11 +24,15 @@ class AdminPanelTests(TestCase):
         member.groups.set(Group.objects.filter(name__in=["usuario", "instructor"]))
         self.client.force_login(admin)
         response = self.client.post(
-            reverse("admin_personalizado:gestionar_usuarios"), {f"role_{member.pk}": "__keep__"}
+            reverse("admin_personalizado:gestionar_usuarios"),
+            {f"role_{member.pk}": "__keep__", "contrasena_actual": "Segura42!"},
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(set(member.groups.values_list("name", flat=True)), {"usuario", "instructor"})
-        self.client.post(reverse("admin_personalizado:gestionar_usuarios"), {f"role_{member.pk}": "999999"})
+        self.client.post(
+            reverse("admin_personalizado:gestionar_usuarios"),
+            {f"role_{member.pk}": "999999", "contrasena_actual": "Segura42!"},
+        )
         self.assertEqual(set(member.groups.values_list("name", flat=True)), {"usuario", "instructor"})
 
     def test_permissions_form_and_save_use_existing_fields(self):
@@ -49,20 +53,28 @@ class AdminPanelTests(TestCase):
         self.assertFalse(group.permissions.filter(pk=permission.pk).exists())
 
     def test_existing_profile_edit_actions_remain_available(self):
-        admin = User.objects.create_user("profile_admin")
+        admin = User.objects.create_user("profile_admin", password="SeguraLocal42!")
         admin.groups.add(Group.objects.get(name="administrador"))
         member = User.objects.create_user("profile_member", email="before@example.com")
         self.client.force_login(admin)
         url = reverse("admin_personalizado:detalle_usuario", args=[member.pk])
         self.client.post(
             url,
-            {"action": "update_profile", "first_name": "Laura", "last_name": "Ramírez", "email": "after@example.com"},
+            {
+                "action": "update_profile",
+                "first_name": "Laura",
+                "last_name": "Ramírez",
+                "email": "after@example.com",
+                "contrasena_actual": "SeguraLocal42!",
+            },
         )
         member.refresh_from_db()
         self.assertEqual(member.first_name, "Laura")
         self.assertEqual(member.email, "after@example.com")
         group = Group.objects.get(name="investigador")
-        self.client.post(url, {"action": "update_groups", "grupos": [str(group.pk)]})
+        self.client.post(
+            url, {"action": "update_groups", "grupos": [str(group.pk)], "contrasena_actual": "SeguraLocal42!"}
+        )
         self.assertEqual(list(member.groups.values_list("name", flat=True)), ["investigador"])
 
     def test_existing_django_admin_uses_institutional_brand(self):
