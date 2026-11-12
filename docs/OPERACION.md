@@ -20,7 +20,7 @@ La cola ofrece entrega al menos una vez: un corte justo después de la aceptaci�
 
 Las fechas se muestran en `America/Bogota`. El usuario puede asociar una evidencia a un plazo de su grupo y proyecto. Se conserva la fecha límite aplicable al registro y se identifica una entrega tardía. Entregar el reporte detiene los avisos pendientes de ese plazo; la aprobación se gestiona por separado.
 
-Cambiar la fecha de un plazo incrementa su versión y permite emitir los avisos de la nueva programación. Para una entrega distinta, crea otro plazo.
+Cambiar un plazo (fecha, indicaciones, destinatarios o estado) incrementa su revisión y su versión de avisos. Guardar sin cambios no reenvía avisos. Las pestañas con una revisión anterior deben recargar antes de guardar. Para una entrega distinta, crea otro plazo.
 
 ## Correo de producción
 
@@ -91,3 +91,22 @@ La migración `Gesicom.0013` añade los campos de versión y el historial. Crea 
 `python manage.py comprobar_correo` comprueba conexión y autenticación sin enviar mensajes. `--solo-configuracion` valida los parámetros sin conectarse. El comando distingue rechazo de credenciales, error de resolución, espera agotada, certificado TLS no confiable y falta de acceso de red. Ninguno de esos mensajes muestra la contraseña ni la respuesta privada del proveedor.
 
 Una validación de configuración no demuestra que el servidor acepte la cuenta. Si el entorno no tiene acceso a `smtp.gmail.com:587`, habilita esa salida en el despliegue antes de comprobar la autenticación. Gmail requiere una contraseña de aplicación de Google o un token OAuth2 vigente; la contraseña normal de acceso no sustituye esa autorización.
+
+
+## Agenda y seguimiento de entregas
+
+Los paneles personales destacan los plazos vencidos sin entrega y las evidencias propias rechazadas. Coordinación y dinamización disponen de una cola de revisión ordenada por primera entrega. “Mis plazos” permite buscar y filtrar por proyecto y estado; “Ver evidencias” conserva el plazo y el propietario al aplicar otros filtros.
+
+En **Plazos de reportes → Seguimiento**, administración consulta los destinatarios activos actuales, entregas a tiempo, tardías y pendientes. Se cuentan personas, aunque una persona tenga varias evidencias. La revisión mostrada corresponde a la evidencia más reciente. El CSV exporta todos los resultados filtrados, sin limitarse a la página; neutraliza fórmulas de hoja de cálculo y no se almacena en caché.
+
+**Preparar recordatorios** exige contraseña actual, CSRF y la revisión vigente. Crea un aviso adicional por persona pendiente y versión del plazo, respetando sus preferencias de correo. Repetir la acción no duplica avisos y no adelanta ni sustituye los recordatorios automáticos. Los filtros de la tabla no limitan esta acción: siempre cubre a quienes faltan en todo el plazo. Las peticiones sensibles tienen límites por cuenta e IP.
+
+**Archivar** conserva las evidencias, retira el plazo de las agendas y cancela su cola pendiente. También funciona para plazos vencidos. Una edición desde Django admin utiliza el mismo servicio de versiones, grupos y avisos.
+
+El trabajador vuelve a comprobar cuenta, preferencias, destinatarios, disponibilidad y versión del plazo antes de cada envío. Si alguien ya entregó, cancela sus recordatorios pendientes. `cancelado` identifica estos descartes normales y no se reintenta como un fallo SMTP. Los correos ya aceptados por el transporte no se pueden retirar. Una modificación concurrente durante el intercambio SMTP puede llegar después de la comprobación; queda registrado el resultado real de la aceptación. El latido del trabajador se renueva durante lotes largos.
+
+## Organización de la bandeja
+
+La búsqueda por título o mensaje, los filtros de tipo y lectura y la paginación comparten la misma consulta autorizada. Cada usuario puede cambiar el estado individual, seleccionar avisos de la página (máximo 100 por petición) o marcar todos los resultados filtrados. Una selección con identificadores ajenos se rechaza completa. Al consultar un aviso se comprueba el acceso actual a su destino; si fue archivado, eliminado o dejó de estar asignado, la bandeja explica el motivo.
+
+Al actualizar, aplica `Gesicom.0014` (índice de plazo/usuario/primera entrega) y `notificaciones.0002` (revisión, actualización y estados de seguimiento/cancelación), recoge estáticos y reinicia web y trabajador. No se cambian fechas ni límites de evidencias previas. La columna `version` de avisos y `revision` de edición tienen finalidades distintas; las escrituras deben pasar por `notificaciones.plazos` para mantenerlas coherentes.

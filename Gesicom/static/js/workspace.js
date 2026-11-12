@@ -288,6 +288,27 @@
     }
     refreshSelection(form);
   });
+  const refreshNotices = () => {
+    const form = $("[data-notice-selection]");
+    if (!form) return;
+    const controls = [...form.elements].filter((el) => el.name === "avisos");
+    const count = controls.filter((el) => el.checked).length;
+    $("[data-notice-count]", form).textContent = `${count} seleccionados`;
+    const all = $("[data-notice-all]", form);
+    all.checked = count > 0 && count === controls.length;
+    all.indeterminate = count > 0 && count < controls.length;
+    $$("[data-notice-action]", form).forEach((button) => { button.disabled = !count; });
+  };
+  refreshNotices();
+  document.addEventListener("workspace:updated", refreshNotices);
+  document.addEventListener("change", (event) => {
+    if (event.target.matches("[data-notice-all]")) {
+      [...event.target.form.elements].filter((el) => el.name === "avisos").forEach((el) => {
+        el.checked = event.target.checked;
+      });
+    }
+    if (event.target.matches("[data-notice-all], input[name=avisos]")) refreshNotices();
+  });
   const confirmation = $("#account-confirm");
   const approved = new WeakSet();
   let pending;

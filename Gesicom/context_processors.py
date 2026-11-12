@@ -48,6 +48,8 @@ def interface(request):
     navigation = []
     for label, route, glyph in items:
         active = current == route
+        if route == "evidencias_list":
+            active = current in ["evidencias_list", "ver_evidencia", "corregir_evidencia"]
         if route == "admin_personalizado:gestionar_usuarios":
             active = current in [
                 "admin_personalizado:gestionar_usuarios",
@@ -62,6 +64,7 @@ def interface(request):
                 "notificaciones:plazos_admin",
                 "notificaciones:crear_plazo",
                 "notificaciones:editar_plazo",
+                "notificaciones:seguimiento_plazo",
             ]
         navigation.append({"label": label, "url": reverse(route), "icon": glyph, "active": active})
     acciones = [{"titulo": item["label"], "url": item["url"], "detalle": "Ir a la sección"} for item in navigation]

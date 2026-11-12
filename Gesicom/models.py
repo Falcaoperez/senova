@@ -49,6 +49,7 @@ class Envio(models.Model):
     class Meta:
         ordering = ["-fecha_envio", "-pk"]
         indexes = [
+            models.Index(fields=["plazo", "usuario", "registrado_en"], name="envio_plazo_usuario_fecha_idx"),
             models.Index(fields=["usuario", "fecha_envio"]),
             models.Index(fields=["proyecto", "fecha_envio"]),
             models.Index(fields=["aprobada", "rechazada", "fecha_envio"]),

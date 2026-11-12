@@ -5,62 +5,99 @@
   <div class="page-heading">
     <div>
       <p class="eyebrow">GESICOM / ADMINISTRACIÓN / PLAZOS</p>
-      <h1>Organicemos las próximas entregas.</h1>
-      <p class="page-description">Programa los reportes, sus destinatarios y los recordatorios de vencimiento.</p>
+      <h1>Entregas claras. Seguimiento sencillo.</h1>
+      <p class="page-description">Programa reportes y consulta quién ha entregado, quién falta y qué requiere revisión.</p>
     </div>
     <a class="button button-primary"
        href="{% url 'notificaciones:crear_plazo' %}">{% icon 'plus' %} Nuevo plazo</a>
   </div>
-  <section class="panel">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Reporte</th>
-            <th>Proyecto</th>
-            <th>Fecha límite · Colombia</th>
-            <th>Dirigido a</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for plazo in plazos %}
-            <tr>
-              <td>
-                <strong>{{ plazo.titulo }}</strong>
-                <small>Aviso {{ plazo.recordatorio_horas }} horas antes</small>
-              </td>
-              <td>{{ plazo.proyecto|default:'Todos' }}</td>
-              <td>{{ plazo.fecha_limite|date:'d M Y · H:i' }}</td>
-              <td>
-                {% for group in plazo.grupos.all %}{{ group.name|capfirst }}{% if not forloop.last %}, {% endif %}
-{% empty %}Todos los usuarios{% endfor %}
-  </td>
-  <td>
-    <span class="badge {% if not plazo.activo %}badge-danger{% elif plazo.vencido %}badge-pending{% else %}badge-success{% endif %}">
-      {% if not plazo.activo %}Inactivo{% elif plazo.vencido %}Vencido{% else %}Programado{% endif %}
-    </span>
-  </td>
-  <td>
-    <a class="icon-button"
-       href="{% url 'notificaciones:editar_plazo' plazo.pk %}"
-       aria-label="Editar {{ plazo.titulo }}">{% icon 'edit' %}</a>
-  </td>
-  </tr>
-{% empty %}
-  <tr>
-    <td colspan="6">
-      <div class="empty-state">
-        <h3>Aún no hay plazos programados.</h3>
-        <p>Crea el primero para acompañar las entregas del equipo.</p>
+  <section class="panel" data-live-scope>
+    <form class="filters" method="get" data-live-form>
+      <div class="field search-field">
+        <label for="deadline-q">Buscar reporte</label>
+        <input id="deadline-q"
+               name="q"
+               value="{{ q }}"
+               maxlength="100"
+               data-live-input
+               placeholder="Nombre o indicaciones…">
       </div>
-    </td>
-  </tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-{% include "notificaciones/paginacion.html" with pagina=plazos %}
-</section>
+      {% include "notificaciones/proyecto_filtro.html" %}
+      <div class="field">
+        <label for="deadline-state">Estado</label>
+        <select id="deadline-state" name="estado">
+          <option value="">Todos</option>
+          <option value="programado" {% if estado == 'programado' %}selected{% endif %}>Programado</option>
+          <option value="vencido" {% if estado == 'vencido' %}selected{% endif %}>Vencido</option>
+          <option value="archivado" {% if estado == 'archivado' %}selected{% endif %}>Archivado</option>
+        </select>
+      </div>
+      <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
+      <a class="text-link"
+         href="{% url 'notificaciones:plazos_admin' %}"
+         data-live-link>Limpiar</a>
+    </form>
+    <div data-live-region="admin-deadlines">
+      <div class="table-toolbar">
+        <h2>{{ plazos.paginator.count }} reportes encontrados</h2>
+      </div>
+      <div class="table-wrapper"
+           role="region"
+           aria-label="Plazos de reportes"
+           tabindex="0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Reporte</th>
+              <th>Proyecto</th>
+              <th>Fecha límite · Colombia</th>
+              <th>Dirigido a</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for plazo in plazos %}
+              <tr>
+                <td>
+                  <strong>{{ plazo.titulo }}</strong>
+                  <small>Aviso {{ plazo.recordatorio_horas }} horas antes</small>
+                </td>
+                <td>{{ plazo.proyecto|default:'Todos' }}</td>
+                <td>{{ plazo.fecha_limite|date:'d M Y · H:i' }}</td>
+                <td>
+                  {% for group in plazo.grupos.all %}{{ group.name|capfirst }}{% if not forloop.last %}, {% endif %}{% empty %}Todos los usuarios activos{% endfor %}
+                </td>
+                <td>
+                  <span class="badge {% if not plazo.activo %}badge-muted{% elif plazo.vencido %}badge-pending{% else %}badge-success{% endif %}">
+                    {% if not plazo.activo %}Archivado{% elif plazo.vencido %}Vencido{% else %}Programado{% endif %}
+                  </span>
+                </td>
+                <td>
+                  <div class="heading-actions">
+                    <a class="button button-secondary button-sm"
+                       href="{% url 'notificaciones:seguimiento_plazo' plazo.pk %}">Seguimiento {% icon 'arrow' %}</a>
+                    <a class="icon-button"
+                       href="{% url 'notificaciones:editar_plazo' plazo.pk %}"
+                       aria-label="Editar {{ plazo.titulo }}">{% icon 'edit' %}</a>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state">
+                    <h3>No hay reportes con estos filtros.</h3>
+                    <p>Crea un plazo o ajusta la búsqueda.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "notificaciones/paginacion.html" with pagina=plazos %}
+    </div>
+    <p class="sr-only" role="status" data-live-status></p>
+  </section>
 {% endblock %}

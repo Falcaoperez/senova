@@ -16,6 +16,8 @@
     <div data-live-region="evidence-stats">{% include "ui/stats.html" %}</div>
     <section class="panel">
       <form class="filters" method="get" data-live-form>
+        <input type="hidden" name="plazo" value="{{ plazo_scope }}">
+        <input type="hidden" name="usuario" value="{{ usuario_scope }}">
         <div class="field search-field">
           <label for="q">Buscar evidencia</label>
           <input id="q"
@@ -62,7 +64,7 @@
             <h2>
               Lista de evidencias <span class="table-count">{{ total_envios }}</span>
             </h2>
-            <p>Información actualizada de tus registros</p>
+            <p>{% if plazo_scope %}Entregas del plazo #{{ plazo_scope }}{% else %}Información actualizada de tus registros{% endif %}{% if usuario_scope %} · Cuenta #{{ usuario_scope }}{% endif %}</p>
           </div>
           <a class="text-link"
              href="{% url 'reportes' %}{% querystring page=None %}">Ver reportes {% icon 'arrow' %}</a>
