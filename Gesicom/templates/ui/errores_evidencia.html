@@ -1,0 +1,29 @@
+{% if form.errors %}
+  <div class="evidence-error-summary"
+       role="alert"
+       tabindex="-1"
+       data-error-summary>
+    <h2>Revisa estos datos antes de guardar.</h2>
+    {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    <ul>
+      {% for field in form.visible_fields %}
+        {% for error in field.errors %}
+          <li>
+            <a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a>
+          </li>
+        {% endfor %}
+      {% endfor %}
+      {% for field in form.hidden_fields %}
+        {% for error in field.errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      {% endfor %}
+    </ul>
+    {% if form.solicitud.errors %}
+      <a class="text-link" href="{% url 'evidencia' %}">Abrir un formulario nuevo</a>
+    {% endif %}
+    {% if form.files %}
+      <p>Vuelve a seleccionar el archivo después de corregir los datos.</p>
+    {% endif %}
+  </div>
+{% endif %}

@@ -12,6 +12,7 @@ MySQL utiliza InnoDB, UTF-8 completo (`utf8mb4`), modo estricto, claves foránea
 
 - `auth_user`, grupos y permisos: cuentas y autorización.
 - `Gesicom_envio`: evidencias, autor, archivo/enlace, revisión y asociación con el plazo.
+- `Gesicom_solicitudenvio`: recibos internos para recuperar el resultado de un reintento del mismo formulario.
 - `notificaciones_plazoreporte`: destinatarios, proyecto, fecha límite, recordatorio y versión.
 - `notificaciones_novedad`: publicaciones y grupos destinatarios.
 - `notificaciones_notificacion`: bandeja individual y fecha de lectura.
@@ -45,3 +46,5 @@ El respaldo consistente se guarda comprimido dentro de `.local/backups/`, con pe
 El SQL de diagnóstico y la documentación pueden versionarse. Los respaldos reales, datos personales, contraseñas y credenciales permanecen en almacenamiento privado. Consulta también [la organización del proyecto](../docs/ARQUITECTURA.md).
 
 `Gesicom_movimientoevidencia` conserva los movimientos de creación, corrección, revisión y observaciones. La versión única por evidencia evita registrar dos cambios con la misma identidad. La primera entrega y el límite aplicado permanecen en `Gesicom_envio`; la fecha de corrección se consulta en el historial.
+
+La migración `Gesicom.0015_solicitudes_adjuntos` añade recibos con UUID único y un índice de nombres de archivo. No rellena recibos históricos ni modifica las evidencias existentes. Los recibos sin evidencia se conservan como constancia de un formulario ya procesado; no deben purgarse automáticamente junto con sus adjuntos.

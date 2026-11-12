@@ -143,10 +143,11 @@ def reportes_trimestrales_csv(request):
 
 @login_required
 def evidencia(request, pk=None):
+    from .archivos import informacion_adjunto
     from .forms import EvidenciaForm
-    from .services import ConflictoEvidencia, corregir_evidencia, registrar_evidencia
+    from .services import ConflictoEvidencia, corregir_evidencia, recuperar_registro, registrar_o_recuperar
 
-    envio = get_object_or_404(Envio, pk=pk, usuario=request.user) if pk else None
+    envio = get_object_or_404(Envio, pk=pk, usuario=request.user) if pk is not None else None
     if envio and envio.aprobada:
         raise PermissionDenied("Una evidencia aprobada no se puede corregir.")
     form = EvidenciaForm(
@@ -157,14 +158,34 @@ def evidencia(request, pk=None):
         initial={"plazo": request.GET.get("plazo", "")},
     )
     status = 200
-    if request.method == "POST" and form.is_valid():
+    valido = form.is_valid() if request.method == "POST" else False
+    if request.method == "POST" and envio is None and form.cleaned_data.get("solicitud"):
+        try:
+            previo = recuperar_registro(request.user, form.cleaned_data["solicitud"])
+        except ValidationError as error:
+            form.add_error(None, error)
+            valido = False
+        else:
+            if previo:
+                messages.info(
+                    request, "Este formulario ya había sido enviado. Abrimos la evidencia registrada, sin duplicarla."
+                )
+                return redirect("ver_evidencia", pk=previo.envio.pk)
+    if request.method == "POST" and valido:
         try:
             if envio:
                 guardado = corregir_evidencia(request.user, envio.pk, form.cleaned_data)
                 messages.success(request, "Corrección guardada. La evidencia vuelve a revisión.")
             else:
-                guardado = registrar_evidencia(request.user, form.cleaned_data)
-                messages.success(request, "Evidencia enviada correctamente")
+                resultado = registrar_o_recuperar(request.user, form.cleaned_data)
+                guardado = resultado.envio
+                if resultado.reutilizado:
+                    messages.info(
+                        request,
+                        "Este formulario ya había sido enviado. Abrimos la evidencia registrada, sin duplicarla.",
+                    )
+                else:
+                    messages.success(request, "Evidencia enviada correctamente")
             return redirect("ver_evidencia", pk=guardado.pk)
         except ConflictoEvidencia as error:
             form.add_error(None, error)
@@ -180,6 +201,7 @@ def evidencia(request, pk=None):
             "home_url": _home_url_for_user(request.user),
             "errores": [str(error) for errors in form.errors.values() for error in errors],
             "exito": False,
+            **(informacion_adjunto(envio) if envio else {}),
         },
         status=status,
     )
@@ -195,28 +217,19 @@ def tabla_instructor(request):
 
 
 def _detalle_evidencia(request, envio, status=200):
-    from pathlib import Path
-
     from django.core.paginator import Paginator
 
-    archivo_url = reverse("archivo_evidencia", args=[envio.pk]) if envio.archivo_evidencia else None
-    suffix = Path(envio.archivo_evidencia.name or "").suffix.lower()
-    tipos = {
-        "image": {".jpg", ".jpeg", ".png", ".gif"},
-        "pdf": {".pdf"},
-        "text": {".txt"},
-        "office": {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"},
-        "video": {".mp4", ".webm", ".ogg"},
-        "audio": {".mp3", ".wav"},
-    }
-    kind = next((tipo for tipo, extensiones in tipos.items() if suffix in extensiones), "other")
+    from .archivos import informacion_adjunto
+
+    info = informacion_adjunto(envio)
+    archivo_url = reverse("archivo_evidencia", args=[envio.pk]) if info["archivo_disponible"] else None
     return render(
         request,
         "ver_evidencia.html",
         {
             "envio": envio,
             "archivo_url": archivo_url,
-            "preview_kind": kind,
+            **info,
             "puede_corregir": request.user.pk == envio.usuario_id and not envio.aprobada,
             "historial": Paginator(envio.historial.select_related("actor"), 20).get_page(request.GET.get("page")),
         },
@@ -306,31 +319,39 @@ def actualizar_observaciones(request, envio_id):
 
 @login_required
 def archivo_evidencia(request, pk):
-    import mimetypes
+    from pathlib import Path
 
-    from django.http import FileResponse, Http404
+    from django.http import FileResponse, Http404, HttpResponse
 
-    envio = get_object_or_404(_visible_envios(request.user), pk=pk)
+    from .adjuntos import texto_limitado, vista_adjunto
+    from .archivos import archivos_visibles
+
+    envio = get_object_or_404(archivos_visibles(request.user), pk=pk)
     if not envio.archivo_evidencia:
         raise Http404("El archivo no está disponible.")
     try:
         archivo = envio.archivo_evidencia.open("rb")
+        nombre = Path(archivo.name).name
+        tipo, mime = vista_adjunto(archivo, nombre)
+        if request.GET.get("vista") == "texto":
+            if tipo != "text":
+                archivo.close()
+                raise Http404("La vista de texto no está disponible para este archivo.")
+            texto, truncado = texto_limitado(archivo)
+            archivo.close()
+            response = HttpResponse(texto, content_type="text/plain; charset=utf-8")
+            response["X-Preview-Truncated"] = "1" if truncado else "0"
+        else:
+            inline = tipo in {"image", "pdf", "text", "video", "audio"} and request.GET.get("descargar") != "1"
+            response = FileResponse(archivo, as_attachment=not inline, filename=nombre, content_type=mime)
     except FileNotFoundError:
-        raise Http404("El archivo no está disponible.")
-    from pathlib import Path
-
-    nombre = Path(envio.archivo_evidencia.name).name
-    extension = Path(nombre).suffix.lower()
-    inline = (
-        extension in {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".txt", ".mp4", ".webm", ".ogg", ".mp3", ".wav"}
-        and request.GET.get("descargar") != "1"
-    )
-    response = FileResponse(
-        archivo,
-        as_attachment=not inline,
-        filename=nombre,
-        content_type=mimetypes.guess_type(nombre)[0] or "application/octet-stream",
-    )
+        raise Http404("El archivo no está disponible.") from None
+    except OSError:
+        response = HttpResponse(
+            "No se pudo abrir el adjunto. Inténtalo de nuevo más tarde.",
+            status=503,
+            content_type="text/plain; charset=utf-8",
+        )
     response["X-Frame-Options"] = "SAMEORIGIN"
     response["Cache-Control"] = "private, no-store"
     return response
@@ -338,5 +359,11 @@ def archivo_evidencia(request, pk):
 
 @login_required
 def archivo_por_ruta(request, ruta):
-    envio = get_object_or_404(_visible_envios(request.user), archivo_evidencia=ruta)
+    from django.http import Http404
+
+    from .archivos import archivos_visibles
+
+    envio = archivos_visibles(request.user).filter(archivo_evidencia=ruta).order_by("pk").first()
+    if envio is None:
+        raise Http404("El archivo no está disponible.")
     return archivo_evidencia(request, envio.pk)

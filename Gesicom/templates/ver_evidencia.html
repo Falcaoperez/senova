@@ -13,9 +13,11 @@
     </div>
     <div class="heading-actions">
       <a class="button button-secondary" href="{% url 'evidencias_list' %}">Volver a evidencias</a>
-      {% if puede_corregir %}<a class="button button-secondary"
-                                href="{% url 'corregir_evidencia' envio.pk %}">{% icon 'edit' %} Corregir evidencia</a>{% endif %}
-      {% if envio.archivo_evidencia %}
+      {% if puede_corregir %}
+        <a class="button button-secondary"
+           href="{% url 'corregir_evidencia' envio.pk %}">{% icon 'edit' %} Corregir evidencia</a>
+      {% endif %}
+      {% if archivo_disponible %}
         <a class="button button-primary"
            href="{{ archivo_url }}?descargar=1"
            download>{% icon 'download' %} Descargar archivo</a>
@@ -29,8 +31,18 @@
   </div>
   <div class="evidence-version-strip">
     <span class="badge">Versión {{ envio.version }}</span>
-    <span>Primera entrega: {{ envio.registrado_en|date:'d M Y · H:i' }}</span>{% if envio.actualizado_en %}<span>Último cambio: {{ envio.actualizado_en|date:'d M Y · H:i' }}</span>{% endif %}<a class="text-link" href="#evidence-history">Ver historial {% icon 'clock' %}</a>
+    <span>Primera entrega: {{ envio.registrado_en|date:'d M Y · H:i' }}</span>
+    {% if envio.actualizado_en %}
+      <span>Último cambio: {{ envio.actualizado_en|date:'d M Y · H:i' }}</span>
+    {% endif %}
+    <a class="text-link" href="#evidence-history">Ver historial {% icon 'clock' %}</a>
   </div>
+  {% if envio.archivo_evidencia and not archivo_disponible %}
+    <div class="action-notice" role="status">
+      {% icon 'info' %}
+      <p>El adjunto no está disponible en este momento. El registro y su historial se conservan. Puedes volver a intentarlo o solicitar que se revise el archivo.</p>
+    </div>
+  {% endif %}
   <div class="preview-layout">
     <section class="preview-surface">
       {% if preview_kind == "image" %}
@@ -40,7 +52,15 @@
                 title="Previsualización de {{ envio.nombre }}">
         </iframe>
       {% elif preview_kind == "text" %}
-        <pre data-text-preview="{{ archivo_url }}" aria-live="polite">Cargando contenido…</pre>
+        <div class="text-preview-wrap">
+          <p class="text-preview-note"
+             data-text-status>Vista de texto de hasta 64 KB. El archivo completo está disponible para descargar.</p>
+          <pre data-text-preview="{{ archivo_url }}?vista=texto"
+               aria-live="polite">Puedes consultar el texto con el enlace de descarga.</pre>
+          <noscript>
+            <a class="button button-secondary" href="{{ archivo_url }}">Consultar texto completo</a>
+          </noscript>
+        </div>
       {% elif preview_kind == "video" %}
         <video controls
                style="width:100%;
@@ -61,7 +81,7 @@
           <a class="button button-secondary"
              href="{{ archivo_url }}?descargar=1">Descargar documento {% icon 'download' %}</a>
         </div>
-      {% elif envio.link_evidencia and not envio.archivo_evidencia %}
+      {% elif envio.link_evidencia and not archivo_disponible %}
         <div class="empty-state">
           <span class="empty-symbol">{% icon 'external' %}</span>
           <h3>Consulta la evidencia en su origen</h3>
@@ -74,9 +94,11 @@
       {% else %}
         <div class="empty-state">
           <span class="empty-symbol">{% icon 'file' %}</span>
-          <h3>{% if envio.archivo_evidencia %}Archivo listo para descargar{% else %}Sin archivo adjunto{% endif %}</h3>
+          <h3>
+            {% if archivo_disponible %}Archivo listo para descargar{% elif envio.archivo_evidencia %}Adjunto no disponible{% else %}Sin archivo adjunto{% endif %}
+          </h3>
           <p>
-            {% if envio.archivo_evidencia %}Usa el botón de descarga para consultar este tipo de archivo.{% else %}Esta evidencia no tiene un archivo o enlace asociado.{% endif %}
+            {% if archivo_disponible %}Usa el botón de descarga para consultar este tipo de archivo.{% elif envio.archivo_evidencia %}Si eres el propietario y aún puedes corregir la evidencia, puedes reemplazar el archivo.{% else %}Esta evidencia no tiene un archivo o enlace asociado.{% endif %}
           </p>
         </div>
       {% endif %}
@@ -85,6 +107,19 @@
       <p class="eyebrow">INFORMACIÓN DEL REGISTRO</p>
       <h2>Detalle de evidencia</h2>
       <dl class="file-meta">
+        {% if envio.archivo_evidencia %}
+          <div>
+            <dt>Adjunto</dt>
+            <dd>
+              {{ archivo_nombre }}
+              {% if archivo_disponible %}
+                <small>{{ archivo_formato }} · {{ archivo_tamano|filesizeformat }}</small>
+              {% else %}
+                <small>No disponible</small>
+              {% endif %}
+            </dd>
+          </div>
+        {% endif %}
         <div>
           <dt>Estado{% if envio.entrega_tardia %} · Entrega fuera de plazo{% endif %}</dt>
           <dd>
@@ -168,7 +203,11 @@
               <strong>{{ movimiento.get_accion_display }}</strong>
               <span class="badge">{{ movimiento.get_estado_display }}</span>
             </div>
-            <p>Versión {{ movimiento.version }} · {% if movimiento.actor %}{{ movimiento.actor.get_full_name|default:movimiento.actor.username }}{% else %}Sistema{% endif %} · {{ movimiento.creado_en|date:'d M Y · H:i' }}</p>{% if movimiento.detalle %}<div class="history-detail">{{ movimiento.detalle|linebreaksbr }}</div>{% endif %}</div>
+            <p>Versión {{ movimiento.version }} · {% if movimiento.actor %}{{ movimiento.actor.get_full_name|default:movimiento.actor.username }}{% else %}Sistema{% endif %} · {{ movimiento.creado_en|date:'d M Y · H:i' }}</p>
+            {% if movimiento.detalle %}
+              <div class="history-detail">{{ movimiento.detalle|linebreaksbr }}</div>
+            {% endif %}
+          </div>
         </li>
       {% empty %}
         <li>

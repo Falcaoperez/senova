@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -49,6 +51,7 @@ class Envio(models.Model):
     class Meta:
         ordering = ["-fecha_envio", "-pk"]
         indexes = [
+            models.Index(fields=["archivo_evidencia"], name="envio_archivo_idx"),
             models.Index(fields=["plazo", "usuario", "registrado_en"], name="envio_plazo_usuario_fecha_idx"),
             models.Index(fields=["usuario", "fecha_envio"]),
             models.Index(fields=["proyecto", "fecha_envio"]),
@@ -97,3 +100,16 @@ class MovimientoEvidencia(models.Model):
 
     def __str__(self):
         return f"Evidencia #{self.envio_id} · versión {self.version}"
+
+
+class SolicitudEnvio(models.Model):
+    codigo = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="solicitudes_evidencia")
+    envio = models.OneToOneField(
+        Envio, on_delete=models.SET_NULL, null=True, blank=True, related_name="solicitud_registro"
+    )
+    creada_en = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        default_permissions = ()
+        verbose_name = "Solicitud de registro de evidencia"

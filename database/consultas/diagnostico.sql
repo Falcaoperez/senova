@@ -42,3 +42,9 @@ FROM notificaciones_notificacion GROUP BY tipo;
 -- Asignaciones nativas: solo contadores, sin nombres ni permisos individuales.
 SELECT COUNT(*) AS permisos_asignados, COUNT(DISTINCT group_id) AS grupos_con_permisos
 FROM auth_group_permissions;
+
+-- Reintentos de alta: solo contadores, sin UUID ni datos de formularios.
+SELECT COUNT(*) AS formularios_procesados,
+       SUM(envio_id IS NOT NULL) AS con_evidencia,
+       SUM(envio_id IS NULL) AS evidencia_retirada
+FROM Gesicom_solicitudenvio;

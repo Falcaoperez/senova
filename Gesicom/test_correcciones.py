@@ -236,3 +236,30 @@ class CorreccionesTests(TestCase):
         history = envio.historial.get()
         self.assertEqual((history.accion, history.actor_id, history.estado), ("historico", None, "aprobada"))
         self.assertEqual(self.envio.historial.count(), 1)
+
+    def test_correction_preserves_unclassified_or_legacy_project_in_form_and_service(self):
+        for proyecto in ["", "Proyecto anterior"]:
+            with self.subTest(proyecto=proyecto):
+                Envio.objects.filter(pk=self.envio.pk).update(proyecto=proyecto)
+                self.envio.refresh_from_db()
+                response = self.client.get(self.url)
+                self.assertEqual(response.context["form"]["proyecto"].value(), proyecto)
+                response = self.client.post(self.url, self.data(proyecto=proyecto, version=self.envio.version))
+                self.assertEqual(response.status_code, 302)
+                self.envio.refresh_from_db()
+                self.assertEqual(self.envio.proyecto, proyecto)
+
+    def test_correction_keeps_original_project_after_deadline_reclassification(self):
+        plazo = PlazoReporte.objects.create(titulo="Plazo reclasificado", proyecto="GIVIT", fecha_limite=timezone.now())
+        self.envio.plazo = plazo
+        self.envio.limite_aplicado = plazo.fecha_limite
+        self.envio.save()
+        response = self.client.post(self.url, self.data())
+        self.assertEqual(response.status_code, 302)
+        self.envio.refresh_from_db()
+        self.assertEqual(self.envio.proyecto, "LEM")
+        response = self.client.post(self.url, self.data(proyecto="ACAF", version=2))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "El proyecto debe coincidir")
+        self.envio.refresh_from_db()
+        self.assertEqual((self.envio.proyecto, self.envio.version), ("LEM", 2))
