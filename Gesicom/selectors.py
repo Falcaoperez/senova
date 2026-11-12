@@ -150,6 +150,8 @@ def _evidencias_context(request, incluir_graficos=False):
         "es_admin": es_admin,
         "puede_revisar": is_admin_or_group(request.user, ["coordinador", "dinamizador"]),
         "q": termino_busqueda,
+        "plazo_scope": _scope_id(request.GET.get("plazo", "")),
+        "usuario_scope": _scope_id(request.GET.get("usuario", "")),
         "estado": estado,
         "quarters": num_quarters,
         "next_direction": "desc" if direccion == "asc" else "asc",
@@ -166,7 +168,7 @@ def _visible_envios(user):
 
 
 def _panel_context(user, role):
-    from notificaciones.services import plazos_para_usuario
+    from notificaciones.selectors import plazos_para_usuario, resumen_agenda
 
     envios = _visible_envios(user)
     resumen = envios.aggregate(
@@ -181,13 +183,28 @@ def _panel_context(user, role):
         "aprobadas": resumen["aprobadas"],
         "pendientes": resumen["pendientes"],
         "rechazadas": resumen["rechazadas"],
-        "recientes": envios.order_by("-fecha_envio", "-pk")[:5],
-        "proximos_plazos": plazos_para_usuario(user).filter(fecha_limite__gte=timezone.now())[:3],
+        "recientes": envios.select_related("usuario").order_by("-registrado_en", "-pk")[:5],
+        "proximos_plazos": plazos_para_usuario(user).order_by("fecha_limite", "pk")[:3],
+        "agenda": resumen_agenda(user),
+        "mis_correcciones": Envio.objects.filter(usuario=user, rechazada=True).count(),
+        "revisiones": envios.filter(aprobada=False, rechazada=False)
+        .select_related("usuario")
+        .order_by("registrado_en", "pk")[:5]
+        if is_admin_or_group(user, ["coordinador", "dinamizador"])
+        else [],
     }
+
+
+def _scope_id(value):
+    return value if value.isascii() and value.isdigit() and len(value) <= 18 else ""
 
 
 def _filtered_envios(request):
     queryset = _visible_envios(request.user)
+    for campo in ["plazo", "usuario"]:
+        pk = _scope_id(request.GET.get(campo, ""))
+        if pk:
+            queryset = queryset.filter(**{campo + "_id": pk})
     proyecto = request.GET.get("proyecto", "")
     if proyecto:
         queryset = queryset.filter(proyecto=proyecto)

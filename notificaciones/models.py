@@ -24,6 +24,12 @@ class Novedad(models.Model):
     def __str__(self):
         return self.titulo
 
+    @property
+    def enlace_publico(self):
+        from .acceso import enlace_seguro
+
+        return enlace_seguro(self.enlace)
+
 
 class PlazoReporte(models.Model):
     PROYECTOS = [
@@ -42,6 +48,8 @@ class PlazoReporte(models.Model):
     grupos = models.ManyToManyField(Group, blank=True, related_name="plazos_reportes")
     activo = models.BooleanField(default=True)
     version = models.PositiveIntegerField(default=1)
+    revision = models.PositiveIntegerField(default=1, db_default=1, editable=False)
+    actualizado_en = models.DateTimeField(null=True, blank=True, editable=False)
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="plazos_creados"
     )
@@ -66,6 +74,7 @@ class Notificacion(models.Model):
         RECORDATORIO = "recordatorio", "Próximo vencimiento"
         VENCIMIENTO = "vencimiento", "Plazo vencido"
         EVIDENCIA = "evidencia", "Revisión de evidencia"
+        SEGUIMIENTO = "seguimiento", "Recordatorio adicional"
 
     lote_id = models.UUIDField(default=uuid.uuid4, db_index=True, editable=False)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notificaciones")
@@ -109,6 +118,7 @@ class CorreoPendiente(models.Model):
         PROCESANDO = "procesando", "Procesando"
         ENVIADO = "enviado", "Enviado"
         ERROR = "error", "Error"
+        CANCELADO = "cancelado", "Cancelado"
 
     notificacion = models.OneToOneField(Notificacion, on_delete=models.CASCADE, related_name="correo")
     estado = models.CharField(max_length=15, choices=Estado.choices, default=Estado.PENDIENTE)

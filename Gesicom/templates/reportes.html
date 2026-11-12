@@ -16,6 +16,8 @@
   </div>
   <section class="panel">
     <form class="filters" method="get" style="margin-bottom:0">
+      <input type="hidden" name="plazo" value="{{ plazo_scope }}">
+      <input type="hidden" name="usuario" value="{{ usuario_scope }}">
       <div class="field">
         <label for="start">Desde</label>
         <input type="month" id="start" name="start" value="{{ start }}">
