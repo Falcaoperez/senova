@@ -76,3 +76,11 @@ El personal activo de Django con permiso explícito `view_envio` o `change_envio
 El resumen solo acepta lectura GET/HEAD y consulta los avisos de `request.user`; no admite elegir otro destinatario. La respuesta detallada limita títulos, fechas, lectura y rutas a los cuatro avisos más recientes. Las respuestas son privadas y no se almacenan en caché. La reutilización del conteo dura únicamente la petición actual y verifica la identidad de la cuenta.
 
 El cliente valida la respuesta y las rutas del mismo origen, inserta los títulos como texto y conserva POST con CSRF al construir los formularios. No abre directamente el destino externo de una notificación; el servidor vuelve a comprobar su autorización al abrirla. Las actualizaciones se cancelan al ocultar la página, no se solapan y no mantienen viva una sesión inactiva. Un fallo de red conserva la última lista disponible sin mostrar detalles internos.
+
+## Respuestas parciales y filtros del directorio
+
+La representación parcial se selecciona únicamente en las vistas previstas y mediante una cabecera GET exacta. No selecciona una plantilla proporcionada por el usuario ni evita los decoradores de acceso, la visibilidad de evidencias o CSRF. Las acciones conservan sus formularios POST y la versión vigente; la respuesta mantiene `Vary: X-Workspace-Fragment` y el control de caché privado. Los resultados de la búsqueda o de otro usuario no se comparten entre peticiones.
+
+El directorio valida los roles contra el catálogo que muestra, sin convertir identificadores arbitrarios a enteros de la base de datos. Cadenas de dígitos excesivas, símbolos numéricos no válidos, estados desconocidos o búsquedas demasiado largas producen un error visible y una lista vacía. La validación no cambia las reglas de las operaciones administrativas.
+
+La protección de ediciones conserva los datos en memoria de la página. No copia observaciones, contraseñas ni permisos a almacenamiento persistente del navegador o al estado del historial. Cancelar una actualización no envía el formulario editado ni guarda sus cambios.

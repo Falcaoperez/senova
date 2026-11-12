@@ -14,7 +14,9 @@ from django.views.decorators.debug import sensitive_post_parameters
 from cuentas.correos import encolar_aviso_cambio, invalidar_recuperaciones
 from cuentas.forms import ConfirmarPasswordForm, EditarUsuarioForm
 from cuentas.sesiones import cerrar_sesiones
+from Gesicom.interfaz import render_panel
 
+from .forms import FiltrosUsuariosForm
 from .selectors import centro_operaciones
 from .services import cambiar_estados, cambiar_roles, registrar_cambio, validar_destino
 
@@ -27,7 +29,9 @@ def _requerir_administrador(usuario):
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
 def panel_control(request):
-    return render(request, "admin_personalizado/dashboard_modern.html", centro_operaciones(request.GET.get("periodo")))
+    return render_panel(
+        request, "admin_personalizado/dashboard_modern.html", centro_operaciones(request.GET.get("periodo"))
+    )
 
 
 @login_required
@@ -128,19 +132,22 @@ def gestionar_usuarios(request):
     busqueda = request.GET.get("q", "").strip()[:100]
     estado = request.GET.get("estado", "")
     rol = request.GET.get("rol", "")
-    lista = User.objects.prefetch_related("groups").order_by("-date_joined", "-pk")
-    if busqueda:
+    grupos = list(Group.objects.order_by("name"))
+    filtros = FiltrosUsuariosForm(request.GET, grupos=grupos)
+    valido = filtros.is_valid()
+    lista = User.objects.prefetch_related("groups").order_by("-date_joined", "-pk") if valido else User.objects.none()
+    if valido and busqueda:
         lista = lista.filter(
             Q(username__icontains=busqueda)
             | Q(email__icontains=busqueda)
             | Q(first_name__icontains=busqueda)
             | Q(last_name__icontains=busqueda)
         )
-    if estado in {"activo", "inactivo"}:
+    if valido and estado:
         lista = lista.filter(is_active=estado == "activo")
-    if rol.isdigit():
-        lista = lista.filter(groups__pk=rol)
-    return render(
+    if valido and rol:
+        lista = lista.filter(groups__pk=filtros.cleaned_data["rol"])
+    return render_panel(
         request,
         "admin_personalizado/gestionar_usuarios_modern.html",
         {
@@ -148,7 +155,9 @@ def gestionar_usuarios(request):
             "busqueda": busqueda,
             "estado": estado,
             "rol": rol,
-            "grupos_disponibles": Group.objects.order_by("name"),
+            "grupos_disponibles": grupos,
+            "filtros_form": filtros,
+            "mensaje_filtros": "No se muestran cuentas hasta corregir los filtros.",
         },
     )
 
