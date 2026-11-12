@@ -8,6 +8,7 @@ from django.views.generic import RedirectView
 from cuentas import seguridad as seguridad_views
 from cuentas import views as cuentas_views
 from Gesicom import views as gesicom_views
+from Gesicom.busqueda import buscar
 from instructor import views as usuarios_views
 
 from .health import health
@@ -34,6 +35,7 @@ urlpatterns = [
     path("roles/coordinador/", gesicom_views.role_coordinador, name="role_coordinador"),
     path("evidencia/", gesicom_views.evidencia, name="evidencia"),
     path("evidencias/", gesicom_views.evidencias_list, name="evidencias_list"),
+    path("api/busqueda/", buscar, name="busqueda_global"),
     path("evidencias/<int:pk>/archivo/", gesicom_views.archivo_evidencia, name="archivo_evidencia"),
     path("media/<path:ruta>", gesicom_views.archivo_por_ruta, name="archivo_por_ruta"),
     path("evidencias/<int:pk>/ver/", gesicom_views.ver_evidencia, name="ver_evidencia"),

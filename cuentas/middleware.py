@@ -21,6 +21,7 @@ class SesionesMiddleware:
 
     def __call__(self, request):
         resumen = request.path_info == "/notificaciones/resumen/"
+        respuesta_json = resumen or request.path_info == "/api/busqueda/"
 
         def acceso_caducado():
             response = JsonResponse(
@@ -30,14 +31,14 @@ class SesionesMiddleware:
             response["Cache-Control"] = "private, no-store"
             return response
 
-        if resumen and not request.user.is_authenticated:
+        if respuesta_json and not request.user.is_authenticated:
             return acceso_caducado()
         if request.user.is_authenticated and request.session.session_key:
             request._gesicom_private = True
             if request.session.get(CLAVE_VERSION) != VERSION_SEGURIDAD:
                 logout(request)
                 messages.info(request, "La seguridad de las sesiones se actualizó. Ingresa de nuevo para continuar.")
-                return acceso_caducado() if resumen else redirect("login")
+                return acceso_caducado() if respuesta_json else redirect("login")
             ahora = timezone.now()
             try:
                 sesion, _ = SesionUsuario.objects.get_or_create(
@@ -53,7 +54,7 @@ class SesionesMiddleware:
                 ):
                     logout(request)
                     messages.info(request, "Tu sesión terminó por inactividad. Ingresa de nuevo para continuar.")
-                    return acceso_caducado() if resumen else redirect("login")
+                    return acceso_caducado() if respuesta_json else redirect("login")
                 if not resumen and ahora - sesion.ultimo_uso >= timedelta(seconds=60):
                     SesionUsuario.objects.filter(pk=sesion.pk).update(ultimo_uso=ahora, direccion_ip=client_ip(request))
             except DatabaseError:

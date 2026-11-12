@@ -1,12 +1,21 @@
-from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.models import Group, Permission, User
-from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.debug import sensitive_post_parameters
+
+from cuentas.correos import encolar_aviso_cambio, invalidar_recuperaciones
+from cuentas.forms import ConfirmarPasswordForm, EditarUsuarioForm
+from cuentas.sesiones import cerrar_sesiones
+
+from .selectors import centro_operaciones
+from .services import cambiar_estados, cambiar_roles, registrar_cambio, validar_destino
 
 
 def _requerir_administrador(usuario):
@@ -14,78 +23,10 @@ def _requerir_administrador(usuario):
     return usuario.is_superuser or usuario.groups.filter(name="administrador").exists()
 
 
-def _validar_contraseña(contraseña):
-    from django.contrib.auth.password_validation import validate_password
-    from django.core.exceptions import ValidationError
-
-    try:
-        validate_password(contraseña)
-    except ValidationError as error:
-        return error.messages
-    return []
-
-
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
 def panel_control(request):
-    """Panel principal del control de administración."""
-    total_usuarios = User.objects.count()
-    total_grupos = Group.objects.count()
-    usuarios_activos = User.objects.filter(is_active=True).count()
-    from cuentas.models import CorreoSeguridad
-    from notificaciones.models import CorreoPendiente
-
-    estados = {}
-    for model in (CorreoSeguridad, CorreoPendiente):
-        for row in model.objects.values("estado").annotate(total=Count("pk")):
-            estados[row["estado"]] = estados.get(row["estado"], 0) + row["total"]
-
-    # Calcular porcentaje de usuarios activos
-    if total_usuarios > 0:
-        usuarios_activos_porcentaje = round((usuarios_activos / total_usuarios) * 100)
-    else:
-        usuarios_activos_porcentaje = 0
-
-    context = {
-        "usuarios_recientes": User.objects.order_by("-date_joined")[:5],
-        "total_usuarios": total_usuarios,
-        "total_grupos": total_grupos,
-        "usuarios_activos": usuarios_activos,
-        "usuarios_activos_porcentaje": usuarios_activos_porcentaje,
-        "correo_remitente": settings.DEFAULT_FROM_EMAIL,
-        "correo_pruebas": settings.EMAIL_HOST in {"localhost", "127.0.0.1", "mailpit", "senova-mailpit"},
-        "correo_credencial": bool(settings.EMAIL_HOST_PASSWORD or settings.EMAIL_OAUTH2_ACCESS_TOKEN),
-        "correo_trabajador": bool(cache.get("notificaciones:trabajador")),
-        "correos_pendientes": estados.get("pendiente", 0) + estados.get("procesando", 0),
-        "correos_errores": estados.get("error", 0),
-    }
-    return render(request, "admin_personalizado/dashboard_modern.html", context)
-
-
-@user_passes_test(_requerir_administrador, login_url="access_denied")
-def usuarios(request):
-    """Lista de usuarios con paginación y búsqueda."""
-    lista_usuarios = User.objects.all().prefetch_related("groups").order_by("-date_joined")
-    busqueda = request.GET.get("q", "").strip()
-    if busqueda:
-        lista_usuarios = lista_usuarios.filter(
-            Q(username__icontains=busqueda)
-            | Q(email__icontains=busqueda)
-            | Q(first_name__icontains=busqueda)
-            | Q(last_name__icontains=busqueda)
-        )
-
-    # Paginación
-    paginador = Paginator(lista_usuarios, 10)
-    numero_pagina = request.GET.get("page")
-    usuarios = paginador.get_page(numero_pagina)
-
-    context = {
-        "usuarios": usuarios,
-        "grupos_disponibles": Group.objects.all().order_by("name"),
-        "busqueda": request.GET.get("q", "").strip(),
-    }
-    return render(request, "admin_personalizado/usuarios.html", context)
+    return render(request, "admin_personalizado/dashboard_modern.html", centro_operaciones(request.GET.get("periodo")))
 
 
 @login_required
@@ -205,55 +146,65 @@ def permisos(request):
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
+@sensitive_post_parameters()
 def gestionar_usuarios(request):
-    """Gestiona la lista de usuarios del sistema."""
-
     if request.method == "POST":
-        # Procesar actualización masiva de roles
-        usuarios_actualizados = 0
-        for key, value in request.POST.items():
-            if key.startswith("role_") and value != "__keep__":
-                try:
-                    usuario_id = int(key.replace("role_", ""))
-                    usuario = User.objects.get(id=usuario_id)
-
-                    grupo = Group.objects.get(id=int(value)) if value else None
-                    usuario.groups.set([grupo] if grupo else [])
-                    usuarios_actualizados += 1
-                except (ValueError, User.DoesNotExist, Group.DoesNotExist):
-                    continue
-
-        messages.success(request, f"Se actualizaron {usuarios_actualizados} usuarios correctamente.")
+        form = ConfirmarPasswordForm(request.POST, usuario=request.user)
+        if not form.is_valid():
+            messages.error(request, "Confirma tu contraseña actual para administrar las cuentas.")
+            return redirect("admin_personalizado:gestionar_usuarios")
+        try:
+            accion = request.POST.get("accion", "roles")
+            if accion in {"activar", "desactivar"}:
+                total = cambiar_estados(request.user, request.POST.getlist("usuarios"), activo=accion == "activar")
+                messages.success(request, f"Se cambió el estado de {total} cuentas.")
+            elif accion == "roles":
+                cambios = {}
+                for key, value in request.POST.items():
+                    if key.startswith("role_") and value != "__keep__":
+                        try:
+                            pk = int(key.removeprefix("role_"))
+                            cambios[pk] = [int(value)] if value else []
+                        except ValueError:
+                            raise ValidationError("Selecciona un usuario y un rol válidos.") from None
+                total = cambiar_roles(request.user, cambios)
+                messages.success(request, f"Se actualizaron los roles de {total} cuentas.")
+            else:
+                raise ValidationError("Selecciona una acción válida.")
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
         return redirect("admin_personalizado:gestionar_usuarios")
-
-    busqueda = request.GET.get("q", "").strip()
-
-    lista_usuarios = User.objects.all().prefetch_related("groups").order_by("-date_joined")
-
-    # Filtrar por búsqueda
+    busqueda = request.GET.get("q", "").strip()[:100]
+    estado = request.GET.get("estado", "")
+    rol = request.GET.get("rol", "")
+    lista = User.objects.prefetch_related("groups").order_by("-date_joined", "-pk")
     if busqueda:
-        lista_usuarios = lista_usuarios.filter(
+        lista = lista.filter(
             Q(username__icontains=busqueda)
             | Q(email__icontains=busqueda)
             | Q(first_name__icontains=busqueda)
             | Q(last_name__icontains=busqueda)
         )
-
-    grupos_disponibles = Group.objects.all().order_by("name")
-
-    context = {
-        "usuarios": Paginator(lista_usuarios, 25).get_page(request.GET.get("page")),
-        "busqueda": busqueda,
-        "grupos_disponibles": grupos_disponibles,
-    }
-    return render(request, "admin_personalizado/gestionar_usuarios_modern.html", context)
+    if estado in {"activo", "inactivo"}:
+        lista = lista.filter(is_active=estado == "activo")
+    if rol.isdigit():
+        lista = lista.filter(groups__pk=rol)
+    return render(
+        request,
+        "admin_personalizado/gestionar_usuarios_modern.html",
+        {
+            "usuarios": Paginator(lista, 25).get_page(request.GET.get("page")),
+            "busqueda": busqueda,
+            "estado": estado,
+            "rol": rol,
+            "grupos_disponibles": Group.objects.order_by("name"),
+        },
+    )
 
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
 def crear_usuario(request):
-    from django.db import IntegrityError
-
     from cuentas.forms import CrearUsuarioForm
 
     form = CrearUsuarioForm(request.POST or None)
@@ -283,125 +234,139 @@ def crear_usuario(request):
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
+@sensitive_post_parameters()
 def detalle_usuario(request, usuario_id):
-    """Detalle y edición de un usuario."""
     from Gesicom.models import Envio
 
-    usuario = get_object_or_404(User, id=usuario_id)
-    grupos_disponibles = Group.objects.all()
-    grupos_usuario = usuario.groups.all()
-
-    # Obtener evidencias del usuario
-    evidencias = Envio.objects.filter(usuario=usuario).order_by("-fecha_envio")
-
-    # Calcular estadísticas de evidencias
-    total_evidencias = evidencias.count()
-    evidencias_con_archivo = evidencias.exclude(archivo_evidencia="").count()
-    evidencias_con_link = evidencias.exclude(link_evidencia="").exclude(link_evidencia=None).count()
-
+    usuario = get_object_or_404(User, pk=usuario_id)
     if request.method == "POST":
-        accion = request.POST.get("action")
-
-        if accion == "update_profile":
-            from cuentas.forms import EditarUsuarioForm
-
-            form = EditarUsuarioForm(request.POST, instance=usuario)
-            if form.is_valid():
-                form.save()
-                messages.success(request, f"Perfil de {usuario.username} actualizado correctamente.")
-            else:
-                for errores in form.errors.values():
-                    for error in errores:
-                        messages.error(request, error)
-
-        elif accion == "update_status":
-            activo = request.POST.get("is_active") == "on"
-            usuario.is_active = activo
-            usuario.save()
-            estado = "activado" if activo else "desactivado"
-            messages.success(request, f"Usuario {usuario.username} {estado} correctamente.")
-
-        elif accion == "update_groups":
-            ids_grupos = request.POST.getlist("grupos")
-            usuario.groups.set(ids_grupos)
-            messages.success(request, f"Grupos del usuario {usuario.username} actualizados.")
-
-        elif accion == "change_password":
-            nueva_contraseña = request.POST.get("nueva_password", "")
-            confirmar_contraseña = request.POST.get("confirmar_password", "")
-
-            errores = _validar_contraseña(nueva_contraseña)
-
-            if nueva_contraseña != confirmar_contraseña:
-                errores.append("Las contraseñas no coinciden.")
-
-            if errores:
-                for error in errores:
-                    messages.error(request, error)
-            else:
-                usuario.set_password(nueva_contraseña)
-                usuario.save()
-                messages.success(request, f"Contraseña de {usuario.username} cambiada correctamente.")
-
+        if not ConfirmarPasswordForm(request.POST, usuario=request.user).is_valid():
+            messages.error(request, "Confirma tu contraseña actual para modificar esta cuenta.")
+            return redirect("admin_personalizado:detalle_usuario", usuario_id=usuario_id)
+        try:
+            with transaction.atomic():
+                usuario = User.objects.select_for_update().get(pk=usuario_id)
+                validar_destino(request.user, usuario)
+                accion = request.POST.get("action")
+                if accion == "update_profile":
+                    form = EditarUsuarioForm(request.POST, instance=usuario)
+                    correo_anterior = usuario.email
+                    if not form.is_valid():
+                        raise ValidationError([str(e) for errors in form.errors.values() for e in errors])
+                    form.save()
+                    if correo_anterior.casefold() != usuario.email.casefold():
+                        invalidar_recuperaciones(usuario)
+                        encolar_aviso_cambio(usuario, correo_anterior)
+                        cerrar_sesiones(
+                            usuario, conservar=request.session.session_key if usuario.pk == request.user.pk else None
+                        )
+                    registrar_cambio(request.user, usuario, "perfil")
+                    messages.success(request, "Datos del usuario actualizados.")
+                elif accion == "update_status":
+                    cambiar_estados(request.user, [usuario.pk], activo=request.POST.get("is_active") == "on")
+                    messages.success(request, "Estado de la cuenta actualizado.")
+                elif accion == "update_groups":
+                    try:
+                        ids = [int(pk) for pk in request.POST.getlist("grupos")]
+                    except ValueError:
+                        raise ValidationError("Selecciona roles válidos.") from None
+                    cambiar_roles(request.user, {usuario.pk: ids})
+                    messages.success(request, "Roles de la cuenta actualizados.")
+                elif accion == "change_password":
+                    form = SetPasswordForm(
+                        usuario,
+                        {
+                            "new_password1": request.POST.get("nueva_password", ""),
+                            "new_password2": request.POST.get("confirmar_password", ""),
+                        },
+                    )
+                    if not form.is_valid():
+                        raise ValidationError([str(e) for errors in form.errors.values() for e in errors])
+                    form.save()
+                    invalidar_recuperaciones(usuario)
+                    encolar_aviso_cambio(usuario)
+                    if usuario.pk == request.user.pk:
+                        update_session_auth_hash(request, usuario)
+                    cerrar_sesiones(
+                        usuario, conservar=request.session.session_key if usuario.pk == request.user.pk else None
+                    )
+                    registrar_cambio(request.user, usuario, "password")
+                    messages.success(request, "Contraseña actualizada. Las otras sesiones se cerraron.")
+                else:
+                    raise ValidationError("Selecciona una acción válida.")
+        except IntegrityError:
+            messages.error(request, "El correo ya está registrado. Usa otra dirección.")
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
         return redirect("admin_personalizado:detalle_usuario", usuario_id=usuario_id)
-
-    context = {
-        "usuario": usuario,
-        "grupos_disponibles": grupos_disponibles,
-        "grupos_usuario": grupos_usuario,
-        "evidencias": evidencias,
-        "total_evidencias": total_evidencias,
-        "evidencias_con_archivo": evidencias_con_archivo,
-        "evidencias_con_link": evidencias_con_link,
-    }
-    return render(request, "admin_personalizado/detalle_usuario_modern.html", context)
+    evidencias = Envio.objects.filter(usuario=usuario).order_by("-fecha_envio", "-pk")
+    totales = evidencias.aggregate(
+        total=Count("pk"),
+        archivos=Count("pk", filter=~Q(archivo_evidencia="") & Q(archivo_evidencia__isnull=False)),
+        enlaces=Count("pk", filter=~Q(link_evidencia="") & Q(link_evidencia__isnull=False)),
+    )
+    busqueda = request.GET.get("q", "").strip()[:100]
+    if busqueda:
+        evidencias = evidencias.filter(Q(nombre__icontains=busqueda) | Q(tipo_evidencia__icontains=busqueda))
+    return render(
+        request,
+        "admin_personalizado/detalle_usuario_modern.html",
+        {
+            "usuario": usuario,
+            "grupos_disponibles": Group.objects.order_by("name"),
+            "grupos_usuario": usuario.groups.all(),
+            "evidencias": Paginator(evidencias, 25).get_page(request.GET.get("page")),
+            "total_evidencias": totales["total"],
+            "evidencias_con_archivo": totales["archivos"],
+            "evidencias_con_link": totales["enlaces"],
+            "busqueda": busqueda,
+            "cuenta_protegida": (usuario.is_staff or usuario.is_superuser) and not request.user.is_superuser,
+        },
+    )
 
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
+@sensitive_post_parameters()
 def asignar_grupo(request, usuario_id):
-    """Endpoint para asignar/remover grupos de usuarios."""
-    usuario = get_object_or_404(User, id=usuario_id)
-
+    usuario = get_object_or_404(User, pk=usuario_id)
     if request.method == "POST":
-        accion = request.POST.get("accion")
-        id_grupo = request.POST.get("grupo_id")
-
         try:
-            grupo = Group.objects.get(id=id_grupo)
-
-            if accion == "agregar":
-                usuario.groups.add(grupo)
-                mensaje = f'Rol "{grupo.name}" agregado al usuario {usuario.username}'
-            elif accion == "quitar":
-                usuario.groups.remove(grupo)
-                mensaje = f'Rol "{grupo.name}" eliminado del usuario {usuario.username}'
-            else:
-                return redirect("admin_personalizado:detalle_usuario", usuario_id=usuario_id)
-
-            messages.success(request, mensaje)
-        except Group.DoesNotExist:
+            if not ConfirmarPasswordForm(request.POST, usuario=request.user).is_valid():
+                raise ValidationError("Confirma tu contraseña actual para cambiar los roles.")
+            with transaction.atomic():
+                usuario = User.objects.select_for_update().get(pk=usuario_id)
+                grupo = Group.objects.get(pk=request.POST.get("grupo_id"))
+                ids = set(usuario.groups.values_list("pk", flat=True))
+                if request.POST.get("accion") == "agregar":
+                    ids.add(grupo.pk)
+                elif request.POST.get("accion") == "quitar":
+                    ids.discard(grupo.pk)
+                else:
+                    raise ValidationError("Selecciona una acción válida.")
+                cambiar_roles(request.user, {usuario.pk: ids})
+            messages.success(request, "Roles de la cuenta actualizados.")
+        except (Group.DoesNotExist, ValueError, TypeError):
             messages.error(request, "El grupo seleccionado no existe.")
-
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
     return redirect("admin_personalizado:detalle_usuario", usuario_id=usuario_id)
 
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
+@sensitive_post_parameters()
 def activar_desactivar(request, usuario_id):
-    """Endpoint para activar/desactivar usuarios."""
-    usuario = get_object_or_404(User, id=usuario_id)
-
+    get_object_or_404(User, pk=usuario_id)
     if request.method == "POST":
-        accion = request.POST.get("accion")
-
-        if accion == "activar":
-            usuario.is_active = True
-            usuario.save()
-            messages.success(request, f"Usuario {usuario.username} activado correctamente.")
-        elif accion == "desactivar":
-            usuario.is_active = False
-            usuario.save()
-            messages.success(request, f"Usuario {usuario.username} desactivado correctamente.")
-
+        try:
+            if not ConfirmarPasswordForm(request.POST, usuario=request.user).is_valid():
+                raise ValidationError("Confirma tu contraseña actual para cambiar el estado.")
+            accion = request.POST.get("accion")
+            if accion not in {"activar", "desactivar"}:
+                raise ValidationError("Selecciona una acción válida.")
+            cambiar_estados(request.user, [usuario_id], activo=accion == "activar")
+            messages.success(request, "Estado de la cuenta actualizado.")
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
     return redirect("admin_personalizado:detalle_usuario", usuario_id=usuario_id)

@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
@@ -18,19 +17,6 @@ RUTAS_ROLES = {
     "coordinador": "role_coordinador",
     "usuario": "usuario",
 }
-
-
-def _validar_contraseña(contraseña1, contraseña2=None):
-    from django.contrib.auth.password_validation import validate_password
-    from django.core.exceptions import ValidationError
-
-    if contraseña2 is not None and contraseña1 != contraseña2:
-        return ["Las contraseñas no coinciden."]
-    try:
-        validate_password(contraseña1)
-    except ValidationError as error:
-        return error.messages
-    return []
 
 
 @require_http_methods(["GET", "POST"])
@@ -132,22 +118,6 @@ def register_view(request):
             "correo": request.POST.get("email", ""),
         },
     )
-
-
-@login_required(login_url="login")
-def panel_usuario(request):
-    """Vista del panel personal del usuario."""
-    from Gesicom.views import _panel_context
-
-    return render(request, "panel_usuario.html", _panel_context(request.user, "Usuario"))
-
-
-@login_required(login_url="login")
-def panel_instructor(request):
-    """Vista del panel personal del instructor."""
-    from Gesicom.views import _panel_context
-
-    return render(request, "panel_instructor.html", _panel_context(request.user, "Instructor"))
 
 
 @require_POST
