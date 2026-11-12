@@ -1,30 +1,10 @@
 import re
-from pathlib import Path
 
 from django.core.exceptions import ValidationError
 
-EXTENSIONES_EVIDENCIA = {
-    ".pdf",
-    ".doc",
-    ".docx",
-    ".xls",
-    ".xlsx",
-    ".ppt",
-    ".pptx",
-    ".txt",
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".zip",
-    ".rar",
-}
-
-
-def validar_archivo_evidencia(archivo):
-    if archivo.size > 10 * 1024 * 1024:
-        raise ValidationError("El archivo es demasiado grande. Tamaño máximo: 10 MB.")
-    if Path(archivo.name).suffix.lower() not in EXTENSIONES_EVIDENCIA:
-        raise ValidationError("Tipo de archivo no permitido. Usa documentos, imágenes o comprimidos compatibles.")
+# Alias conservados para los formularios y consumidores anteriores.
+from .adjuntos import EXTENSIONES_EVIDENCIA as EXTENSIONES_EVIDENCIA
+from .adjuntos import validar_archivo_evidencia as validar_archivo_evidencia
 
 
 class ValidadorContraseñaOchoCarActualMayusNumEspecial:

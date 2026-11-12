@@ -121,40 +121,103 @@
   $$("[data-dropzone]").forEach((zone) => {
     const input = $("[data-file-input]", zone),
       label = $("[data-file-label]", zone);
+    const selection = $("[data-upload-selection]", zone),
+      image = $("[data-upload-image]", zone);
+    const status = $("[data-upload-message]", zone),
+      clear = $("[data-file-clear]", zone);
+    const allowed = input.accept
+      .toLowerCase()
+      .split(",")
+      .map((value) => value.trim());
+    let reader,
+      generation = 0;
     const update = () => {
-      const file = input.files?.[0];
-      input.setCustomValidity(
-        file && file.size > 10 * 1024 * 1024
-          ? "El archivo supera el límite de 10 MB."
-          : "",
-      );
+      reader?.abort();
+      const ownGeneration = ++generation,
+        file = input.files?.[0];
+      if (image) {
+        image.hidden = true;
+        image.removeAttribute("src");
+      }
+      if (selection) selection.hidden = !file;
+      let error = "";
+      if (file) {
+        const extension = "." + file.name.split(".").pop().toLowerCase();
+        if (!allowed.includes(extension))
+          error =
+            "Este formato no está permitido. Selecciona un documento, imagen o comprimido compatible.";
+        else if (!file.size)
+          error = "El archivo está vacío. Selecciona uno con contenido.";
+        else if (file.size > Number(input.dataset.maxBytes || 10485760))
+          error = "El archivo supera el límite de 10 MB.";
+      }
+      input.setCustomValidity(error);
+      zone.classList.toggle("is-invalid", Boolean(error));
+      const unit =
+        !file || file.size < 1024 ? 1 : file.size < 1048576 ? 1024 : 1048576;
+      const suffix = unit === 1 ? "B" : unit === 1024 ? "KB" : "MB";
       label.textContent = file
-        ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MB`
+        ? `${file.name} · ${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(file.size / unit)} ${suffix}`
         : "";
-      if (file && file.size > 10 * 1024 * 1024) input.reportValidity();
+      if (status)
+        status.textContent =
+          error ||
+          (file ? "Selección lista. El formato se verificará al guardar." : "");
+      if (!error && file && image && /\.(jpe?g|png)$/i.test(file.name)) {
+        reader = new FileReader();
+        reader.addEventListener("load", () => {
+          if (generation !== ownGeneration) return;
+          image.src = reader.result;
+          image.hidden = false;
+        });
+        image.onerror = () => {
+          if (generation !== ownGeneration) return;
+          image.hidden = true;
+          if (status)
+            status.textContent =
+              "No se pudo generar una vista previa. El formato se verificará al guardar.";
+        };
+        reader.readAsDataURL(file);
+      }
     };
     input.addEventListener("change", update);
+    clear?.addEventListener("click", () => {
+      input.value = "";
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      input.focus();
+    });
     ["dragenter", "dragover"].forEach((type) =>
-      zone.addEventListener(type, (e) => {
-        e.preventDefault();
+      zone.addEventListener(type, (event) => {
+        event.preventDefault();
         zone.classList.add("is-dragging");
       }),
     );
     ["dragleave", "drop"].forEach((type) =>
-      zone.addEventListener(type, (e) => {
-        e.preventDefault();
+      zone.addEventListener(type, (event) => {
+        event.preventDefault();
         zone.classList.remove("is-dragging");
       }),
     );
     zone.addEventListener("drop", (event) => {
-      if (event.dataTransfer.files.length) {
-        const transfer = new DataTransfer();
-        transfer.items.add(event.dataTransfer.files[0]);
-        input.files = transfer.files;
-        update();
+      const files = event.dataTransfer?.files;
+      if (!files?.length) return;
+      if (files.length !== 1) {
+        input.setCustomValidity("Selecciona un solo archivo por evidencia.");
+        zone.classList.add("is-invalid");
+        if (selection) selection.hidden = false;
+        if (status)
+          status.textContent =
+            "Solo se puede adjuntar un archivo. Selecciona uno o reúne los documentos en un comprimido.";
+        return;
       }
+      const transfer = new DataTransfer();
+      transfer.items.add(files[0]);
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     });
   });
+  const errorSummary = $("[data-error-summary]");
+  errorSummary?.focus();
   $$("[data-submit]").forEach((form) =>
     form.addEventListener("submit", () => {
       const button = $("button[type=submit]", form);
@@ -165,7 +228,9 @@
     }),
   );
   document.addEventListener("submit", async (event) => {
-    const form = event.target.closest("[data-remote-form], [data-observation-form]");
+    const form = event.target.closest(
+      "[data-remote-form], [data-observation-form]",
+    );
     if (!form) return;
     event.preventDefault();
     const button = $("button[type=submit]", form),
@@ -189,16 +254,25 @@
       });
       if (response.status === 401 && result.login_url) {
         const login = new URL(result.login_url, location.origin);
-        if (login.origin === location.origin) { location.assign(login); return; }
+        if (login.origin === location.origin) {
+          location.assign(login);
+          return;
+        }
       }
       if (!response.ok || result.error)
         throw new Error(result.error || "No se pudo guardar el cambio.");
       if (form.hasAttribute("data-observation-form")) {
         form.dataset.dirty = "false";
-        $$("textarea", form).forEach((input) => { input.defaultValue = input.value; });
+        $$("textarea", form).forEach((input) => {
+          input.defaultValue = input.value;
+        });
         if (Number.isInteger(result.version)) {
-          $$("input[name=version]", form.closest("[data-evidence-record]") || form)
-            .forEach((input) => { input.value = String(result.version); });
+          $$(
+            "input[name=version]",
+            form.closest("[data-evidence-record]") || form,
+          ).forEach((input) => {
+            input.value = String(result.version);
+          });
         }
         toast("Observaciones guardadas correctamente.");
       } else {
@@ -272,13 +346,24 @@
     button.addEventListener("click", () => window.print()),
   );
   $$("[data-text-preview]").forEach(async (pre) => {
+    const note = $("[data-text-status]", pre.closest(".text-preview-wrap"));
+    pre.textContent = "Cargando la vista de texto…";
     try {
-      const response = await fetch(pre.dataset.textPreview);
+      const response = await fetch(pre.dataset.textPreview, {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
       if (!response.ok) throw new Error();
       pre.textContent = await response.text();
+      if (note)
+        note.textContent =
+          response.headers.get("X-Preview-Truncated") === "1"
+            ? "Se muestran los primeros 64 KB. Descarga el archivo para consultar el contenido completo."
+            : "Vista del contenido de texto.";
     } catch {
       pre.textContent =
-        "No se pudo cargar la vista previa. Descarga el archivo para consultarlo.";
+        "No se pudo cargar la vista previa. Intenta de nuevo o consulta el archivo desde su descarga.";
+      if (note) note.textContent = "Vista previa no disponible.";
     }
   });
   window.addEventListener("pageshow", (event) => {
@@ -289,47 +374,8 @@
       });
   });
 })();
-// La bandeja se actualiza sin recargar ni multiplicar consultas por segundo.
+// Caducidad visible del PIN de recuperación.
 (() => {
-  const menu = document.querySelector("[data-notifications-summary]");
-  if (menu) {
-    const update = async () => {
-      if (document.hidden) return;
-      try {
-        const response = await fetch(menu.dataset.notificationsSummary, {
-          credentials: "same-origin",
-          headers: { Accept: "application/json" },
-        });
-        if (response.status === 401) {
-          const data = await response.json();
-          const login = data.login_url || "/login/";
-          location.assign(login.startsWith("/") && !login.startsWith("//") ? login : "/login/");
-          return;
-        }
-        if (!response.ok) return;
-        const data = await response.json();
-        document.querySelectorAll("[data-unread-count]").forEach((el) => {
-          el.textContent = data.pendientes;
-          el.hidden = !data.pendientes;
-        });
-      } catch {
-        /* La navegación sigue disponible si la conexión se interrumpe. */
-      }
-    };
-    setInterval(update, 45000);
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) update();
-    });
-    menu.addEventListener("toggle", () => {
-      if (menu.open) update();
-    });
-    document.addEventListener("click", (e) => {
-      if (!menu.contains(e.target)) menu.open = false;
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") menu.open = false;
-    });
-  }
   const expiry = document.querySelector("[data-pin-expiry]");
   if (expiry) {
     const deadline = Date.parse(expiry.dataset.pinExpiry);

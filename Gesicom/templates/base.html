@@ -21,6 +21,7 @@
     <script defer src="{% static 'js/sena.js' %}"></script>
     {% if user.is_authenticated %}
       <script defer src="{% static 'js/workspace.js' %}"></script>
+      <script defer src="{% static 'js/notifications.js' %}"></script>
     {% endif %}
     {% block head %}{% endblock %}
   </head>
@@ -108,28 +109,34 @@
             <div class="topbar-actions">
               <details class="notifications-menu"
                        data-notifications-summary="{% url 'notificaciones:resumen' %}">
-                <summary class="icon-button" aria-label="Notificaciones">
+                <summary class="icon-button"
+                         aria-label="Notificaciones: {{ ui_notificaciones_pendientes }} sin leer">
                   {% icon 'bell' %}
                   <span class="notification-count"
                         data-unread-count
-                        {% if not ui_notificaciones_pendientes %}hidden{% endif %}>{{ ui_notificaciones_pendientes }}</span>
+                        {% if not ui_notificaciones_pendientes %}hidden{% endif %}>{% if ui_notificaciones_pendientes > 99 %}99+{% else %}{{ ui_notificaciones_pendientes }}{% endif %}</span>
                 </summary>
                 <div class="notification-dropdown">
                   <h2>Notificaciones</h2>
-                  {% for aviso in ui_notificaciones_recientes %}
-                    <form class="notification-preview"
-                          method="post"
-                          action="{% url 'notificaciones:abrir' aviso.pk %}">
+                  <p class="notification-update-status"
+                     data-notification-status
+                     role="status"
+                     hidden></p>
+                  <button type="button"
+                          class="text-link notification-retry"
+                          data-notification-retry
+                          hidden>Reintentar actualización</button>
+                  <div data-notification-items>
+                    {% include "notificaciones/avisos_recientes.html" %}
+                  </div>
+                  <template data-notification-template>
+                    <form class="notification-preview" method="post">
                       {% csrf_token %}
                       <button type="submit">
-                        <strong>{{ aviso.titulo }}</strong>
-                        <small>{{ aviso.creada_en|date:'d M · H:i' }}{% if not aviso.leida_en %} · Sin leer{% endif %}
-                        </small>
+                        <strong></strong><small></small>
                       </button>
                     </form>
-                  {% empty %}
-                    <p class="password-help">Estás al día. Aquí aparecerán los nuevos avisos.</p>
-                  {% endfor %}
+                  </template>
                   <a class="text-link"
                      href="{% url 'notificaciones:bandeja' %}">Ver todas las notificaciones {% icon 'arrow' %}</a>
                 </div>

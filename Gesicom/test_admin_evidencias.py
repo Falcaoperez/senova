@@ -1,14 +1,16 @@
+from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from django.contrib.auth.models import Permission, User
+from django.contrib.auth.models import Group, Permission, User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from notificaciones.models import Notificacion
+from notificaciones.models import Notificacion, PlazoReporte
 
 from .models import Envio
 from .services import corregir_evidencia, observar_evidencia
@@ -107,3 +109,87 @@ class AdminEvidenciasTests(TestCase):
         notice = Notificacion.objects.get(usuario=revisor, envio=self.envio)
         self.assertEqual(notice.enlace, self.url)
         self.assertEqual(self.client.get(notice.enlace).status_code, 200)
+
+    def test_native_creation_captures_deadline_snapshot_including_late_delivery(self):
+        plazo = PlazoReporte.objects.create(
+            titulo="Entrega vencida", proyecto="LEM", fecha_limite=timezone.now() - timedelta(days=1)
+        )
+        response = self.client.post(
+            reverse("admin:Gesicom_envio_add"), self.payload(nombre="Entrega administrativa", plazo=plazo.pk)
+        )
+        self.assertEqual(response.status_code, 302)
+        envio = Envio.objects.get(nombre="Entrega administrativa")
+        self.assertEqual(envio.limite_aplicado, plazo.fecha_limite)
+        self.assertTrue(envio.entrega_tardia)
+        self.assertEqual(envio.historial.get().accion, "registro")
+        plazo.fecha_limite += timedelta(days=5)
+        plazo.save(update_fields=["fecha_limite"])
+        envio.refresh_from_db()
+        self.assertNotEqual(envio.limite_aplicado, plazo.fecha_limite)
+        self.assertTrue(envio.entrega_tardia)
+
+    def test_native_existing_deadline_and_original_dates_are_read_only(self):
+        plazo = PlazoReporte.objects.create(titulo="Original", fecha_limite=timezone.now())
+        otro = PlazoReporte.objects.create(titulo="Otro", fecha_limite=timezone.now() + timedelta(days=4))
+        self.envio.plazo = plazo
+        self.envio.limite_aplicado = plazo.fecha_limite
+        self.envio.save()
+        original = (self.envio.plazo_id, self.envio.limite_aplicado, self.envio.fecha_envio, self.envio.registrado_en)
+        response = self.client.get(self.url)
+        self.assertNotContains(response, 'name="plazo"')
+        response = self.client.post(
+            self.url,
+            self.payload(plazo=otro.pk, limite_aplicado=otro.fecha_limite.isoformat(), fecha_envio="2030-01-01"),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.envio.refresh_from_db()
+        self.assertEqual(
+            (self.envio.plazo_id, self.envio.limite_aplicado, self.envio.fecha_envio, self.envio.registrado_en),
+            original,
+        )
+
+    def test_native_creation_rejects_unavailable_deadline_or_wrong_project(self):
+        plazo = PlazoReporte.objects.create(titulo="Restringido", proyecto="LEM", fecha_limite=timezone.now())
+        plazo.grupos.add(Group.objects.get(name="coordinador"))
+        response = self.client.post(reverse("admin:Gesicom_envio_add"), self.payload(plazo=plazo.pk))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "asignado al destinatario")
+        plazo.grupos.clear()
+        response = self.client.post(reverse("admin:Gesicom_envio_add"), self.payload(plazo=plazo.pk, proyecto="GIVIT"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "El proyecto debe coincidir")
+        plazo.activo = False
+        plazo.save(update_fields=["activo"])
+        response = self.client.post(reverse("admin:Gesicom_envio_add"), self.payload(plazo=plazo.pk))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Envio.objects.count(), 1)
+
+    def test_native_creation_rejects_a_deadline_already_delivered_by_recipient(self):
+        plazo = PlazoReporte.objects.create(titulo="Entregado", proyecto="LEM", fecha_limite=timezone.now())
+        self.envio.plazo = plazo
+        self.envio.save(update_fields=["plazo"])
+        response = self.client.post(reverse("admin:Gesicom_envio_add"), self.payload(plazo=plazo.pk))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "pendiente de entrega")
+        self.assertEqual(Envio.objects.count(), 1)
+
+    def test_native_edit_preserves_legacy_project_and_rejects_disguised_file(self):
+        self.envio.proyecto = "Proyecto anterior"
+        self.envio.save(update_fields=["proyecto"])
+        response = self.client.get(self.url)
+        self.assertContains(response, '<option value="Proyecto anterior" selected>')
+        with TemporaryDirectory(prefix="gesicom-formato-admin-") as media, self.settings(MEDIA_ROOT=media):
+            response = self.client.post(
+                self.url,
+                self.payload(
+                    proyecto="Proyecto anterior",
+                    archivo_evidencia=SimpleUploadedFile("informe.pdf", b"<html>Archivo HTML</html>"),
+                ),
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "El contenido no corresponde al formato")
+            self.assertFalse([p for p in Path(media).rglob("*") if p.is_file()])
+        response = self.client.post(self.url, self.payload(proyecto="Proyecto anterior"))
+        self.assertEqual(response.status_code, 302)
+        self.envio.refresh_from_db()
+        self.assertEqual(self.envio.proyecto, "Proyecto anterior")

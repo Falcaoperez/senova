@@ -130,3 +130,23 @@ Guardar requiere contraseña actual y una revisión calculada sobre el grupo y s
 Solo un superadministrador puede modificar el grupo `administrador` o un grupo con cuentas de personal/superusuario. Django admin utiliza la misma política, contraseña y revisión para añadir o editar grupos. Los seis grupos del sistema no se pueden renombrar ni eliminar desde esa administración, incluso en lotes mixtos. Los intentos de confirmación se limitan por identidad e IP. La auditoría registra actor y ruta, sin contraseña ni contenido de la petición.
 
 Este bloque no necesita migraciones ni nuevas tablas de permisos. Después de actualizar, recoge los estáticos y reinicia web y trabajador para cargar los módulos compartidos.
+
+## Adjuntos y formularios de entrega
+
+El selector comprueba extensión, tamaño y archivos vacíos, permite quitar la selección y muestra una imagen antes de enviarla. El servidor vuelve a comprobar el contenido; una extensión correcta no basta. Los documentos de Office modernos deben estar sin contraseña. Si el formulario devuelve errores, conserva los campos de texto y explica que es necesario seleccionar otra vez el archivo. El resumen de errores recibe el foco y enlaza con los campos afectados.
+
+Cada formulario nuevo incluye una identificación privada de 24 horas. Si el navegador repite el envío, se abre la evidencia original sin crear otra ni sustituir sus datos. Esto también funciona con JavaScript desactivado. Para otra evidencia, abre un formulario nuevo. Si el formulario ha caducado, usa el enlace que aparece en el error y copia los datos a uno nuevo. No se deben borrar sus recibos de MySQL al eliminar una evidencia: impiden que un reintento la vuelva a crear.
+
+El detalle muestra nombre, formato y tamaño del adjunto. Los textos tienen una vista limitada de 64 KB del archivo de origen; la descarga conserva todos los bytes. Sin JavaScript se ofrece un enlace al texto completo. Si falta un archivo, el detalle y el historial siguen disponibles y el propietario puede sustituirlo o retirarlo mediante una corrección. Una vista de descarga todavía puede devolver 404 si el archivo desaparece después de abrir el detalle.
+
+Antes de actualizar, respalda MySQL y los medios. Aplica `Gesicom.0015_solicitudes_adjuntos`, recopila estáticos y reinicia web y trabajador. La migración añade un índice por nombre de archivo y recibos internos, sin modificar fechas, proyectos, adjuntos ni historial previos; no crea recibos para entregas históricas. El personal de Django necesita permiso explícito de consulta o cambio de evidencias para abrir sus archivos. Las evidencias existentes mantienen su plazo como solo lectura en esa administración.
+
+## Campana de notificaciones
+
+La campana muestra el contador y hasta cuatro avisos recientes. Al abrirse actualiza también los títulos y su estado de lectura; mientras permanece abierta, continúa actualizándose sin recargar el panel. Conserva el foco del aviso seleccionado si sigue en la lista. Si desaparece, el foco vuelve al control de la campana. El distintivo muestra hasta `99+`; su etiqueta accesible conserva el total real.
+
+La consulta periódica se programa cada 45 segundos después de terminar la anterior. Se suspende al ocultar la pestaña o perder conexión, se cancela si no responde en diez segundos y no se solapa con otra. Los fallos amplían la espera hasta cinco minutos, respetando una espera mayor de `Retry-After`. Si falla una actualización, la lista anterior sigue disponible y se ofrece reintentar o consultar la bandeja. Volver a la pestaña o recuperar conexión solicita un resumen actualizado.
+
+Estas consultas no prolongan la sesión por inactividad. Cuando el servidor devuelve acceso caducado, el navegador vuelve al ingreso. Abrir un aviso continúa usando POST con CSRF y la autorización actual de su destino. Sin JavaScript, la lista inicial y esos formularios siguen funcionando.
+
+El resumen básico conserva su respuesta anterior con `pendientes`; `?detalle=1` añade cuatro avisos de la cuenta, con título, fecha, lectura y ruta de apertura. No devuelve el mensaje completo ni destinatarios. Su lectura utiliza una consulta de notificaciones para el contador y una segunda solo cuando se piden los avisos; el control de sesión realiza sus propias comprobaciones. No hay caché de respuestas ni estado compartido entre usuarios. Este bloque no cambia tablas: recopila estáticos y reinicia la aplicación web.

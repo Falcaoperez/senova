@@ -47,7 +47,7 @@ La búsqueda global exige sesión válida, aplica la visibilidad de evidencias y
 
 ## Correcciones e historial de evidencias
 
-El propietario puede corregir una evidencia pendiente o rechazada; una aprobada permanece cerrada para ese flujo. La corrección conserva propietario, primera entrega, fecha de envío y límite aplicado. El proyecto debe coincidir con el plazo asociado y las observaciones del revisor no se sustituyen desde el formulario del propietario. Al guardar vuelve a revisión y se avisa al último revisor que conserve autorización, respetando sus preferencias de correo.
+El propietario puede corregir una evidencia pendiente o rechazada; una aprobada permanece cerrada para ese flujo. La corrección conserva propietario, primera entrega, fecha de envío y límite aplicado. Si se cambia el proyecto, debe coincidir con el plazo asociado. Se puede conservar la clasificación original aunque el plazo se haya reclasificado después; también se conservan proyectos históricos o sin clasificar. Las observaciones del revisor no se sustituyen desde el formulario del propietario. Al guardar vuelve a revisión y se avisa al último revisor que conserve autorización, respetando sus preferencias de correo.
 
 Las escrituras bloquean la fila de evidencia en MySQL y comparan su versión. Los formularios actuales y el administrador nativo incluyen esa versión; un cambio desactualizado se rechaza sin guardar. Las rutas históricas de revisión aún aceptan clientes que omitan la versión, pero serializan sus cambios y no duplican avisos cuando el estado ya coincide. El formulario de corrección exige siempre una versión válida.
 
@@ -60,3 +60,19 @@ Los formularios de creación, corrección y administración validan los adjuntos
 Un operador con permisos de edición de usuarios no puede modificar cuentas de superusuario, personal administrativo ni del grupo administrador. Los indicadores de privilegios, los grupos y los permisos individuales son de solo lectura para esos operadores. El superusuario conserva la gestión de esas cuentas, con protección frente a retirar su propio acceso o eliminarse en una operación masiva.
 
 Los cambios de correo o contraseña y la desactivación invalidan recuperaciones y revocan sesiones también desde el administrador de Django. El cambio de contraseña usa una actualización limitada a ese campo; una edición de perfil no restaura un hash de contraseña antiguo si hubo un cambio concurrente. Se encolan avisos de cambios de credenciales sin abrir SMTP desde el formulario.
+
+## Adjuntos y reintentos de alta
+
+Los formularios nuevos incluyen un identificador firmado, válido durante 24 horas y vinculado al usuario. La firma no sustituye CSRF ni la autorización. Una restricción primaria UUID y el bloqueo del recibo en MySQL evitan que dos peticiones del mismo formulario creen dos evidencias. El reintento recupera el primer resultado sin modificarlo, incluso si ya no aparece el plazo en la lista de pendientes o el navegador perdió el archivo. Si el registro fue eliminado o reasignado, no se vuelve a crear ni se revela su nuevo destino. Abrir un formulario nuevo permite una entrega independiente. Por compatibilidad, los clientes históricos que omitan el identificador conservan el comportamiento de alta anterior.
+
+Las cargas admiten un archivo por petición, hasta 10 MB, y rechazan archivos vacíos. Además de la extensión se comprueban firmas básicas de PDF, formatos binarios de Office, RAR y ZIP; las imágenes JPEG/PNG pasan por Pillow y se limitan a 25 millones de píxeles. Los documentos DOCX/XLSX/PPTX deben contener las partes esperadas, con límites para su directorio y sin cifrado. No se extraen comprimidos ni se ejecuta contenido en el servidor. Estas comprobaciones no constituyen un antivirus ni certifican que un documento sea válido en todas sus aplicaciones.
+
+La vista privada reconoce el contenido antes de ofrecer una previsualización. Los formatos históricos desconocidos o incompatibles con su extensión se descargan sin ejecución como HTML. El texto se inserta con `textContent`, admite UTF-8, UTF-16/32 con marca y Windows-1252, y limita la lectura del origen a 64 KB. Un adjunto ausente conserva la evidencia y su historial; no se ofrece una vista rota.
+
+El personal activo de Django con permiso explícito `view_envio` o `change_envio` puede consultar los adjuntos desde su administración. Esto no amplía la visibilidad de listas ni detalles públicos de GESICOM. Al eliminar una evidencia, el archivo se retira después de confirmar la transacción y solo si no quedan referencias; un rollback conserva el archivo. El administrador nativo no permite cambiar el plazo original de una evidencia existente y, al crear una nueva entrega asociada, valida destinatario/proyecto y conserva el límite aplicado.
+
+## Actualizaciones de la campana
+
+El resumen solo acepta lectura GET/HEAD y consulta los avisos de `request.user`; no admite elegir otro destinatario. La respuesta detallada limita títulos, fechas, lectura y rutas a los cuatro avisos más recientes. Las respuestas son privadas y no se almacenan en caché. La reutilización del conteo dura únicamente la petición actual y verifica la identidad de la cuenta.
+
+El cliente valida la respuesta y las rutas del mismo origen, inserta los títulos como texto y conserva POST con CSRF al construir los formularios. No abre directamente el destino externo de una notificación; el servidor vuelve a comprobar su autorización al abrirla. Las actualizaciones se cancelan al ocultar la página, no se solapan y no mantienen viva una sesión inactiva. Un fallo de red conserva la última lista disponible sin mostrar detalles internos.
