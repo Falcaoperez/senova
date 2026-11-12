@@ -32,3 +32,9 @@ FROM cuentas_passwordresettoken WHERE used = 0 AND expires_at <= UTC_TIMESTAMP()
 
 SELECT accion, estado, COUNT(*) AS movimientos
 FROM Gesicom_movimientoevidencia GROUP BY accion, estado;
+
+-- Plazos y cola: no incluye contenidos ni direcciones personales.
+SELECT activo, COUNT(*) AS plazos, SUM(fecha_limite <= UTC_TIMESTAMP()) AS vencidos
+FROM notificaciones_plazoreporte GROUP BY activo;
+SELECT tipo, COUNT(*) AS avisos, SUM(leida_en IS NOT NULL) AS leidos
+FROM notificaciones_notificacion GROUP BY tipo;

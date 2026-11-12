@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Seguimiento de {{ plazo.titulo }} · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">
+        <a href="{% url 'notificaciones:plazos_admin' %}">PLAZOS DE REPORTES</a> / SEGUIMIENTO</p>
+      <h1>{{ plazo.titulo }}</h1>
+      <p class="page-description">{{ plazo.proyecto|default:'Todos los proyectos' }} · Fecha límite: {{ plazo.fecha_limite|date:'d M Y · H:i' }} (Colombia)</p>
+    </div>
+    <a class="button button-secondary"
+       href="{% url 'notificaciones:editar_plazo' plazo.pk %}">{% icon 'edit' %} Editar plazo</a>
+  </div>
+  {% if not plazo.activo %}
+    <div class="action-notice">
+      {% icon 'clock' %}
+      <p>Este plazo está archivado. Su historial y las entregas se conservan; los recordatorios están desactivados.</p>
+    </div>
+  {% endif %}
+  {% if plazo.descripcion %}
+    <p class="deadline-instructions">{{ plazo.descripcion|linebreaksbr }}</p>
+  {% endif %}
+  <div class="agenda-summary four-columns"
+       aria-label="Cumplimiento del plazo">
+    <div class="agenda-stat">
+      <span>Destinatarios actuales</span>
+      <strong>{{ seguimiento.total }}</strong>
+      <small>Usuarios activos asignados</small>
+    </div>
+    <div class="agenda-stat">
+      <span>Entregas registradas</span>
+      <strong>{{ seguimiento.entregados }}</strong>
+      <small>{{ seguimiento.a_tiempo }} a tiempo · {{ seguimiento.tardios }} fuera de plazo</small>
+    </div>
+    <div class="agenda-stat agenda-urgent">
+      <span>Pendientes de entrega</span>
+      <strong>{{ seguimiento.pendientes }}</strong>
+      <small>{% if plazo.vencido %}El plazo ya venció{% else %}El plazo sigue abierto{% endif %}</small>
+    </div>
+    <div class="agenda-stat">
+      <span>Avance de entregas</span>
+      <strong>{% widthratio seguimiento.entregados seguimiento.total 100 %}%</strong>
+      <progress value="{{ seguimiento.entregados }}"
+                max="{{ seguimiento.total|default:1 }}"
+                aria-label="Proporción de destinatarios que entregaron">{{ seguimiento.entregados }} de {{ seguimiento.total }}</progress>
+    </div>
+  </div>
+  <section class="panel" data-live-scope>
+    <form class="filters" method="get" data-live-form>
+      <div class="field search-field">
+        <label for="audience-q">Buscar destinatario</label>
+        <input id="audience-q"
+               name="q"
+               value="{{ q }}"
+               maxlength="100"
+               data-live-input
+               placeholder="Usuario, nombre o correo…">
+      </div>
+      <div class="field">
+        <label for="audience-state">Entrega</label>
+        <select id="audience-state" name="estado">
+          <option value="">Todas</option>
+          <option value="pendiente" {% if estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+          <option value="entregado" {% if estado == 'entregado' %}selected{% endif %}>Entregado</option>
+          <option value="a_tiempo" {% if estado == 'a_tiempo' %}selected{% endif %}>A tiempo</option>
+          <option value="tardia" {% if estado == 'tardia' %}selected{% endif %}>Fuera de plazo</option>
+        </select>
+      </div>
+      <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
+      <a class="text-link"
+         href="{% url 'notificaciones:seguimiento_plazo' plazo.pk %}"
+         data-live-link>Limpiar</a>
+    </form>
+    <div data-live-region="follow-up">
+      <div class="table-toolbar">
+        <div>
+          <h2>{{ destinatarios.paginator.count }} destinatarios encontrados</h2>
+          <p>El estado de entrega conserva el límite aplicado al registrar la evidencia.</p>
+        </div>
+        <a class="button button-secondary button-sm"
+           href="{% url 'notificaciones:seguimiento_csv' plazo.pk %}{% querystring page=None %}">
+        {% icon 'download' %} Exportar resultados CSV</a>
+      </div>
+      <div class="table-wrapper"
+           role="region"
+           aria-label="Seguimiento por destinatario"
+           tabindex="0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Destinatario</th>
+              <th>Entrega</th>
+              <th>Última entrega · Colombia</th>
+              <th>Revisión más reciente</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for persona in destinatarios %}
+              <tr>
+                <td>
+                  <strong>{{ persona.get_full_name|default:persona.username }}</strong>
+                  <small>{{ persona.username }} · {{ persona.email|default:'Sin correo' }}</small>
+                </td>
+                <td>
+                  {% if persona.entregado %}
+                    <span class="badge {% if persona.a_tiempo %}badge-success{% else %}badge-pending{% endif %}">
+                      {% if persona.a_tiempo %}A tiempo{% else %}Fuera de plazo{% endif %}
+                    </span>
+                  {% else %}
+                    <span class="badge {% if plazo.vencido %}badge-danger{% else %}badge-pending{% endif %}">Pendiente</span>
+                    {% if persona.recordado %}
+                      <small>Recordatorio adicional preparado</small>
+                    {% endif %}
+                  {% endif %}
+                </td>
+                <td>{{ persona.ultima_entrega|date:'d M Y · H:i'|default:'—' }}</td>
+                <td>
+                  {% if persona.entregado %}
+                    <span class="badge {% if persona.ultima_aprobada %}badge-success{% elif persona.ultima_rechazada %}badge-danger{% else %}badge-pending{% endif %}">
+                      {% if persona.ultima_aprobada %}Aprobada{% elif persona.ultima_rechazada %}Rechazada{% else %}En revisión{% endif %}
+                    </span>
+            {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if persona.entregado %}
+                  <a class="text-link"
+                     href="{% url 'evidencias_list' %}?plazo={{ plazo.pk }}&amp;usuario={{ persona.pk }}">Ver entregas {% icon 'arrow' %}
+                  </a>
+                {% else %}
+                  <span class="password-help">Sin evidencias</span>
+                {% endif %}
+              </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <h3>No hay destinatarios con estos filtros.</h3>
+                    <p>El seguimiento incluye a los usuarios activos de los grupos asignados.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "notificaciones/paginacion.html" with pagina=destinatarios %}
+    </div>
+    <p class="sr-only" role="status" data-live-status></p>
+  </section>
+  {% if plazo.activo %}
+    <div class="follow-up-actions">
+      <section class="panel">
+        <p class="eyebrow">ACOMPAÑAR LA ENTREGA</p>
+        <h2>Recordar a quienes faltan</h2>
+        <p class="page-description">Hay {{ seguimiento.sin_recordatorio }} destinatarios sin entrega ni recordatorio adicional en esta versión. Se permite uno por persona y versión del plazo. Los avisos automáticos siguen su programación.</p>
+        <form method="post"
+              action="{% url 'notificaciones:recordar_pendientes' plazo.pk %}"
+              data-submit>
+          {% csrf_token %}
+          <input type="hidden" name="revision_actual" value="{{ plazo.revision }}">
+          <div class="field">
+            <label for="remind-password">Tu contraseña actual</label>
+            <input id="remind-password"
+                   type="password"
+                   name="contrasena_actual"
+                   autocomplete="current-password"
+                   required>
+          </div>
+          <button class="button button-primary"
+                  type="submit"
+                  {% if not seguimiento.sin_recordatorio %}disabled{% endif %}>
+          {% icon 'bell' %} Preparar recordatorios</button>
+        </form>
+      </section>
+      <details class="panel archive-panel">
+        <summary>
+          <span>
+            <strong>Archivar este plazo</strong>
+            <small>Conserva el historial y detiene los recordatorios.</small>
+          </span>
+          {% icon 'chevron' %}
+        </summary>
+        <p class="page-description">Dejará de aparecer en la agenda personal y no admitirá nuevas entregas asociadas. Las evidencias existentes se conservan.</p>
+        <form method="post"
+              action="{% url 'notificaciones:archivar_plazo' plazo.pk %}"
+              data-submit>
+          {% csrf_token %}
+          <input type="hidden" name="revision_actual" value="{{ plazo.revision }}">
+          <div class="field">
+            <label for="archive-password">Tu contraseña actual</label>
+            <input id="archive-password"
+                   type="password"
+                   name="contrasena_actual"
+                   autocomplete="current-password"
+                   required>
+          </div>
+          <button class="button button-secondary" type="submit">Archivar plazo</button>
+        </form>
+      </details>
+    </div>
+  {% endif %}
+{% endblock %}

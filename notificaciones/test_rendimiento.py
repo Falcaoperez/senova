@@ -1,5 +1,6 @@
 """Comprueba consultas acotadas con 1.200 usuarios y 12.000 evidencias."""
 
+from datetime import timedelta
 from time import perf_counter
 
 from django.contrib.auth import get_user_model
@@ -8,10 +9,11 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from Gesicom.models import Envio
 
-from .models import CorreoPendiente, Notificacion, Novedad
+from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte
 from .services import publicar_novedad
 
 User = get_user_model()
@@ -76,3 +78,26 @@ class EscalaMilUsuariosTests(TestCase):
         print(
             f"ESCALA aviso para 1200 usuarios: {len(queries)} consultas, {elapsed:.1f} ms; correo encolado, no enviado en la petición"
         )
+
+    def test_follow_up_and_personal_agenda_keep_queries_bounded(self):
+        plazo = PlazoReporte.objects.create(titulo="Entrega masiva", fecha_limite=timezone.now() + timedelta(days=1))
+        plazo.grupos.add(Group.objects.get(name="instructor"))
+        Envio.objects.filter(usuario_id__in=self.ids[:600]).update(plazo=plazo, limite_aplicado=plazo.fecha_limite)
+        self.client.force_login(self.admin)
+        inicio = perf_counter()
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(reverse("notificaciones:seguimiento_plazo", args=[plazo.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["seguimiento"]["total"], 1200)
+        self.assertEqual(response.context["seguimiento"]["entregados"], 600)
+        self.assertEqual(len(response.context["destinatarios"]), 25)
+        self.assertLessEqual(len(queries), 20)
+        print(
+            f"ESCALA seguimiento 1200 destinatarios / 12000 evidencias: {len(queries)} consultas, {(perf_counter() - inicio) * 1000:.1f} ms"
+        )
+        self.client.force_login(User.objects.get(pk=self.ids[-1]))
+        for name in ["role_instructor", "notificaciones:mis_plazos"]:
+            with CaptureQueriesContext(connection) as queries:
+                response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 200)
+            self.assertLessEqual(len(queries), 22)

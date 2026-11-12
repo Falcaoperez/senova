@@ -31,12 +31,12 @@ erDiagram
 | Área | Tablas principales | Integridad y consulta |
 | --- | --- | --- |
 | Identidad | `auth_user`, `auth_group`, `auth_user_groups` | Correo normalizado único; contraseñas con hash; permisos de Django |
-| Evidencias | `Gesicom_envio` | Propietario y plazo con claves foráneas; estados compatibles; índices por usuario, proyecto, estado y fecha |
+| Evidencias | `Gesicom_envio` | Propietario y plazo con claves foráneas; estados compatibles; índices por usuario, proyecto, estado, fecha y plazo/usuario/primera entrega |
 | Historial de evidencia | `Gesicom_movimientoevidencia` | Actor opcional; unicidad por evidencia/versión; orden cronológico por versión |
-| Agenda | `notificaciones_plazoreporte` y tabla intermedia de grupos | Índice de activo/fecha; versión del plazo; cada envío conserva el límite aplicado |
+| Agenda | `notificaciones_plazoreporte` y tabla intermedia de grupos | Índice de activo/fecha; revisión de edición y versión de avisos; cada envío conserva el límite aplicado |
 | Publicaciones | `notificaciones_novedad` y grupos | Autor opcional; destinatarios por rol o toda la comunidad |
 | Bandeja | `notificaciones_notificacion` | Índice por usuario/lectura/fecha; unicidad por destinatario y publicación o fase del plazo |
-| Entrega | `notificaciones_correopendiente` | Un correo por aviso; índice de estado/próximo intento y arrendamiento de trabajo |
+| Entrega | `notificaciones_correopendiente` | Un correo por aviso; índice de estado/próximo intento, arrendamiento de trabajo y cancelación de avisos obsoletos |
 | Preferencias | `notificaciones_preferenciasnotificacion` | Una configuración por usuario |
 | Recuperación | `cuentas_passwordresettoken` | Hash del PIN, caducidad, intentos y firma que lo vincula con las credenciales |
 | Correo de seguridad | `cuentas_correoseguridad` | PIN cifrado hasta su envío; contenido borrado al terminar; índice de procesamiento |
@@ -48,3 +48,5 @@ erDiagram
 La desactivación de una cuenta revoca sus sesiones e invalida sus recuperaciones antes de permitir una futura reactivación. Las operaciones masivas admiten hasta 100 cuentas, bloquean las filas en orden y validan todo el lote antes de modificarlo. El cambio de contraseña utiliza los validadores oficiales de Django con el usuario como contexto.
 
 Cada evidencia tiene una versión creciente y una fecha de última actualización. La migración 0013 incorpora el estado de los registros previos con actor desconocido, manteniendo sus fechas originales. El historial no contiene contraseñas ni copias de los adjuntos.
+
+El recordatorio adicional usa el tipo `seguimiento` y la unicidad existente de usuario/plazo/versión/tipo. No requiere una tabla duplicada. El cumplimiento se calcula con subconsultas `EXISTS` e índices; los listados de personas se paginan y no cargan la totalidad de evidencias.
