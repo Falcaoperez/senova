@@ -5,8 +5,11 @@
 """
 
 from django.contrib.auth.models import Group, User
-from django.db.models.signals import post_migrate, post_save
+from django.db import transaction
+from django.db.models.signals import post_delete, post_migrate, post_save
 from django.dispatch import receiver
+
+from .models import Envio
 
 
 @receiver(post_migrate)
@@ -23,3 +26,13 @@ def assign_default_group(sender, instance, created, **kwargs):
     if created:
         group, _ = Group.objects.get_or_create(name="usuario")
         instance.groups.add(group)
+
+
+@receiver(post_delete, sender=Envio)
+def retirar_adjunto_eliminado(sender, instance, **kwargs):
+    from .services import _archivo_sin_referencias
+
+    if instance.archivo_evidencia:
+        storage = instance.archivo_evidencia.storage
+        nombre = instance.archivo_evidencia.name
+        transaction.on_commit(lambda: _archivo_sin_referencias(storage, nombre))

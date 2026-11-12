@@ -1,0 +1,14 @@
+{% for aviso in ui_notificaciones_recientes %}
+  <form class="notification-preview"
+        method="post"
+        data-notification-id="{{ aviso.pk }}"
+        action="{% url 'notificaciones:abrir' aviso.pk %}">
+    {% csrf_token %}
+    <button type="submit">
+      <strong>{{ aviso.titulo }}</strong>
+      <small>{{ aviso.creada_en|date:'d M · H:i' }}{% if not aviso.leida_en %} · Sin leer{% endif %}</small>
+    </button>
+  </form>
+{% empty %}
+  <p class="password-help">Estás al día. Aquí aparecerán los nuevos avisos.</p>
+{% endfor %}

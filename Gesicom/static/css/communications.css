@@ -89,3 +89,25 @@ button.text-link { border: 0; background: transparent; font: inherit; font-size:
   .deadline-table td[data-label]::before { display: block; content: attr(data-label); color: var(--muted); font-size: 9px; margin-bottom: 5px; }
   .deadline-table td:last-child .button { width: 100%; }
 }
+
+.notification-update-status {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.notification-retry {
+  margin-bottom: 12px;
+  font: inherit;
+  font-size: 11px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.notification-preview > button {
+  width: 100%;
+  text-align: left;
+}
+.notification-preview strong {
+  overflow-wrap: anywhere;
+}

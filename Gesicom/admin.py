@@ -5,7 +5,8 @@ from django.core.validators import URLValidator
 from django.db import connection
 from django.utils import timezone
 
-from notificaciones.services import notificar_revision
+from notificaciones.models import PlazoReporte
+from notificaciones.services import notificar_revision, plazos_para_usuario
 
 from .models import Envio, InstructorProfile, MovimientoEvidencia
 from .services import (
@@ -31,9 +32,30 @@ class EvidenciaAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.pk:
+        self._proyecto_original = self.instance.proyecto
+        if (
+            self.instance.pk
+            and "proyecto" in self.fields
+            and self.instance.proyecto not in dict(self.fields["proyecto"].choices)
+        ):
+            self.fields["proyecto"].choices = [
+                *self.fields["proyecto"].choices,
+                (self.instance.proyecto, self.instance.proyecto or "Sin proyecto"),
+            ]
+        if self.instance.pk and "version_actual" in self.fields:
             self.initial["version_actual"] = self.instance.version
             self.fields["version_actual"].required = True
+
+    def _get_validation_exclusions(self):
+        excluidos = super()._get_validation_exclusions()
+        # El modelo mantiene el catálogo actual; una edición puede conservar su clasificación histórica.
+        if (
+            self.instance.pk
+            and self._proyecto_original not in dict(Envio.PROYECTO_CHOICES)
+            and self.cleaned_data.get("proyecto") == self._proyecto_original
+        ):
+            excluidos.add("proyecto")
+        return excluidos
 
     def clean(self):
         data = super().clean()
@@ -48,6 +70,15 @@ class EvidenciaAdminForm(forms.ModelForm):
                 comprobar_version(vigente, data["version_actual"])
             except ConflictoEvidencia as error:
                 raise forms.ValidationError(error.messages) from None
+        plazo = data.get("plazo")
+        if not self.instance.pk and plazo:
+            if connection.in_atomic_block:
+                plazo = PlazoReporte.objects.select_for_update().get(pk=plazo.pk)
+            autor = data.get("usuario")
+            if not autor or not autor.is_active or not plazos_para_usuario(autor).filter(pk=plazo.pk).exists():
+                self.add_error("plazo", "El plazo debe estar activo, asignado al destinatario y pendiente de entrega.")
+            if plazo.proyecto and data.get("proyecto") != plazo.proyecto:
+                self.add_error("proyecto", "El proyecto debe coincidir con el plazo seleccionado.")
         return data
 
     def clean_archivo_evidencia(self):
@@ -74,6 +105,25 @@ class EnvioAdmin(admin.ModelAdmin):
     list_per_page = 25
     readonly_fields = ["registrado_en", "fecha_envio", "limite_aplicado", "version", "actualizado_en"]
 
+    def get_readonly_fields(self, request, obj=None):
+        return [*self.readonly_fields, *(["plazo"] if obj else [])]
+
+    def get_fields(self, request, obj=None):
+        campos = [
+            "nombre",
+            "usuario",
+            "proyecto",
+            "tipo_evidencia",
+            "plazo",
+            "archivo_evidencia",
+            "link_evidencia",
+            "observaciones",
+            "aprobada",
+            "rechazada",
+            *self.readonly_fields,
+        ]
+        return campos + (["version_actual"] if obj is None or self.has_change_permission(request, obj) else [])
+
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         if request.method != "POST":
             return super().changeform_view(request, object_id, form_url, extra_context)
@@ -92,6 +142,9 @@ class EnvioAdmin(admin.ModelAdmin):
             getattr(request, "_gesicom_adjuntos", []).append(
                 (obj, anterior.archivo_evidencia.name if anterior else None)
             )
+        if not change and obj.plazo_id:
+            plazo = PlazoReporte.objects.select_for_update().get(pk=obj.plazo_id)
+            obj.limite_aplicado = plazo.fecha_limite
         super().save_model(request, obj, form, change)
         if anterior:
             retirar_adjunto_sustituido(obj, anterior.archivo_evidencia.name, anterior.archivo_evidencia.storage)
