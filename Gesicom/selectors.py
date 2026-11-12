@@ -1,11 +1,8 @@
 """Consultas de evidencias y resúmenes, compartidas por vistas, búsquedas y reportes."""
 
-import datetime
-
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.urls import reverse
-from django.utils import timezone
 
 from .models import Envio
 from .utils import apply_date_filters, is_admin_or_group, user_roles
@@ -21,143 +18,57 @@ def _home_url_for_user(user):
     return reverse("usuario") if "usuario" in roles else reverse("home")
 
 
-def _evidencias_context(request, incluir_graficos=False):
-    home_url = _home_url_for_user(request.user)
-    consulta = _filtered_envios(request).select_related("usuario")
-    proyecto = request.GET.get("proyecto", "")
-    inicio = request.GET.get("start", "")
-    fin = request.GET.get("end", "")
-    termino_busqueda = (request.GET.get("q") or "").strip()
-    estado = request.GET.get("estado", "")
-    orden = request.GET.get("order", "fecha_envio")
-    direccion = request.GET.get("dir", "desc")
-    permitidos = {"fecha_envio", "nombre", "proyecto", "tipo_evidencia"}
-    if orden in permitidos:
-        criterio_orden = orden if direccion == "asc" else f"-{orden}"
-        consulta = consulta.order_by(criterio_orden, "-pk")
-    else:
-        consulta = consulta.order_by("-fecha_envio", "-pk")
-    paginador = Paginator(consulta, 10)
-    numero_pagina = request.GET.get("page")
-    objeto_pagina = paginador.get_page(numero_pagina)
-    hoy = timezone.localdate()
-    hace_30 = hoy - datetime.timedelta(days=30)
-    hace_60 = hoy - datetime.timedelta(days=60)
-    resumen = consulta.aggregate(
+def _filtros(request):
+    from .filtros import FiltrosEvidenciasForm
+
+    if not hasattr(request, "_filtros_evidencias"):
+        request._filtros_evidencias = FiltrosEvidenciasForm(request.GET, visibles=_visible_envios(request.user))
+        request._filtros_evidencias.is_valid()
+    return request._filtros_evidencias
+
+
+def _resumen_envios(consulta):
+    return consulta.aggregate(
         total=Count("pk"),
-        nuevas=Count("pk", filter=Q(fecha_envio__gte=hace_30)),
-        anteriores=Count("pk", filter=Q(fecha_envio__gte=hace_60, fecha_envio__lt=hace_30)),
         aprobadas=Count("pk", filter=Q(aprobada=True)),
-        rechazadas=Count("pk", filter=Q(rechazada=True)),
-        aprobadas_recientes=Count("pk", filter=Q(aprobada=True, fecha_envio__gte=hace_30)),
-        aprobadas_anteriores=Count("pk", filter=Q(aprobada=True, fecha_envio__gte=hace_60, fecha_envio__lt=hace_30)),
         pendientes=Count("pk", filter=Q(aprobada=False, rechazada=False)),
+        rechazadas=Count("pk", filter=Q(rechazada=True)),
     )
-    total_envios = resumen["total"]
-    nuevas_30d, nuevas_prev_30d = resumen["nuevas"], resumen["anteriores"]
-    aprobadas, rechazadas = resumen["aprobadas"], resumen["rechazadas"]
-    aprobadas_30d, aprobadas_prev_30d = resumen["aprobadas_recientes"], resumen["aprobadas_anteriores"]
 
-    def cambio_porcentaje(current, previous):
-        try:
-            if previous == 0:
-                return None if current == 0 else 100.0
-            return round(((current - previous) / previous) * 100, 1)
-        except Exception:
-            return None
 
-    pct_nuevas = cambio_porcentaje(nuevas_30d, nuevas_prev_30d)
-    pct_aprobadas = cambio_porcentaje(aprobadas_30d, aprobadas_prev_30d)
-    pct_total = cambio_porcentaje(nuevas_30d, nuevas_prev_30d)
-    pct_nuevas_abs = abs(pct_nuevas) if pct_nuevas is not None else None
-    pct_aprobadas_abs = abs(pct_aprobadas) if pct_aprobadas is not None else None
-    pct_total_abs = abs(pct_total) if pct_total is not None else None
-    opciones_proyectos = list(Envio.PROYECTO_CHOICES)
-    try:
-        num_quarters = max(1, min(12, int(request.GET.get("quarters", 4))))
-    except (ValueError, TypeError):
-        num_quarters = 4
-    categorias_labels, categorias_data = [], []
-    trimestres_labels, datos_trimestrales_nuevas, datos_trimestrales_aprobadas = [], [], []
-    usuarios_labels, usuarios_data = [], []
-    if incluir_graficos:
-        from django.db.models.functions import ExtractQuarter, ExtractYear
+def _ordenar_envios(consulta, datos):
+    campo = datos.get("order", "fecha_envio")
+    direccion = datos.get("dir", "desc")
+    return consulta.order_by(campo if direccion == "asc" else "-" + campo, "pk" if direccion == "asc" else "-pk")
 
-        proyectos = dict(
-            consulta.values("proyecto").annotate(total=Count("pk")).order_by().values_list("proyecto", "total")
-        )
-        for code, label in Envio.PROYECTO_CHOICES:
-            if proyectos.get(code):
-                categorias_labels.append(label)
-                categorias_data.append(proyectos[code])
-        trimestral = (
-            consulta.annotate(anio=ExtractYear("fecha_envio"), trimestre=ExtractQuarter("fecha_envio"))
-            .values("anio", "trimestre")
-            .annotate(nuevas=Count("pk"), aprobadas=Count("pk", filter=Q(aprobada=True)))
-            .order_by()
-        )
-        mapa = {(row["anio"], row["trimestre"]): row for row in trimestral}
-        serial = hoy.year * 4 + (hoy.month - 1) // 3
-        for valor in range(serial - num_quarters + 1, serial + 1):
-            anio, trimestre = valor // 4, valor % 4 + 1
-            row = mapa.get((anio, trimestre), {})
-            trimestres_labels.append(f"Q{trimestre} {anio}")
-            datos_trimestrales_nuevas.append(row.get("nuevas", 0))
-            datos_trimestrales_aprobadas.append(row.get("aprobadas", 0))
-        top = (
-            consulta.values("usuario__first_name", "usuario__last_name", "usuario__username")
-            .annotate(total=Count("pk"))
-            .order_by("-total")[:6]
-        )
-        for row in top:
-            nombre = (
-                " ".join(filter(None, [row["usuario__first_name"], row["usuario__last_name"]]))
-                or row["usuario__username"]
-                or "Usuario"
-            )
-            usuarios_labels.append(nombre)
-            usuarios_data.append(row["total"])
-    es_admin = is_admin_or_group(request.user, [])
 
-    context = {
-        "envios": objeto_pagina,
-        "proyecto": proyecto,
-        "order": orden,
-        "dir": direccion,
-        "start": inicio,
-        "end": fin,
-        "opciones_proyectos": opciones_proyectos,
-        "total_envios": total_envios,
-        "nuevas_30d": nuevas_30d,
-        "aprobadas": aprobadas,
-        "rechazadas": rechazadas,
+def _evidencias_context(request):
+    form = _filtros(request)
+    datos = form.cleaned_data
+    consulta = _ordenar_envios(_filtered_envios(request), datos).select_related("usuario")
+    resumen = _resumen_envios(consulta)
+    return {
+        "envios": Paginator(consulta, 10).get_page(request.GET.get("page")),
+        "total_envios": resumen["total"],
+        "aprobadas": resumen["aprobadas"],
+        "rechazadas": resumen["rechazadas"],
         "pendientes": resumen["pendientes"],
-        "categorias_labels_json": categorias_labels,
-        "categorias_data_json": categorias_data,
-        "trimestres_labels_json": trimestres_labels,
-        "datos_trimestrales_nuevas_json": datos_trimestrales_nuevas,
-        "datos_trimestrales_aprobadas_json": datos_trimestrales_aprobadas,
-        "usuarios_labels_json": usuarios_labels,
-        "usuarios_data_json": usuarios_data,
-        "pct_nuevas": pct_nuevas,
-        "pct_aprobadas": pct_aprobadas,
-        "pct_total": pct_total,
-        "pct_nuevas_abs": pct_nuevas_abs,
-        "pct_aprobadas_abs": pct_aprobadas_abs,
-        "pct_total_abs": pct_total_abs,
-        "aprobadas_30d": aprobadas_30d,
-        "home_url": home_url,
-        "es_admin": es_admin,
+        "home_url": _home_url_for_user(request.user),
+        "es_admin": is_admin_or_group(request.user, []),
         "puede_revisar": is_admin_or_group(request.user, ["coordinador", "dinamizador"]),
-        "q": termino_busqueda,
-        "plazo_scope": _scope_id(request.GET.get("plazo", "")),
-        "usuario_scope": _scope_id(request.GET.get("usuario", "")),
-        "estado": estado,
-        "quarters": num_quarters,
-        "next_direction": "desc" if direccion == "asc" else "asc",
-        "status_chart": [aprobadas, resumen["pendientes"], rechazadas],
+        "filtros_form": form,
+        "opciones_proyectos": form.fields["proyecto"].choices[1:],
+        "q": request.GET.get("q", "")[:100],
+        "estado": request.GET.get("estado", ""),
+        "start": request.GET.get("start", ""),
+        "end": request.GET.get("end", ""),
+        "proyecto": request.GET.get("proyecto", ""),
+        "plazo_scope": datos.get("plazo") or "",
+        "usuario_scope": datos.get("usuario") or "",
+        "order": datos.get("order", "fecha_envio"),
+        "dir": datos.get("dir", "desc"),
+        "next_direction": "desc" if datos.get("dir") == "asc" else "asc",
     }
-    return context
 
 
 def _visible_envios(user):
@@ -195,26 +106,28 @@ def _panel_context(user, role):
     }
 
 
-def _scope_id(value):
-    return value if value.isascii() and value.isdigit() and len(value) <= 18 else ""
-
-
 def _filtered_envios(request):
+    from .filtros import SIN_PROYECTO
+
     queryset = _visible_envios(request.user)
-    for campo in ["plazo", "usuario"]:
-        pk = _scope_id(request.GET.get(campo, ""))
-        if pk:
-            queryset = queryset.filter(**{campo + "_id": pk})
-    proyecto = request.GET.get("proyecto", "")
+    form = _filtros(request)
+    if not form.is_valid():
+        return queryset.none()
+    datos = form.cleaned_data
+    for campo in ("plazo", "usuario"):
+        if datos.get(campo):
+            queryset = queryset.filter(**{campo + "_id": datos[campo]})
+    proyecto = datos["proyecto"]
     if proyecto:
-        queryset = queryset.filter(proyecto=proyecto)
-    queryset = apply_date_filters(queryset, request.GET.get("start", ""), request.GET.get("end", ""))
-    query = (request.GET.get("q") or "").strip()
-    if query:
+        queryset = queryset.filter(proyecto="" if proyecto == SIN_PROYECTO else proyecto)
+    queryset = apply_date_filters(queryset, datos["start"], datos["end"])
+    if datos["q"]:
         queryset = queryset.filter(
-            Q(nombre__icontains=query) | Q(tipo_evidencia__icontains=query) | Q(observaciones__icontains=query)
+            Q(nombre__icontains=datos["q"])
+            | Q(tipo_evidencia__icontains=datos["q"])
+            | Q(observaciones__icontains=datos["q"])
         )
-    estado = request.GET.get("estado", "")
+    estado = datos["estado"]
     if estado == "aprobada":
         queryset = queryset.filter(aprobada=True)
     elif estado == "rechazada":

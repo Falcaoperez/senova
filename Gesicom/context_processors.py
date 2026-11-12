@@ -50,6 +50,8 @@ def interface(request):
         active = current == route
         if route == "evidencias_list":
             active = current in ["evidencias_list", "ver_evidencia", "corregir_evidencia"]
+        if route == "reportes":
+            active = current in ["reportes", "reportes_csv", "reportes_trimestrales_csv"]
         if route == "admin_personalizado:gestionar_usuarios":
             active = current in [
                 "admin_personalizado:gestionar_usuarios",

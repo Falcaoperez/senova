@@ -110,3 +110,23 @@ El trabajador vuelve a comprobar cuenta, preferencias, destinatarios, disponibil
 La búsqueda por título o mensaje, los filtros de tipo y lectura y la paginación comparten la misma consulta autorizada. Cada usuario puede cambiar el estado individual, seleccionar avisos de la página (máximo 100 por petición) o marcar todos los resultados filtrados. Una selección con identificadores ajenos se rechaza completa. Al consultar un aviso se comprueba el acceso actual a su destino; si fue archivado, eliminado o dejó de estar asignado, la bandeja explica el motivo.
 
 Al actualizar, aplica `Gesicom.0014` (índice de plazo/usuario/primera entrega) y `notificaciones.0002` (revisión, actualización y estados de seguimiento/cancelación), recoge estáticos y reinicia web y trabajador. No se cambian fechas ni límites de evidencias previas. La columna `version` de avisos y `revision` de edición tienen finalidades distintas; las escrituras deben pasar por `notificaciones.plazos` para mantenerlas coherentes.
+
+## Reportes y exportaciones
+
+La lista de evidencias, los reportes y sus CSV comparten `Gesicom.filtros`. Se puede buscar por nombre, tipo u observaciones y combinar proyecto, estado, meses, propietario y plazo. Los proyectos históricos y los registros sin proyecto permanecen consultables. Un filtro inválido muestra errores y no devuelve registros; las descargas con filtros inválidos responden HTTP 400, sin generar un CSV de toda la base.
+
+La serie trimestral termina en el trimestre del mes final elegido. Sin fecha final, utiliza el trimestre actual. Pantalla y CSV trimestral utilizan la misma agregación SQL y de 1 a 12 trimestres. Las aprobadas reflejan el estado actual de las evidencias registradas en cada trimestre; no se cuentan como si fueran la fecha de aprobación. El total general corresponde a todos los registros filtrados y se indica cuando la ventana trimestral solo muestra una parte.
+
+Los gráficos permiten filtrar por proyecto o estado. Los enlaces de las tablas ofrecen la misma acción con teclado o sin JavaScript. Los filtros conservan el historial del navegador. Cada gráfico incluye una tabla de datos; la impresión utiliza estas tablas. Si Chart.js no está disponible, los datos siguen siendo consultables.
+
+El CSV de evidencias conserva primero las seis columnas históricas y añade estado, usuario, primera entrega, plazo, límite original y entrega tardía. Se ordena según la consulta y recorre los registros en lotes de 500, sin acumular las instancias ni el documento CSV completo en Django. El controlador de MySQL puede mantener sus propios búferes de filas. Se usa UTF-8 con marca BOM para las tildes en hojas de cálculo, neutralización de fórmulas y `Cache-Control: no-store`. El CSV trimestral usa el mismo período que el gráfico. El seguimiento de plazos reutiliza la misma respuesta CSV.
+
+## Permisos de grupos
+
+El panel conserva los seis permisos históricos, con etiquetas que describen su función real. “Sin asignar” retira la concesión del grupo; no deniega permisos que una persona obtenga de otros grupos o de asignaciones individuales. El acceso a Django admin también requiere una cuenta de personal autorizada. Los permisos nativos no sustituyen los roles que gobiernan los paneles de GESICOM.
+
+Guardar requiere contraseña actual y una revisión calculada sobre el grupo y sus permisos completos. La actualización bloquea el grupo, vuelve a comprobar la autorización y valida todo el formulario antes de escribir. Una pestaña antigua se rechaza; guardar sin cambios no genera otro movimiento de auditoría. Los permisos ajenos al catálogo se conservan al usar el panel de GESICOM. Se aceptan los nombres de campo históricos y el valor anterior de retirada para mantener compatibilidad.
+
+Solo un superadministrador puede modificar el grupo `administrador` o un grupo con cuentas de personal/superusuario. Django admin utiliza la misma política, contraseña y revisión para añadir o editar grupos. Los seis grupos del sistema no se pueden renombrar ni eliminar desde esa administración, incluso en lotes mixtos. Los intentos de confirmación se limitan por identidad e IP. La auditoría registra actor y ruta, sin contraseña ni contenido de la petición.
+
+Este bloque no necesita migraciones ni nuevas tablas de permisos. Después de actualizar, recoge los estáticos y reinicia web y trabajador para cargar los módulos compartidos.

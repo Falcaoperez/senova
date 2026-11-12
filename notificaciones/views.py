@@ -1,5 +1,3 @@
-import csv
-
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -8,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -16,7 +14,8 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
 from cuentas.forms import ConfirmarPasswordForm
-from Gesicom.utils import require_group, safe_csv_cell
+from Gesicom.exportaciones import respuesta_csv
+from Gesicom.utils import require_group
 
 from .acceso import destino_notificacion
 from .bandeja import cambiar_lectura, regreso_bandeja
@@ -253,22 +252,13 @@ def seguimiento_plazo(request, pk):
     )
 
 
-class _CSV:
-    def write(self, value):
-        return value
-
-
 @require_group("administrador")
 def seguimiento_csv(request, pk):
     plazo = get_object_or_404(PlazoReporte, pk=pk)
     usuarios = seguimiento_filtrado(plazo, request.GET)
 
     def filas():
-        writer = csv.writer(_CSV())
-        yield "\ufeff"
-        yield writer.writerow(
-            ["Usuario", "Nombre", "Correo", "Entrega", "Última entrega (Colombia)", "Última revisión"]
-        )
+        yield ["Usuario", "Nombre", "Correo", "Entrega", "Última entrega (Colombia)", "Última revisión"]
         for usuario in usuarios.iterator(chunk_size=500):
             entrega = "Pendiente" if not usuario.entregado else "A tiempo" if usuario.a_tiempo else "Fuera de plazo"
             revision = (
@@ -285,17 +275,9 @@ def seguimiento_csv(request, pk):
                 if usuario.ultima_entrega
                 else ""
             )
-            yield writer.writerow(
-                [
-                    safe_csv_cell(v)
-                    for v in [usuario.username, usuario.get_full_name(), usuario.email, entrega, fecha, revision]
-                ]
-            )
+            yield [usuario.username, usuario.get_full_name(), usuario.email, entrega, fecha, revision]
 
-    response = StreamingHttpResponse(filas(), content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="seguimiento-plazo-{plazo.pk}.csv"'
-    response["Cache-Control"] = "no-store"
-    return response
+    return respuesta_csv(filas(), f"seguimiento-plazo-{plazo.pk}.csv")
 
 
 @require_group("administrador")

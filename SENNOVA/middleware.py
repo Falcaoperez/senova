@@ -50,6 +50,9 @@ class RateLimitMiddleware:
         "actualizar_observaciones": (2000, 600, 100),
         "recordar_pendientes": (1000, 600, 20),
         "archivar_plazo": (1000, 600, 20),
+        "permisos": (1000, 600, 20),
+        "auth_group_change": (1000, 600, 20),
+        "auth_group_add": (1000, 600, 20),
     }
 
     def __init__(self, get_response):
@@ -72,6 +75,8 @@ class RateLimitMiddleware:
             if name in {"evidencia", "corregir_evidencia", "set_aprobada", "actualizar_observaciones"}
             else "admin_personalizado:gestionar_usuarios"
             if request.resolver_match.namespace == "admin_personalizado"
+            else "admin:auth_group_changelist"
+            if request.resolver_match.namespace == "admin"
             else "notificaciones:plazos_admin"
             if request.resolver_match.namespace == "notificaciones"
             else "centro_seguridad"

@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load static ui %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/reports.css' %}">
+{% endblock %}
 {% block title %}Permisos · GESICOM SENA{% endblock %}
 {% block content %}
-  {% include "ui/page_heading.html" with section="GESICOM / ADMINISTRACIÓN / PERMISOS" heading="Accesos claros. Trabajo organizado." description="Consulta y actualiza los permisos de los grupos del sistema." %}
+  {% include "ui/page_heading.html" with section="GESICOM / ADMINISTRACIÓN / PERMISOS" heading="Accesos claros. Trabajo organizado." description="Consulta las autorizaciones de cada grupo y confirma los cambios con tu contraseña." %}
   <div class="form-layout">
-    <section class="panel">
+    <section class="panel permission-editor">
       <form method="get" class="filters">
         <div class="field">
           <label for="group-select">Grupo de usuarios</label>
@@ -27,45 +30,64 @@
           </div>
           {% icon 'shield' %}
         </div>
-        <form method="post" data-submit>
-          {% csrf_token %}
-          <input type="hidden" name="group" value="{{ grupo_seleccionado.pk }}">
-          {% for permission in permisos %}
+        {% if not puede_editar %}
+          <div class="action-notice">
+            {% icon 'shield' %}
+            <p>Este grupo contiene cuentas protegidas o es el grupo de administradores. Solo un superadministrador puede modificarlo.</p>
+          </div>
+        {% endif %}
+        <form method="post" data-submit data-permission-editor>
+          {% csrf_token %}{{ form.group }}{{ form.revision_actual }}
+          {% if form.errors %}
+            <div class="alert alert-error" role="alert">
+              <div>{{ form.non_field_errors }}{% for field in form %}{{ field.errors }}{% endfor %}</div>
+            </div>
+          {% endif %}
+          {% if conflicto %}
+            <p>
+              <a class="text-link"
+                 href="{% url 'admin_personalizado:permisos' %}?group={{ grupo_seleccionado.pk }}">Recargar permisos actuales</a>
+            </p>
+          {% endif %}
+          {% for field in form.opciones %}
             <div class="permission-row">
-              <label for="perm_{{ forloop.counter }}">
-                <strong>{{ permission.etiqueta }}</strong>
-              </label>
-              <select id="perm_{{ forloop.counter }}"
-                      name="perm_{{ permission.nombre_codigo }}_1">
-                <option value="inherited"
-                        {% if permission.estado_1 == 'inherited' %}selected{% endif %}>Sin asignar</option>
-                <option value="allowed"
-                        {% if permission.estado_1 == 'allowed' %}selected{% endif %}>Permitido</option>
-                <option value="denied"
-                        {% if permission.estado_1 == 'denied' %}selected{% endif %}>Retirar permiso</option>
-              </select>
+              <div>
+                {{ field.label_tag }}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>
+              </div>
+              {{ field }}
             </div>
           {% endfor %}
-          <div class="form-actions">
-            <a class="button button-secondary"
-               href="{% url 'admin_personalizado:dashboard' %}">Volver</a>
-            <button class="button button-primary" type="submit">{% icon 'check' %} Guardar permisos</button>
-          </div>
+          {% if puede_editar %}
+            <div class="permission-confirmation">
+              <p class="password-help"
+                 data-permission-status
+                 role="status">Los cambios se aplican al grupo completo.</p>
+              <div class="field">{{ form.contrasena_actual.label_tag }}{{ form.contrasena_actual }}</div>
+              <div class="form-actions">
+                <a class="button button-secondary"
+                   href="{% url 'admin_personalizado:dashboard' %}">Volver</a>
+                <button class="button button-primary" type="submit">{% icon 'check' %} Guardar permisos</button>
+              </div>
+            </div>
+          {% endif %}
         </form>
       {% else %}
         <div class="empty-state">
           <span class="empty-symbol">{% icon 'shield' %}</span>
           <h3>Un grupo para comenzar</h3>
-          <p>Selecciona un grupo para consultar sus permisos actuales.</p>
+          <p>Selecciona un grupo para consultar sus permisos.</p>
         </div>
       {% endif %}
     </section>
     <aside class="panel side-guide">
       <p class="eyebrow">PERMISOS POR GRUPO</p>
-      <h3>Una administración consciente.</h3>
-      <p>Los permisos se asignan al grupo y se consultan desde Django. Las vistas de GESICOM conservan sus controles de acceso por rol.</p>
+      <h3>Decisiones de acceso conscientes.</h3>
+      <p>Estas autorizaciones corresponden a modelos de Django. Para entrar a Django admin la cuenta también necesita acceso de personal autorizado.</p>
       <hr>
-      <p>Asignar un permiso no cambia el rol del usuario ni lo convierte en administrador.</p>
+      <p>El rol sigue determinando los paneles de GESICOM. Asignar un permiso no convierte a una persona en administradora.</p>
+      <hr>
+      <p>“Sin asignar” retira la autorización de este grupo. La persona puede conservarla si otro grupo o una autorización individual se la concede.</p>
+      <p>Las pestañas antiguas deben recargar antes de guardar. Los nombres y grupos del sistema se conservan.</p>
     </aside>
   </div>
 {% endblock %}

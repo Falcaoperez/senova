@@ -13,7 +13,7 @@
     <a class="button button-primary" href="{% url 'evidencia' %}">{% icon 'plus' %} Nueva evidencia</a>
   </div>
   <div data-live-scope>
-    <div data-live-region="evidence-stats">{% include "ui/stats.html" %}</div>
+    <div data-live-region="evidence-stats">{% include "ui/filtros_errores.html" %}{% include "ui/stats.html" %}</div>
     <section class="panel">
       <form class="filters" method="get" data-live-form>
         <input type="hidden" name="plazo" value="{{ plazo_scope }}">
