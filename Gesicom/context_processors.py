@@ -91,11 +91,11 @@ def interface(request):
     pendientes = 0
     recientes = []
     if user.is_authenticated:
-        from notificaciones.models import Notificacion
+        from notificaciones.resumen import resumen_de_peticion
 
-        avisos = Notificacion.objects.filter(usuario=user)
-        pendientes = avisos.filter(leida_en__isnull=True).count()
-        recientes = list(avisos.only("titulo", "creada_en", "leida_en")[:4])
+        resumen = resumen_de_peticion(request, recientes=True)
+        pendientes = resumen["pendientes"]
+        recientes = resumen["recientes"]
     return {
         "proyectos_evidencia": Envio.PROYECTO_CHOICES,
         "tipos_evidencia": [

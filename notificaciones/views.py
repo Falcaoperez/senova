@@ -10,8 +10,9 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.views.decorators.debug import sensitive_post_parameters
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_safe
 
 from cuentas.forms import ConfirmarPasswordForm
 from Gesicom.exportaciones import respuesta_csv
@@ -22,6 +23,7 @@ from .bandeja import cambiar_lectura, regreso_bandeja
 from .forms import NovedadForm, PlazoReporteForm, PreferenciasForm
 from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
 from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
+from .resumen import resumen_de_peticion
 from .selectors import agenda_filtrada, avisos_filtrados, resumen_agenda, resumen_seguimiento, seguimiento_filtrado
 from .services import publicar_novedad
 
@@ -34,7 +36,7 @@ def bandeja(request):
         "notificaciones/bandeja.html",
         {
             "avisos": Paginator(avisos_filtrados(request.user, request.GET), 20).get_page(request.GET.get("page")),
-            "sin_leer": Notificacion.objects.filter(usuario=request.user, leida_en__isnull=True).count(),
+            "sin_leer": resumen_de_peticion(request)["pendientes"],
             "preferencias_form": PreferenciasForm(instance=preferencias),
             "tipos": Notificacion.Tipo.choices,
             "q": request.GET.get("q", "")[:100],
@@ -94,10 +96,23 @@ def preferencias(request):
 
 
 @login_required
+@require_safe
 def resumen(request):
-    return JsonResponse(
-        {"pendientes": Notificacion.objects.filter(usuario=request.user, leida_en__isnull=True).count()}
-    )
+    detalle = request.GET.get("detalle") == "1"
+    resumen = resumen_de_peticion(request, recientes=detalle)
+    datos = {"pendientes": resumen["pendientes"]}
+    if detalle:
+        datos["recientes"] = [
+            {
+                "id": aviso.pk,
+                "titulo": aviso.titulo,
+                "fecha": date_format(timezone.localtime(aviso.creada_en), "d M · H:i"),
+                "leida": aviso.leida_en is not None,
+                "abrir_url": reverse("notificaciones:abrir", args=[aviso.pk]),
+            }
+            for aviso in resumen["recientes"]
+        ]
+    return JsonResponse(datos)
 
 
 @login_required

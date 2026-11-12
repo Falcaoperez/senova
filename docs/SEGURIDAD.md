@@ -70,3 +70,9 @@ Las cargas admiten un archivo por petición, hasta 10 MB, y rechazan archivos va
 La vista privada reconoce el contenido antes de ofrecer una previsualización. Los formatos históricos desconocidos o incompatibles con su extensión se descargan sin ejecución como HTML. El texto se inserta con `textContent`, admite UTF-8, UTF-16/32 con marca y Windows-1252, y limita la lectura del origen a 64 KB. Un adjunto ausente conserva la evidencia y su historial; no se ofrece una vista rota.
 
 El personal activo de Django con permiso explícito `view_envio` o `change_envio` puede consultar los adjuntos desde su administración. Esto no amplía la visibilidad de listas ni detalles públicos de GESICOM. Al eliminar una evidencia, el archivo se retira después de confirmar la transacción y solo si no quedan referencias; un rollback conserva el archivo. El administrador nativo no permite cambiar el plazo original de una evidencia existente y, al crear una nueva entrega asociada, valida destinatario/proyecto y conserva el límite aplicado.
+
+## Actualizaciones de la campana
+
+El resumen solo acepta lectura GET/HEAD y consulta los avisos de `request.user`; no admite elegir otro destinatario. La respuesta detallada limita títulos, fechas, lectura y rutas a los cuatro avisos más recientes. Las respuestas son privadas y no se almacenan en caché. La reutilización del conteo dura únicamente la petición actual y verifica la identidad de la cuenta.
+
+El cliente valida la respuesta y las rutas del mismo origen, inserta los títulos como texto y conserva POST con CSRF al construir los formularios. No abre directamente el destino externo de una notificación; el servidor vuelve a comprobar su autorización al abrirla. Las actualizaciones se cancelan al ocultar la página, no se solapan y no mantienen viva una sesión inactiva. Un fallo de red conserva la última lista disponible sin mostrar detalles internos.
