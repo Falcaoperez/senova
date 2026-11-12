@@ -1,8 +1,106 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.validators import URLValidator
+
+from notificaciones.models import PlazoReporte
+from notificaciones.services import plazos_para_usuario
+
+from .models import Envio
+from .validators import validar_archivo_evidencia
 
 User = get_user_model()
+
+
+class EvidenciaForm(forms.Form):
+    nombre = forms.CharField(label="Nombre de la evidencia", max_length=80)
+    proyecto = forms.ChoiceField(label="Proyecto", choices=[("", "Selecciona un proyecto"), *Envio.PROYECTO_CHOICES])
+    plazo = forms.ModelChoiceField(
+        label="Plazo de reporte (opcional)",
+        queryset=PlazoReporte.objects.none(),
+        required=False,
+        empty_label="Evidencia sin plazo asociado",
+    )
+    evidencias = forms.MultipleChoiceField(
+        label="Tipo de evidencia",
+        choices=[(tipo, tipo) for tipo in ["Planeación", "Ejecución", "Evaluación", "Informe Final", "Documento"]],
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    linkArchivo = forms.CharField(
+        label="Enlace de la evidencia",
+        required=False,
+        max_length=200,
+        validators=[URLValidator(schemes=["http", "https"])],
+        widget=forms.URLInput(attrs={"placeholder": "https://"}),
+    )
+    archivo = forms.FileField(label="Archivo de la evidencia", required=False, validators=[validar_archivo_evidencia])
+    eliminar_archivo = forms.BooleanField(label="Retirar el archivo actual", required=False)
+    observaciones = forms.CharField(
+        label="Observaciones (opcional)", max_length=2000, required=False, widget=forms.Textarea
+    )
+    motivo = forms.CharField(
+        label="¿Qué corregiste?",
+        min_length=3,
+        max_length=1000,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    version = forms.IntegerField(min_value=1, required=False, widget=forms.HiddenInput)
+
+    def __init__(self, data=None, files=None, *, usuario, envio=None, **kwargs):
+        self.envio = envio
+        if data is not None and not data.get("linkArchivo") and data.get("link_evidencia"):
+            data = data.copy()
+            data["linkArchivo"] = data["link_evidencia"]
+        super().__init__(data, files, **kwargs)
+        from django.utils import timezone
+
+        self.fields["plazo"].label_from_instance = lambda plazo: (
+            f"{plazo.titulo} · {timezone.localtime(plazo.fecha_limite):%d/%m/%Y %H:%M}"
+            + (" · Fuera de plazo" if plazo.vencido else "")
+        )
+        self.fields["archivo"].widget.attrs.update(
+            {"accept": ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.zip,.rar", "data-file-input": True}
+        )
+        self.fields["observaciones"].widget.attrs.update({"rows": 4})
+        self.fields["plazo"].queryset = plazos_para_usuario(usuario)
+        if envio:
+            tipos = [
+                tipo.strip()
+                for tipo in envio.tipo_evidencia.split(",")
+                if tipo.strip() and tipo.strip() != "Sin especificar"
+            ]
+            existentes = {value for value, _ in self.fields["evidencias"].choices}
+            self.fields["evidencias"].choices += [(tipo, tipo) for tipo in tipos if tipo not in existentes]
+            self.initial.update(
+                nombre=envio.nombre,
+                proyecto=envio.proyecto,
+                plazo=envio.plazo_id,
+                evidencias=tipos,
+                linkArchivo=envio.link_evidencia,
+                version=envio.version,
+            )
+            self.fields["plazo"].queryset = PlazoReporte.objects.filter(pk=envio.plazo_id)
+            self.fields["plazo"].disabled = True
+            self.fields["version"].required = True
+            self.fields["motivo"].required = True
+            self.fields.pop("observaciones")
+        else:
+            for name in ("eliminar_archivo", "motivo", "version"):
+                self.fields.pop(name)
+
+    def clean(self):
+        data = super().clean()
+        archivo_previo = self.envio and self.envio.archivo_evidencia and not data.get("eliminar_archivo")
+        if not (data.get("linkArchivo") or data.get("archivo") or archivo_previo):
+            self.add_error(None, "Debe proporcionar un enlace o adjuntar un archivo (al menos uno).")
+        plazo = data.get("plazo")
+        if plazo and plazo.proyecto and data.get("proyecto") != plazo.proyecto:
+            self.add_error("proyecto", "El proyecto debe coincidir con el plazo seleccionado.")
+        if len(", ".join(data.get("evidencias", []))) > 50:
+            self.add_error("evidencias", "La combinación de tipos supera los 50 caracteres permitidos.")
+        return data
 
 
 class ProfileForm(forms.ModelForm):

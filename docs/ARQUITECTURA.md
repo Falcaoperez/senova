@@ -5,6 +5,8 @@
 | `SENNOVA/` | Configuración activa, rutas y middleware HTTP |
 | `config/` | Configuración de Gunicorn |
 | `Gesicom/` | Evidencias, reportes, páginas y recursos visuales compartidos |
+| `Gesicom/forms.py` | Validaciones compartidas de creación y corrección, con compatibilidad para el enlace histórico |
+| `Gesicom/services.py` | Transacciones de evidencia, control de versiones, historial y ciclo de sustitución de adjuntos |
 | `Gesicom/selectors.py` | Consultas reutilizadas por vistas, reportes y búsqueda; visibilidad por rol |
 | `Gesicom/busqueda.py` | Búsqueda autenticada, limitada por cuenta y con resultados acotados |
 | `ADMIN/` | Administración de la comunidad |
@@ -24,3 +26,5 @@ El centro de operaciones agrega los registros en MySQL y limita las listas recie
 Los filtros usan las mismas vistas GET con o sin JavaScript. La mejora interactiva sustituye únicamente los resultados, mantiene los parámetros en la URL y permite volver con el navegador. Los cambios de cuentas siguen siendo formularios POST con CSRF, confirmación de identidad y validación del servidor. Las acciones sensibles no se ejecutan desde la búsqueda.
 
 Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js. Los módulos `workspace.js`, `admin-dashboard.js` y `operations.css` separan las nuevas interacciones de los estilos y comportamientos generales.
+
+`Gesicom/admin.py` utiliza las mismas reglas de versiones y registro de movimientos. El formulario de corrección reutiliza `formulario.html`; no añade un segundo panel de evidencias. Los estilos de ese flujo están en `evidencias.css`. La tabla de movimientos es de solo lectura en la administración.

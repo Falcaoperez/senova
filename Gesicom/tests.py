@@ -42,6 +42,7 @@ class EnvioViewsTests(TestCase):
                 "linkArchivo": "https://example.com/file",
                 "observaciones": "Test",
             },
+            follow=True,
         )
         self.assertEqual(resp.status_code, 200)
         # el texto de éxito se muestra en el template
@@ -241,7 +242,7 @@ class StaticResourceTests(TestCase):
             reverse("evidencia"),
             {"nombre": "Enlace anterior", "proyecto": "LEM", "link_evidencia": "https://www.sena.edu.co"},
         )
-        self.assertTrue(response.context["exito"])
+        self.assertRedirects(response, reverse("ver_evidencia", args=[Envio.objects.get(nombre="Enlace anterior").pk]))
         self.assertEqual(Envio.objects.get(nombre="Enlace anterior").link_evidencia, "https://www.sena.edu.co")
 
     def test_csv_matches_search_and_state_filters(self):

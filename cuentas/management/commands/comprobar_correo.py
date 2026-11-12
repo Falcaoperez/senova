@@ -1,4 +1,7 @@
+import errno
 import smtplib
+import socket
+import ssl
 from email.utils import parseaddr
 
 from django.conf import settings
@@ -53,11 +56,34 @@ class Command(BaseCommand):
             connection.open()
             connection.close()
         except smtplib.SMTPAuthenticationError:
-            raise CommandError(
-                "El proveedor rechazó la autenticación. Revisa las credenciales y la autorización SMTP de la cuenta."
+            ayuda = (
+                "Gmail requiere una contraseña de aplicación de Google o un token OAuth2 vigente."
+                if settings.EMAIL_HOST.casefold() in {"smtp.gmail.com", "smtp.googlemail.com"}
+                else "Revisa las credenciales y la autorización SMTP de la cuenta."
             )
-        except (OSError, smtplib.SMTPException, ImproperlyConfigured):
+            raise CommandError(f"El proveedor rechazó la autenticación. {ayuda}") from None
+        except ssl.SSLCertVerificationError:
+            raise CommandError(
+                "No se pudo verificar el certificado TLS del servidor SMTP. Revisa la cadena de confianza."
+            ) from None
+        except socket.gaierror:
+            raise CommandError(
+                "No se pudo resolver el nombre del servidor SMTP. La autenticación no se comprobó."
+            ) from None
+        except TimeoutError:
+            raise CommandError(
+                "El servidor SMTP no respondió dentro del tiempo configurado. La autenticación no se comprobó."
+            ) from None
+        except OSError as error:
+            if error.errno in {errno.ENETUNREACH, errno.EHOSTUNREACH, errno.EACCES, errno.EPERM}:
+                raise CommandError(
+                    "Este entorno no tiene acceso de red al servidor SMTP. La autenticación no se comprobó."
+                ) from None
+            raise CommandError(
+                "No se pudo abrir la conexión SMTP. Revisa el acceso al host y puerto configurados."
+            ) from None
+        except (smtplib.SMTPException, ImproperlyConfigured):
             raise CommandError(
                 "No se pudo establecer la conexión SMTP. Revisa host, puerto, cifrado y autorización del proveedor."
-            )
+            ) from None
         self.stdout.write(self.style.SUCCESS("Conexión SMTP y autenticación correctas. No se enviaron mensajes."))

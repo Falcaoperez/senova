@@ -10,9 +10,11 @@ Incluye:
 import csv
 import datetime
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -50,7 +52,7 @@ def contacto(request):
 
 
 def ayuda(request):
-    return render(request, "ayuda.html")
+    return render(request, "ayuda.html", {"pin_minutos": settings.PASSWORD_RESET_PIN_MINUTES})
 
 
 @require_group("instructor")
@@ -175,115 +177,47 @@ def reportes_trimestrales_csv(request):
 
 
 @login_required
-def evidencia(request):
-    home_url = _home_url_for_user(request.user)
-    from notificaciones.services import plazos_para_usuario
+def evidencia(request, pk=None):
+    from .forms import EvidenciaForm
+    from .services import ConflictoEvidencia, corregir_evidencia, registrar_evidencia
 
-    plazos = plazos_para_usuario(request.user)
-    extra = {
-        "home_url": home_url,
-        "plazos_evidencia": plazos,
-        "plazo_seleccionado": request.POST.get("plazo", request.GET.get("plazo", "")),
-    }
-
-    if request.method == "POST":
-        nombre = request.POST.get("nombre", "").strip()
-        proyecto = request.POST.get("proyecto", "").strip()
-        tipos = request.POST.getlist("evidencias")
-        tipo_evidencia = ", ".join(tipos) if tipos else "Sin especificar"
-        enlace = (request.POST.get("linkArchivo") or request.POST.get("link_evidencia", "")).strip()
-        archivo = request.FILES.get("archivo")
-        observaciones = request.POST.get("observaciones", "").strip()
-        errores = []
-        plazo = None
-        plazo_id = request.POST.get("plazo", "")
-        if plazo_id:
-            plazo = (
-                plazos.filter(pk=int(plazo_id)).first()
-                if plazo_id.isascii() and plazo_id.isdigit() and len(plazo_id) <= 18
-                else None
-            )
-            if not plazo:
-                errores.append("Selecciona un plazo disponible para tu cuenta.")
-            elif plazo.proyecto and plazo.proyecto != proyecto:
-                errores.append("El proyecto debe coincidir con el plazo seleccionado.")
-        if not (enlace or archivo):
-            errores.append("Debe proporcionar un enlace o adjuntar un archivo (al menos uno).")
-        if not nombre:
-            errores.append("El nombre es obligatorio.")
-        if proyecto not in dict(Envio.PROYECTO_CHOICES):
-            errores.append("Debe seleccionar un proyecto válido.")
-        if enlace:
-            from django.core.exceptions import ValidationError
-            from django.core.validators import URLValidator
-
-            try:
-                URLValidator(schemes=["http", "https"])(enlace)
-            except ValidationError:
-                errores.append("Ingresa un enlace válido que empiece por http:// o https://.")
-        if archivo and archivo.size > 10 * 1024 * 1024:
-            errores.append("El archivo es demasiado grande. Tamaño máximo: 10MB.")
-        if archivo:
-            extensiones_permitidas = [
-                ".pdf",
-                ".doc",
-                ".docx",
-                ".xls",
-                ".xlsx",
-                ".ppt",
-                ".pptx",
-                ".txt",
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".zip",
-                ".rar",
-            ]
-            nombre_archivo = archivo.name.lower()
-            if not any(nombre_archivo.endswith(ext) for ext in extensiones_permitidas):
-                errores.append(
-                    f"Tipo de archivo no permitido. Extensiones permitidas: {', '.join(extensiones_permitidas)}"
-                )
-        if errores:
-            return render(
-                request,
-                "formulario.html",
-                {
-                    "errores": errores,
-                    "exito": False,
-                    "nombre": nombre,
-                    "proyecto": proyecto,
-                    "tipos": tipos,
-                    "enlace_archivo": enlace,
-                    "observaciones": observaciones,
-                    **extra,
-                },
-            )
-        envio = Envio(
-            usuario=request.user,
-            plazo=plazo,
-            limite_aplicado=plazo.fecha_limite if plazo else None,
-            nombre=nombre,
-            proyecto=proyecto,
-            tipo_evidencia=tipo_evidencia,
-            link_evidencia=enlace if enlace else None,
-            archivo_evidencia=archivo,
-            observaciones=observaciones,
-        )
-        envio.save()
-        mensaje_exito = "Evidencia enviada correctamente"
-        if archivo:
-            mensaje_exito += f". Archivo guardado: {envio.archivo_evidencia.name}"
-        return render(
-            request,
-            "formulario.html",
-            {
-                "exito": True,
-                "mensaje_exito": mensaje_exito,
-                **extra,
-            },
-        )
-    return render(request, "formulario.html", extra)
+    envio = get_object_or_404(Envio, pk=pk, usuario=request.user) if pk else None
+    if envio and envio.aprobada:
+        raise PermissionDenied("Una evidencia aprobada no se puede corregir.")
+    form = EvidenciaForm(
+        request.POST if request.method == "POST" else None,
+        request.FILES or None,
+        usuario=request.user,
+        envio=envio,
+        initial={"plazo": request.GET.get("plazo", "")},
+    )
+    status = 200
+    if request.method == "POST" and form.is_valid():
+        try:
+            if envio:
+                guardado = corregir_evidencia(request.user, envio.pk, form.cleaned_data)
+                messages.success(request, "Corrección guardada. La evidencia vuelve a revisión.")
+            else:
+                guardado = registrar_evidencia(request.user, form.cleaned_data)
+                messages.success(request, "Evidencia enviada correctamente")
+            return redirect("ver_evidencia", pk=guardado.pk)
+        except ConflictoEvidencia as error:
+            form.add_error(None, error)
+            status = 409
+        except ValidationError as error:
+            form.add_error(None, error)
+    return render(
+        request,
+        "formulario.html",
+        {
+            "form": form,
+            "envio": envio,
+            "home_url": _home_url_for_user(request.user),
+            "errores": [str(error) for errors in form.errors.values() for error in errors],
+            "exito": False,
+        },
+        status=status,
+    )
 
 
 @login_required
@@ -295,31 +229,39 @@ def tabla_instructor(request):
     return redirect("evidencias_list")
 
 
-@login_required
-def ver_evidencia(request, pk):
-    envio = get_object_or_404(_visible_envios(request.user), pk=pk)
-    archivo_url = None
-    if envio.archivo_evidencia:
-        archivo_url = reverse("archivo_evidencia", args=[envio.pk])
+def _detalle_evidencia(request, envio, status=200):
     from pathlib import Path
 
+    from django.core.paginator import Paginator
+
+    archivo_url = reverse("archivo_evidencia", args=[envio.pk]) if envio.archivo_evidencia else None
     suffix = Path(envio.archivo_evidencia.name or "").suffix.lower()
-    kind = (
-        "image"
-        if suffix in {".jpg", ".jpeg", ".png", ".gif"}
-        else "pdf"
-        if suffix == ".pdf"
-        else "text"
-        if suffix == ".txt"
-        else "office"
-        if suffix in {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"}
-        else "video"
-        if suffix in {".mp4", ".webm", ".ogg"}
-        else "audio"
-        if suffix in {".mp3", ".wav"}
-        else "other"
+    tipos = {
+        "image": {".jpg", ".jpeg", ".png", ".gif"},
+        "pdf": {".pdf"},
+        "text": {".txt"},
+        "office": {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp"},
+        "video": {".mp4", ".webm", ".ogg"},
+        "audio": {".mp3", ".wav"},
+    }
+    kind = next((tipo for tipo, extensiones in tipos.items() if suffix in extensiones), "other")
+    return render(
+        request,
+        "ver_evidencia.html",
+        {
+            "envio": envio,
+            "archivo_url": archivo_url,
+            "preview_kind": kind,
+            "puede_corregir": request.user.pk == envio.usuario_id and not envio.aprobada,
+            "historial": Paginator(envio.historial.select_related("actor"), 20).get_page(request.GET.get("page")),
+        },
+        status=status,
     )
-    return render(request, "ver_evidencia.html", {"envio": envio, "archivo_url": archivo_url, "preview_kind": kind})
+
+
+@login_required
+def ver_evidencia(request, pk):
+    return _detalle_evidencia(request, get_object_or_404(_visible_envios(request.user), pk=pk))
 
 
 @login_required
@@ -355,26 +297,21 @@ def editar_perfil(request):
 @require_group("administrador", "coordinador", "dinamizador")
 @require_POST
 def set_aprobada(request, pk):
-    from notificaciones.services import notificar_revision
-
-    envio = get_object_or_404(_visible_envios(request.user), pk=pk)
-    estado_anterior = (envio.aprobada, envio.rechazada)
-    valor = request.POST.get("valor")
-    if valor not in {"0", "1"}:
-        return JsonResponse({"error": "Estado inválido"}, status=400)
-    if valor == "1":
-        envio.aprobada = True
-        envio.rechazada = False
-    else:
-        envio.aprobada = False
-        envio.rechazada = True
-    envio.save()
-    if estado_anterior != (envio.aprobada, envio.rechazada):
-        notificar_revision(envio)
-    messages.success(request, "Estado de evidencia actualizado.")
-    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/evidencias/"
     from django.utils.http import url_has_allowed_host_and_scheme
 
+    from .services import ConflictoEvidencia, revisar_evidencia
+
+    if request.POST.get("valor") not in {"0", "1"}:
+        return JsonResponse({"error": "Estado inválido"}, status=400)
+    try:
+        envio, cambiado = revisar_evidencia(
+            request.user, pk, request.POST["valor"] == "1", version=request.POST.get("version")
+        )
+    except ConflictoEvidencia as error:
+        messages.error(request, " ".join(error.messages))
+        return _detalle_evidencia(request, get_object_or_404(_visible_envios(request.user), pk=pk), status=409)
+    messages.success(request, "Estado de evidencia actualizado." if cambiado else "La evidencia ya tenía ese estado.")
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("evidencias_list")
     if not url_has_allowed_host_and_scheme(next_url, {request.get_host()}, require_https=request.is_secure()):
         next_url = reverse("evidencias_list")
     return redirect(next_url)
@@ -385,24 +322,21 @@ def access_denied(request):
 
 
 @login_required
+@require_POST
 def actualizar_observaciones(request, envio_id):
-    """Vista para actualizar observaciones de una evidencia. Solo administradores."""
-    if request.method != "POST":
-        return JsonResponse({"error": "Método no permitido"}, status=405)
+    from .services import ConflictoEvidencia, observar_evidencia
 
-    # Verificar que el usuario sea administrador o superusuario
-    if not (request.user.is_superuser or request.user.groups.filter(name="administrador").exists()):
+    try:
+        envio = observar_evidencia(
+            request.user, envio_id, request.POST.get("observaciones", "").strip(), version=request.POST.get("version")
+        )
+    except PermissionDenied:
         return JsonResponse({"error": "No tienes permisos para editar observaciones"}, status=403)
-
-    envio = get_object_or_404(Envio, id=envio_id)
-    anterior = envio.observaciones or ""
-    envio.observaciones = request.POST.get("observaciones", "").strip()
-    envio.save(update_fields=["observaciones"])
-    if anterior != envio.observaciones:
-        from notificaciones.services import notificar_revision
-
-        notificar_revision(envio)
-    return JsonResponse({"success": True, "observaciones": envio.observaciones})
+    except ConflictoEvidencia as error:
+        return JsonResponse({"error": " ".join(error.messages)}, status=409)
+    except ValidationError as error:
+        return JsonResponse({"error": " ".join(error.messages)}, status=400)
+    return JsonResponse({"success": True, "observaciones": envio.observaciones, "version": envio.version})
 
 
 @login_required

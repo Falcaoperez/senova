@@ -187,11 +187,19 @@
           "No se pudo procesar la respuesta. Recarga la página e intenta de nuevo.",
         );
       });
+      if (response.status === 401 && result.login_url) {
+        const login = new URL(result.login_url, location.origin);
+        if (login.origin === location.origin) { location.assign(login); return; }
+      }
       if (!response.ok || result.error)
         throw new Error(result.error || "No se pudo guardar el cambio.");
       if (form.hasAttribute("data-observation-form")) {
         form.dataset.dirty = "false";
         $$("textarea", form).forEach((input) => { input.defaultValue = input.value; });
+        if (Number.isInteger(result.version)) {
+          $$("input[name=version]", form.closest("[data-evidence-record]") || form)
+            .forEach((input) => { input.value = String(result.version); });
+        }
         toast("Observaciones guardadas correctamente.");
       } else {
         const target = new URL(form.dataset.redirect, location.origin);
