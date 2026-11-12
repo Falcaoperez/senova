@@ -1,0 +1,7 @@
+GESICOM · SENA
+
+Se actualizaron el correo, el nombre de usuario o la contraseña de tu cuenta.
+Los cambios de contraseña cierran las otras sesiones.
+
+Si no reconoces este cambio, recupera tu acceso en {{ enlace }} y contacta al administrador.
+Este mensaje no contiene tu contraseña ni un PIN.

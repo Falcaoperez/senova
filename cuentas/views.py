@@ -1,25 +1,24 @@
 """Recuperación en tres pasos: solicitar PIN, verificarlo y elegir contraseña."""
 
-import logging
 import re
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
+from django.contrib.auth import get_user_model, logout
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.template.loader import render_to_string
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 
+from .correos import encolar_aviso_cambio, encolar_pin, invalidar_recuperaciones
 from .models import PasswordResetToken
+from .sesiones import cerrar_sesiones
 
-logger = logging.getLogger(__name__)
 User = get_user_model()
 SESSION_PROOF = "recuperacion_verificada"
 
@@ -30,6 +29,7 @@ def password_reset_form(request):
 
 
 @require_http_methods(["POST"])
+@sensitive_post_parameters()
 def olvide_password(request):
     email = request.POST.get("email", "").strip().lower()
     try:
@@ -46,24 +46,13 @@ def olvide_password(request):
         user = users[0]
         with transaction.atomic():
             User.objects.select_for_update().get(pk=user.pk)
+            invalidar_recuperaciones(user)
             solicitud = PasswordResetToken.crear_para_usuario(user)
-        context = {"pin": solicitud.pin_para_envio, "minutos": settings.PASSWORD_RESET_PIN_MINUTES}
-        message = EmailMultiAlternatives(
-            "Tu PIN de recuperación de GESICOM",
-            render_to_string("cuentas/correo_pin.txt", context),
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-        )
-        message.attach_alternative(render_to_string("cuentas/correo_pin.html", context), "text/html")
-        try:
-            message.send(fail_silently=False)
-        except Exception:
-            solicitud.utilizado = True
-            solicitud.save(update_fields=["utilizado"])
-            logger.exception("No se pudo enviar el PIN de recuperación")
-            return JsonResponse(
-                {"error": "No se pudo enviar el correo. Intenta más tarde o contacta al administrador."}, status=503
-            )
+            encolar_pin(solicitud)
+    else:
+        # Igual que el backend de autenticación de Django: trabajo de hash también
+        # para cuentas ausentes, sin SMTP ni consultas sobre la existencia en la respuesta.
+        make_password("solicitud-de-recuperacion-sin-cuenta")
     return JsonResponse({"mensaje": "Si el correo tiene una cuenta activa, recibirás un PIN de seis dígitos."})
 
 
@@ -81,6 +70,7 @@ def password_reset_update(request):
 
 
 @require_http_methods(["POST"])
+@sensitive_post_parameters()
 def verificar_pin(request):
     email = request.POST.get("email", "").strip().lower()
     codigo = request.POST.get("codigo", "").strip()
@@ -89,6 +79,7 @@ def verificar_pin(request):
     with transaction.atomic():
         solicitud = (
             PasswordResetToken.objects.select_for_update()
+            .select_related("usuario")
             .filter(usuario__email__iexact=email, usuario__is_active=True, utilizado=False)
             .order_by("-creado_en")
             .first()
@@ -126,6 +117,7 @@ def password_reset_new(request):
 
 
 @require_http_methods(["POST"])
+@sensitive_post_parameters()
 def restablecer_password(request):
     password = request.POST.get("password", "")
     confirmation = request.POST.get("password_confirm", "")
@@ -141,9 +133,11 @@ def restablecer_password(request):
             return JsonResponse({"error": " ".join(error.messages)}, status=400)
         solicitud.usuario.set_password(password)
         solicitud.usuario.save(update_fields=["password"])
-        PasswordResetToken.objects.filter(usuario=solicitud.usuario, utilizado=False).update(utilizado=True)
+        invalidar_recuperaciones(solicitud.usuario)
+        encolar_aviso_cambio(solicitud.usuario)
+        cerrar_sesiones(solicitud.usuario)
         request.session.pop(SESSION_PROOF, None)
         request.session.pop("recuperacion_correo", None)
         request.session.pop("recuperacion_expira", None)
-        request.session.cycle_key()
+        logout(request)
     return JsonResponse({"mensaje": "Contraseña cambiada con éxito."})

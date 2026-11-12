@@ -25,10 +25,20 @@ class Command(BaseCommand):
             raise CommandError("Falta EMAIL_HOST.")
         if settings.EMAIL_USE_TLS and settings.EMAIL_USE_SSL:
             raise CommandError("Usa STARTTLS o SSL, no ambos a la vez.")
+        if (settings.EMAIL_HOST_PASSWORD or settings.EMAIL_OAUTH2_ACCESS_TOKEN) and not (
+            settings.EMAIL_USE_TLS or settings.EMAIL_USE_SSL
+        ):
+            raise CommandError("Las credenciales SMTP requieren TLS o SSL.")
         try:
-            validate_email(parseaddr(settings.DEFAULT_FROM_EMAIL)[1])
+            remitente = parseaddr(settings.DEFAULT_FROM_EMAIL)[1]
+            validate_email(remitente)
         except Exception:
             raise CommandError("DEFAULT_FROM_EMAIL debe contener una dirección válida.")
+        if settings.EMAIL_HOST.casefold() in {"smtp.gmail.com", "smtp.googlemail.com"}:
+            if not (settings.EMAIL_USE_TLS or settings.EMAIL_USE_SSL):
+                raise CommandError("Gmail requiere TLS o SSL.")
+            if remitente.casefold() != settings.EMAIL_HOST_USER.casefold():
+                raise CommandError("En Gmail, DEFAULT_FROM_EMAIL debe coincidir con la cuenta autenticada.")
         if settings.EMAIL_HOST_USER and not (settings.EMAIL_HOST_PASSWORD or settings.EMAIL_OAUTH2_ACCESS_TOKEN):
             raise CommandError(
                 "Falta EMAIL_HOST_PASSWORD o EMAIL_OAUTH2_ACCESS_TOKEN en la configuración privada del entorno. No se intentó conectar."

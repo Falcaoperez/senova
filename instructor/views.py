@@ -1,10 +1,11 @@
 import logging
 
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.http import require_http_methods, require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +19,8 @@ RUTAS_ROLES = {
 }
 
 
-def _validar_contraseña(contraseña1, contraseña2=None):
-    from django.contrib.auth.password_validation import validate_password
-    from django.core.exceptions import ValidationError
-
-    if contraseña2 is not None and contraseña1 != contraseña2:
-        return ["Las contraseñas no coinciden."]
-    try:
-        validate_password(contraseña1)
-    except ValidationError as error:
-        return error.messages
-    return []
-
-
+@require_http_methods(["GET", "POST"])
+@sensitive_post_parameters()
 def login_view(request):
     rol = request.GET.get("role") or request.POST.get("role") or ""
     if rol not in RUTAS_ROLES:
@@ -102,6 +92,8 @@ def login_view(request):
     return render(request, "login.html", context)
 
 
+@require_http_methods(["GET", "POST"])
+@sensitive_post_parameters()
 def register_view(request):
     from cuentas.forms import RegistroForm
 
@@ -128,22 +120,7 @@ def register_view(request):
     )
 
 
-@login_required(login_url="login")
-def panel_usuario(request):
-    """Vista del panel personal del usuario."""
-    from Gesicom.views import _panel_context
-
-    return render(request, "panel_usuario.html", _panel_context(request.user, "Usuario"))
-
-
-@login_required(login_url="login")
-def panel_instructor(request):
-    """Vista del panel personal del instructor."""
-    from Gesicom.views import _panel_context
-
-    return render(request, "panel_instructor.html", _panel_context(request.user, "Instructor"))
-
-
+@require_POST
 def logout_view(request):
     """Cerrar sesión del usuario."""
     logout(request)

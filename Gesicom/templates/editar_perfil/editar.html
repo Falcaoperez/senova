@@ -23,6 +23,8 @@
           </dd>
         </div>
       </dl>
+      <a class="button button-secondary"
+         href="{% url 'centro_seguridad' %}">{% icon 'shield' %} Seguridad y sesiones</a>
     </aside>
     <section class="panel">
       <div class="panel-heading">
@@ -35,7 +37,7 @@
       <form method="post" data-submit>
         {% csrf_token %}{{ form.non_field_errors }}<div class="form-grid">
         {% for field in form %}
-          <div class="field {% if field.name == 'contrasena' %}full-width{% endif %} {% if field.errors %}has-error{% endif %}">{{ field.label_tag }}{% if field.name == "contrasena" %}
+          <div class="field {% if field.errors %}has-error{% endif %}">{{ field.label_tag }}{% if field.field.widget.input_type == "password" %}
             <div class="password-wrap">
               {{ field }}<button class="icon-button"
                                  type="button"
@@ -45,7 +47,7 @@
             </div>
 {% else %}{{ field }}{% endif %}
 {% if field.help_text %}
-  <small>{{ field.help_text }}</small>
+              <small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>
 {% endif %}{{ field.errors }}</div>
 {% endfor %}
 </div>

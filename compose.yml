@@ -18,7 +18,7 @@ x-application-environment: &application-environment
   DB_PORT: "3306"
   REDIS_URL: redis://:${REDIS_PASSWORD:?Configura REDIS_PASSWORD}@redis:6379/0
   EMAIL_BACKEND: "${EMAIL_BACKEND:-SENNOVA.email_backend.SMTPBackend}"
-  EMAIL_HOST: "${EMAIL_HOST:-smtp.office365.com}"
+  EMAIL_HOST: "${EMAIL_HOST:-smtp.gmail.com}"
   EMAIL_PORT: "${EMAIL_PORT:-587}"
   EMAIL_HOST_USER: "${EMAIL_HOST_USER:-}"
   EMAIL_HOST_PASSWORD: "${EMAIL_HOST_PASSWORD:-}"
@@ -26,12 +26,13 @@ x-application-environment: &application-environment
   EMAIL_USE_TLS: "${EMAIL_USE_TLS:-True}"
   EMAIL_USE_SSL: "${EMAIL_USE_SSL:-False}"
   EMAIL_TIMEOUT: "${EMAIL_TIMEOUT:-20}"
-  DEFAULT_FROM_EMAIL: "${DEFAULT_FROM_EMAIL:-GESICOM SENA <noresponderGESICOM@soy.sena.edu.co>}"
+  DEFAULT_FROM_EMAIL: "${DEFAULT_FROM_EMAIL:-GESICOM <santiagoocoy2025@gmail.com>}"
   WEB_WORKERS: "${WEB_WORKERS:-4}"
   WEB_THREADS: "${WEB_THREADS:-2}"
   RATE_LIMITS_ENABLED: "${RATE_LIMITS_ENABLED:-True}"
   LOGIN_IP_LIMIT: "${LOGIN_IP_LIMIT:-2000}"
   REGISTRATION_IP_LIMIT: "${REGISTRATION_IP_LIMIT:-2000}"
+  SESSION_IDLE_TIMEOUT: "${SESSION_IDLE_TIMEOUT:-1800}"
 
 services:
   database:

@@ -63,6 +63,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "cuentas.middleware.SesionesMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "SENNOVA.middleware.RateLimitMiddleware",
     "SENNOVA.middleware.AuditMiddleware",
@@ -256,6 +257,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 8 * 60 * 60
+SESSION_IDLE_TIMEOUT = env("SESSION_IDLE_TIMEOUT", default=1800, cast=int)
 CSRF_COOKIE_SAMESITE = "Lax"
 X_FRAME_OPTIONS = "DENY"
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0

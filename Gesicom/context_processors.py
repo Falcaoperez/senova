@@ -64,6 +64,25 @@ def interface(request):
                 "notificaciones:editar_plazo",
             ]
         navigation.append({"label": label, "url": reverse(route), "icon": glyph, "active": active})
+    acciones = [{"titulo": item["label"], "url": item["url"], "detalle": "Ir a la sección"} for item in navigation]
+    for label, route in [
+        ("Mis notificaciones", "notificaciones:bandeja"),
+        ("Editar mi perfil", "editar_perfil"),
+        ("Seguridad de mi cuenta", "centro_seguridad"),
+        ("Centro de ayuda", "ayuda"),
+        *(
+            [
+                ("Crear usuario", "admin_personalizado:crear_usuario"),
+                ("Publicar novedad", "notificaciones:crear_novedad"),
+                ("Crear plazo", "notificaciones:crear_plazo"),
+            ]
+            if admin
+            else []
+        ),
+    ]:
+        url = reverse(route)
+        if not any(item["url"] == url for item in acciones):
+            acciones.append({"titulo": label, "url": url, "detalle": "Acceso rápido"})
     pendientes = 0
     recientes = []
     if user.is_authenticated:
@@ -85,6 +104,7 @@ def interface(request):
         "ui_reviewer": admin or bool(groups & {"coordinador", "dinamizador"}),
         "ui_panel_url": reverse(panel),
         "ui_navigation": navigation,
+        "ui_acciones": acciones if user.is_authenticated else [],
         "ui_notificaciones_pendientes": pendientes,
         "ui_notificaciones_recientes": recientes,
     }

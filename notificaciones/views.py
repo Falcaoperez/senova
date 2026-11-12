@@ -28,6 +28,9 @@ from .services import anunciar_plazo, plazos_para_usuario, publicar_novedad
 @login_required
 def bandeja(request):
     avisos = Notificacion.objects.filter(usuario=request.user)
+    aviso_id = request.GET.get("aviso", "")
+    if aviso_id.isdigit():
+        avisos = avisos.filter(pk=aviso_id)
     solo_pendientes = request.GET.get("estado") == "pendiente"
     if solo_pendientes:
         avisos = avisos.filter(leida_en__isnull=True)
@@ -86,6 +89,9 @@ def resumen(request):
 @login_required
 def mis_plazos(request):
     plazos = plazos_para_usuario(request.user, pendientes=False)
+    plazo_id = request.GET.get("plazo", "")
+    if plazo_id.isdigit():
+        plazos = plazos.filter(pk=plazo_id)
     entregas = (
         request.user.envios.exclude(plazo=None)
         .values("plazo_id")
