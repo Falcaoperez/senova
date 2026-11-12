@@ -44,6 +44,10 @@ class RateLimitMiddleware:
         "detalle_usuario": (1000, 600, 40),
         "activar_desactivar": (1000, 600, 40),
         "asignar_grupo": (1000, 600, 40),
+        "evidencia": (1000, 600, 40),
+        "corregir_evidencia": (1000, 600, 40),
+        "set_aprobada": (2000, 600, 200),
+        "actualizar_observaciones": (2000, 600, 100),
     }
 
     def __init__(self, get_response):
@@ -62,7 +66,9 @@ class RateLimitMiddleware:
         } or "application/json" in request.headers.get("Accept", ""):
             return JsonResponse({"error": message}, status=status)
         route = (
-            "admin_personalizado:gestionar_usuarios"
+            "evidencias_list"
+            if name in {"evidencia", "corregir_evidencia", "set_aprobada", "actualizar_observaciones"}
+            else "admin_personalizado:gestionar_usuarios"
             if request.resolver_match.namespace == "admin_personalizado"
             else "centro_seguridad"
             if name in {"revocar_sesion", "cerrar_otras_sesiones"}

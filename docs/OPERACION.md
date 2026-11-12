@@ -72,3 +72,22 @@ Las claves que empiezan por `ci-` solo pertenecen a servicios efímeros de prueb
 - Los filtros de usuarios y evidencias conservan su estado en la URL y permiten volver con el navegador. Los formularios GET continúan funcionando sin JavaScript.
 - El centro de operaciones permite períodos de 7, 30 o 90 días. El gráfico cuenta la fecha de envío de las evidencias y ofrece una tabla de datos accesible, también sin JavaScript.
 - La selección de cuentas se limita a la página visible. El cambio de roles solo afecta los desplegables modificados; puede conservar varios roles existentes. Las cuentas protegidas no se pueden modificar por un administrador sin privilegios de superusuario.
+
+## Corrección y revisión de evidencias
+
+1. El propietario abre el detalle de una evidencia pendiente o rechazada y selecciona **Corregir evidencia**.
+2. Actualiza nombre, tipo, archivo o enlace y explica qué corrigió. El plazo y la primera entrega se conservan.
+3. Al guardar vuelve a revisión. El último revisor autorizado recibe un aviso en su bandeja y, si lo permite, en la cola de correo.
+4. El equipo consulta el contenido y el historial antes de aprobar o rechazar. Una pestaña desactualizada debe recargar la versión vigente.
+
+La primera entrega sigue determinando el cumplimiento del plazo; las correcciones posteriores muestran su fecha propia en el historial. Una corrección no crea una entrega nueva ni cambia retroactivamente el límite aplicado.
+
+El registro inicial redirige al detalle para que actualizar el navegador no reenvíe el formulario. Las correcciones funcionan sin JavaScript y reutilizan el mismo formulario. El administrador nativo participa en el control de versiones y en el historial.
+
+La migración `Gesicom.0013` añade los campos de versión y el historial. Crea un movimiento de estado histórico para las evidencias existentes en lotes de 500; conserva sus datos y adjuntos. Realiza una copia de seguridad antes de actualizar una instalación con datos y aplica `python manage.py migrate --noinput` con el procedimiento habitual de despliegue.
+
+## Diagnóstico de SMTP
+
+`python manage.py comprobar_correo` comprueba conexión y autenticación sin enviar mensajes. `--solo-configuracion` valida los parámetros sin conectarse. El comando distingue rechazo de credenciales, error de resolución, espera agotada, certificado TLS no confiable y falta de acceso de red. Ninguno de esos mensajes muestra la contraseña ni la respuesta privada del proveedor.
+
+Una validación de configuración no demuestra que el servidor acepte la cuenta. Si el entorno no tiene acceso a `smtp.gmail.com:587`, habilita esa salida en el despliegue antes de comprobar la autenticación. Gmail requiere una contraseña de aplicación de Google o un token OAuth2 vigente; la contraseña normal de acceso no sustituye esa autorización.

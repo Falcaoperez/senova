@@ -1,6 +1,6 @@
 # GESICOM · SENA / SENNOVA
 
-Gestión de evidencias, reportes, novedades y plazos con Django 5.2 LTS, MySQL 8.4 y Redis. La interfaz utiliza Work Sans, el logosímbolo del SENA y una estructura compartida para todos los roles.
+Gestión de evidencias, reportes, novedades y plazos con Django 5.2 LTS, MySQL 8.4 y Redis. Las evidencias pendientes o rechazadas admiten correcciones con historial y control de versiones. La interfaz utiliza Work Sans, el logosímbolo del SENA y una estructura compartida para todos los roles.
 
 ## Inicio local con Docker
 

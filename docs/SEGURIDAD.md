@@ -44,3 +44,19 @@ Los cambios de roles, estado, datos o contraseña de cuentas existentes requiere
 Desactivar revoca las sesiones y cancela las recuperaciones pendientes, de modo que reactivar la cuenta no restaura esos accesos. Cambiar una contraseña desde el panel usa los validadores de Django con el usuario como contexto, invalida los PIN, cierra las otras sesiones y encola un aviso. Un cambio de correo se notifica a ambas direcciones.
 
 La búsqueda global exige sesión válida, aplica la visibilidad de evidencias y limita avisos a su destinatario y plazos a sus grupos. Solo los administradores pueden buscar otras cuentas. Cada tipo devuelve pocos resultados y cada cuenta admite 60 búsquedas por minuto; un fallo del contador devuelve un error temporal sin ejecutar las consultas. Los resultados son privados, no se almacenan en cachés de respuesta y se insertan en el navegador con `textContent`. Abrir un resultado no ejecuta operaciones sensibles.
+
+## Correcciones e historial de evidencias
+
+El propietario puede corregir una evidencia pendiente o rechazada; una aprobada permanece cerrada para ese flujo. La corrección conserva propietario, primera entrega, fecha de envío y límite aplicado. El proyecto debe coincidir con el plazo asociado y las observaciones del revisor no se sustituyen desde el formulario del propietario. Al guardar vuelve a revisión y se avisa al último revisor que conserve autorización, respetando sus preferencias de correo.
+
+Las escrituras bloquean la fila de evidencia en MySQL y comparan su versión. Los formularios actuales y el administrador nativo incluyen esa versión; un cambio desactualizado se rechaza sin guardar. Las rutas históricas de revisión aún aceptan clientes que omitan la versión, pero serializan sus cambios y no duplican avisos cuando el estado ya coincide. El formulario de corrección exige siempre una versión válida.
+
+`Gesicom_movimientoevidencia` registra actor, acción, estado, versión, detalle y fecha, con una identidad única por evidencia/versión. La consulta del historial aplica la misma visibilidad de la evidencia y tiene paginación. El administrador de Django solo permite consultar movimientos. Los registros anteriores se incorporan como un estado histórico, sin inventar autores ni revisiones pasadas.
+
+Los formularios de creación, corrección y administración validan los adjuntos y los enlaces HTTP/HTTPS. Si un guardado con archivo falla, se retiran los archivos nuevos que no quedaron referenciados. Los adjuntos sustituidos se retiran después de confirmar la transacción, siempre que ningún otro registro los use. No se conserva un archivo completo de versiones de adjuntos; el historial registra los movimientos, no copias del contenido.
+
+## Protección del administrador nativo
+
+Un operador con permisos de edición de usuarios no puede modificar cuentas de superusuario, personal administrativo ni del grupo administrador. Los indicadores de privilegios, los grupos y los permisos individuales son de solo lectura para esos operadores. El superusuario conserva la gestión de esas cuentas, con protección frente a retirar su propio acceso o eliminarse en una operación masiva.
+
+Los cambios de correo o contraseña y la desactivación invalidan recuperaciones y revocan sesiones también desde el administrador de Django. El cambio de contraseña usa una actualización limitada a ese campo; una edición de perfil no restaura un hash de contraseña antiguo si hubo un cambio concurrente. Se encolan avisos de cambios de credenciales sin abrir SMTP desde el formulario.

@@ -152,6 +152,17 @@ def notificar_revision(envio):
     )
 
 
+def notificar_correccion(envio, revisor, *, enlace=None):
+    return _crear_avisos(
+        User.objects.filter(pk=revisor.pk, is_active=True),
+        tipo=Notificacion.Tipo.EVIDENCIA,
+        titulo=f"Corrección por revisar: {envio.nombre}"[:180],
+        mensaje=f"Se actualizó una evidencia que revisaste. Versión {envio.version}. Consulta los cambios y su historial.",
+        enlace=enlace or reverse("ver_evidencia", args=[envio.pk]),
+        envio=envio,
+    )
+
+
 def procesar_correos(limite=50):
     """Reclama un lote con bloqueo y arrendamiento; aplica reintentos con espera."""
     ahora = timezone.now()

@@ -76,3 +76,15 @@ Las pruebas de concurrencia requieren MySQL y utilizan una base de pruebas indep
 La revisión utilizó dos cuentas, 33 evidencias y un plazo temporales. Se eliminaron al terminar; permanecen las seis cuentas y los datos de revisión previos. La contraseña solicitada para el administrador solo se aplicó a la base local y al archivo privado de credenciales. No forma parte del código, del workflow ni de la configuración SMTP.
 
 El workflow conserva el contenedor Python y las conexiones internas a MySQL/Redis ya corregidas. La imagen de aplicación y la medición HTTP de capacidad descritas arriba corresponden a la revisión anterior; este bloque se comprobó con Gunicorn, MySQL y Redis, además de la validación automática del PR.
+
+## Correcciones, historial y administrador nativo — 12 de noviembre de 2026
+
+- 147 pruebas con MySQL, incluidas propiedad de registros, rechazo de versiones desactualizadas, conservación del plazo original, historial privado, preferencias de avisos, limpieza de archivos tras un fallo y pruebas concurrentes de corrección/aprobación.
+- Se comprobó la protección de privilegios en el administrador nativo, la revocación de sesiones y PIN al desactivar, los avisos a ambas direcciones al cambiar correo, el cambio de contraseña propio sin perder la nueva sesión y la preservación de un hash actualizado durante una edición de perfil.
+- 37 comprobaciones de navegador: ciclo de rechazo/corrección/aprobación con archivo, dos pestañas en conflicto, observaciones después de filtrar, privacidad, actualización desde Django admin, alta con redirección y corrección mediante teclado sin JavaScript. Seis roles en escritorio/móvil y detalle/formulario a 320, 768 y 1.440 píxeles, sin errores JavaScript, CSP ni desbordamientos.
+- La migración 0013 se aplicó al MySQL de revisión e incorporó el registro existente al historial. La prueba de datos históricos confirma que no altera fechas, estado ni adjuntos anteriores.
+- Diez consultas SQL de diagnóstico ejecutadas correctamente. Ruff, comprobación de migraciones, producción y estáticos completados.
+
+La comprobación externa de `smtp.gmail.com:587` devolvió `ENETUNREACH` (red inaccesible) antes de autenticar. No se enviaron mensajes reales y la credencial no quedó validada frente a Google. El comando ahora distingue ese fallo de un rechazo de contraseña. La configuración privada sigue fuera del historial Git; las pruebas de correo utilizan transporte local.
+
+Los datos de navegador fueron temporales: dos cuentas, un plazo y dos evidencias, con sus movimientos y adjunto. Se retiraron al finalizar. Se conservan las seis cuentas y los datos de revisión previos; el registro de evidencia anterior cuenta ahora con su movimiento histórico.
