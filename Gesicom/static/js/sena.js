@@ -374,51 +374,8 @@
       });
   });
 })();
-// La bandeja se actualiza sin recargar ni multiplicar consultas por segundo.
+// Caducidad visible del PIN de recuperación.
 (() => {
-  const menu = document.querySelector("[data-notifications-summary]");
-  if (menu) {
-    const update = async () => {
-      if (document.hidden) return;
-      try {
-        const response = await fetch(menu.dataset.notificationsSummary, {
-          credentials: "same-origin",
-          headers: { Accept: "application/json" },
-        });
-        if (response.status === 401) {
-          const data = await response.json();
-          const login = data.login_url || "/login/";
-          location.assign(
-            login.startsWith("/") && !login.startsWith("//")
-              ? login
-              : "/login/",
-          );
-          return;
-        }
-        if (!response.ok) return;
-        const data = await response.json();
-        document.querySelectorAll("[data-unread-count]").forEach((el) => {
-          el.textContent = data.pendientes;
-          el.hidden = !data.pendientes;
-        });
-      } catch {
-        /* La navegación sigue disponible si la conexión se interrumpe. */
-      }
-    };
-    setInterval(update, 45000);
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) update();
-    });
-    menu.addEventListener("toggle", () => {
-      if (menu.open) update();
-    });
-    document.addEventListener("click", (e) => {
-      if (!menu.contains(e.target)) menu.open = false;
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") menu.open = false;
-    });
-  }
   const expiry = document.querySelector("[data-pin-expiry]");
   if (expiry) {
     const deadline = Date.parse(expiry.dataset.pinExpiry);

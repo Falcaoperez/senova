@@ -23,6 +23,7 @@
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
+| `notificaciones/resumen.py` | Conteo y cuatro avisos recientes compartidos durante una petición, sin caché entre cuentas |
 | `database/` | Documentación del esquema, diagnóstico SQL y preparación de la base de pruebas |
 | `scripts/` | Operación, copias de seguridad y medición de carga |
 | `docs/` | Operación, seguridad, arquitectura y verificaciones |
@@ -42,3 +43,5 @@ Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js.
 El alta de evidencias utiliza `SolicitudEnvio` como recibo interno, sin panel ni permisos adicionales. Su UUID único y el bloqueo transaccional de MySQL permiten recuperar el primer registro aceptado cuando llegan reintentos del mismo formulario. El recibo, la evidencia y el movimiento se confirman juntos; un fallo retira también el archivo nuevo que haya quedado sin referencia. Al eliminar la evidencia se conserva el recibo sin destino para que un reintento no la vuelva a crear.
 
 Los archivos compartidos se buscan por nombre indexado y se retiran después del commit solo si ninguna evidencia los referencia. La consulta de disponibilidad no modifica registros históricos. Las vistas de texto leen como máximo 64 KB del origen, más un byte para detectar truncamiento; la descarga conserva el archivo completo.
+
+`notifications.js` concentra la actualización de la campana en todos los paneles autenticados; `sena.js` conserva las interacciones generales y la caducidad visible del PIN. La lista inicial se genera en `notificaciones/avisos_recientes.html`, con POST y CSRF, para funcionar también sin JavaScript. Las actualizaciones utilizan el mismo resumen autorizado y crean los elementos con `textContent`; no incorporan HTML de los títulos. La bandeja y el procesador de contexto comparten el conteo únicamente dentro de la misma petición.

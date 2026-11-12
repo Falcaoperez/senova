@@ -127,3 +127,13 @@ Los datos visuales son temporales: tres cuentas, un grupo y 38 evidencias. Se re
 - Copia privada de MySQL comprobada y migración `Gesicom.0015_solicitudes_adjuntos` aplicada. El índice por nombre de archivo y los recibos no modifican registros anteriores. Ruff, migraciones, configuración de producción, estáticos, sintaxis JavaScript y catorce consultas SQL de diagnóstico completados.
 
 Se retiraron tres cuentas, un grupo, un plazo y nueve evidencias temporales, con sus sesiones, recibos, avisos y archivos. Se conservaron las seis cuentas, la evidencia con su movimiento histórico, los dos plazos y los ocho avisos de revisión previos. El trabajador local utiliza captura de correo; esta revisión no envía mensajes reales ni valida autenticación de Gmail.
+
+## Campana actualizada y consultas de bandeja — 12 de noviembre de 2026
+
+- 257 pruebas con MySQL (ocho adicionales): compatibilidad del resumen básico, aislamiento del destinatario, límite de cuatro avisos, orden estable, respuesta de solo lectura, CSRF al abrir, títulos escapados y conteo accesible superior a 99. La consulta detallada tampoco prolonga una sesión inactiva y devuelve JSON 401 al caducar.
+- El resumen utiliza una consulta de notificaciones sin detalle y dos con los cuatro avisos. Las pruebas verifican que la bandeja y su cabecera realizan un único conteo de pendientes en la petición. Otra petición vuelve a consultar; no se comparten resultados entre cuentas.
+- 41 comprobaciones en Chromium: publicación dirigida visible sin recargar, títulos insertados como texto, foco conservado, apertura con POST/CSRF, exclusión de avisos ajenos, ausencia de peticiones solapadas, error temporal, respeto de `Retry-After`, consulta sin respuesta y reintento, pausa con pestaña oculta o sin conexión, recuperación, lista vacía y vuelta al ingreso al cerrar la sesión. Los tiempos y fallos de red se simularon en el navegador; no se provocaron cortes en los servicios.
+- Seis roles en reportes y bandeja a 390 y 1.440 píxeles, además de la campana abierta entre 320 y 1.440 píxeles. Lista inicial y apertura comprobadas sin JavaScript. Sin errores JavaScript, infracciones CSP ni desbordamientos.
+- Ruff, ausencia de migraciones nuevas, configuración de producción y recopilación de estáticos correctos. No se añadieron tablas ni paneles.
+
+Se retiraron las tres cuentas, el grupo, la publicación y sus avisos de prueba con las sesiones; se conservaron las seis cuentas y los registros anteriores. Los datos de las capturas son ficticios y el correo continúa en captura local.
