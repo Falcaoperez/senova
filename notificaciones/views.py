@@ -1,48 +1,47 @@
-from urllib.parse import urlsplit
+import csv
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, F, Q
-from django.http import JsonResponse
+from django.db.models import Count, Q
+from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
-from Gesicom.utils import require_group
+from cuentas.forms import ConfirmarPasswordForm
+from Gesicom.utils import require_group, safe_csv_cell
 
+from .acceso import destino_notificacion
+from .bandeja import cambiar_lectura, regreso_bandeja
 from .forms import NovedadForm, PlazoReporteForm, PreferenciasForm
-from .models import (
-    CorreoPendiente,
-    Notificacion,
-    Novedad,
-    PlazoReporte,
-    PreferenciasNotificacion,
-)
-from .services import anunciar_plazo, plazos_para_usuario, publicar_novedad
+from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
+from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
+from .selectors import agenda_filtrada, avisos_filtrados, resumen_agenda, resumen_seguimiento, seguimiento_filtrado
+from .services import publicar_novedad
 
 
 @login_required
 def bandeja(request):
-    avisos = Notificacion.objects.filter(usuario=request.user)
-    aviso_id = request.GET.get("aviso", "")
-    if aviso_id.isdigit():
-        avisos = avisos.filter(pk=aviso_id)
-    solo_pendientes = request.GET.get("estado") == "pendiente"
-    if solo_pendientes:
-        avisos = avisos.filter(leida_en__isnull=True)
     preferencias, _ = PreferenciasNotificacion.objects.get_or_create(usuario=request.user)
-    form = PreferenciasForm(instance=preferencias)
     return render(
         request,
         "notificaciones/bandeja.html",
         {
-            "avisos": Paginator(avisos, 20).get_page(request.GET.get("page")),
-            "solo_pendientes": solo_pendientes,
-            "preferencias_form": form,
+            "avisos": Paginator(avisos_filtrados(request.user, request.GET), 20).get_page(request.GET.get("page")),
+            "sin_leer": Notificacion.objects.filter(usuario=request.user, leida_en__isnull=True).count(),
+            "preferencias_form": PreferenciasForm(instance=preferencias),
+            "tipos": Notificacion.Tipo.choices,
+            "q": request.GET.get("q", "")[:100],
+            "estado": request.GET.get("estado", ""),
+            "tipo": request.GET.get("tipo", ""),
+            "aviso_id": request.GET.get("aviso", ""),
         },
     )
 
@@ -50,22 +49,36 @@ def bandeja(request):
 @login_required
 @require_POST
 def abrir(request, pk):
-    aviso = get_object_or_404(Notificacion, pk=pk, usuario=request.user)
-    if not aviso.leida_en:
-        aviso.leida_en = timezone.now()
-        aviso.save(update_fields=["leida_en"])
-    link = aviso.enlace or reverse("notificaciones:bandeja")
-    if link.startswith("//") or (urlsplit(link).scheme not in ["", "https", "http"]):
-        link = reverse("notificaciones:bandeja")
-    return redirect(link)
+    aviso = get_object_or_404(
+        Notificacion.objects.select_related("usuario", "plazo", "novedad"), pk=pk, usuario=request.user
+    )
+    Notificacion.objects.filter(pk=pk, leida_en__isnull=True).update(leida_en=timezone.now())
+    destino, motivo = destino_notificacion(aviso)
+    if motivo:
+        messages.info(request, motivo)
+    return redirect(destino or reverse("notificaciones:bandeja"))
+
+
+@login_required
+@require_POST
+def lectura(request, pk=None):
+    try:
+        total = cambiar_lectura(
+            request.user, [str(pk)] if pk is not None else request.POST.getlist("avisos"), request.POST.get("accion")
+        )
+        messages.success(request, f"{total} notificaciones actualizadas.")
+    except ValidationError as error:
+        messages.error(request, " ".join(error.messages))
+    return redirect(regreso_bandeja(request.POST.get("next")))
 
 
 @login_required
 @require_POST
 def marcar_todas(request):
-    total = Notificacion.objects.filter(usuario=request.user, leida_en__isnull=True).update(leida_en=timezone.now())
+    params = request.POST if request.POST.get("alcance") == "filtradas" else {}
+    total = avisos_filtrados(request.user, params).filter(leida_en__isnull=True).update(leida_en=timezone.now())
     messages.success(request, f"{total} notificaciones marcadas como leídas.")
-    return redirect("notificaciones:bandeja")
+    return redirect(regreso_bandeja(request.POST.get("next")))
 
 
 @login_required
@@ -76,7 +89,9 @@ def preferencias(request):
     if form.is_valid():
         form.save()
         messages.success(request, "Preferencias de correo actualizadas.")
-    return redirect("notificaciones:bandeja")
+    else:
+        messages.error(request, "Revisa las preferencias de correo.")
+    return redirect(regreso_bandeja(request.POST.get("next")))
 
 
 @login_required
@@ -88,38 +103,46 @@ def resumen(request):
 
 @login_required
 def mis_plazos(request):
-    plazos = plazos_para_usuario(request.user, pendientes=False)
-    plazo_id = request.GET.get("plazo", "")
-    if plazo_id.isdigit():
-        plazos = plazos.filter(pk=plazo_id)
-    entregas = (
-        request.user.envios.exclude(plazo=None)
-        .values("plazo_id")
-        .annotate(
-            a_tiempo=Count("pk", filter=Q(limite_aplicado__isnull=True) | Q(registrado_en__lte=F("limite_aplicado")))
-        )
-        .order_by()
-    )
-    entregas = list(entregas)
-    cumplidos = {row["plazo_id"] for row in entregas}
-    tardios = {row["plazo_id"] for row in entregas if row["a_tiempo"] == 0}
     return render(
         request,
         "notificaciones/mis_plazos.html",
-        {"plazos": Paginator(plazos, 20).get_page(request.GET.get("page")), "cumplidos": cumplidos, "tardios": tardios},
+        {
+            "plazos": Paginator(agenda_filtrada(request.user, request.GET), 20).get_page(request.GET.get("page")),
+            "agenda": resumen_agenda(request.user),
+            "proyectos": PlazoReporte.PROYECTOS,
+            "q": request.GET.get("q", "")[:100],
+            "estado": request.GET.get("estado", ""),
+            "proyecto": request.GET.get("proyecto", ""),
+            "plazo_id": request.GET.get("plazo", ""),
+        },
     )
 
 
 @require_group("administrador")
 def novedades_admin(request):
+    novedades = Novedad.objects.select_related("creada_por").annotate(
+        destinatarios_total=Count("notificacion", distinct=True),
+        leidas_total=Count("notificacion", distinct=True, filter=Q(notificacion__leida_en__isnull=False)),
+        enviados_total=Count("notificacion", distinct=True, filter=Q(notificacion__correo__estado="enviado")),
+    )
+    q = request.GET.get("q", "").strip()[:100]
+    if q:
+        novedades = novedades.filter(Q(titulo__icontains=q) | Q(contenido__icontains=q))
+    cola = CorreoPendiente.objects.aggregate(
+        pendientes=Count("pk", filter=Q(estado__in=["pendiente", "procesando"])),
+        errores=Count("pk", filter=Q(estado="error")),
+        cancelados=Count("pk", filter=Q(estado="cancelado")),
+    )
     return render(
         request,
         "notificaciones/novedades_admin.html",
         {
-            "novedades": Paginator(Novedad.objects.select_related("creada_por"), 20).get_page(request.GET.get("page")),
-            "correos_pendientes": CorreoPendiente.objects.filter(estado__in=["pendiente", "procesando"]).count(),
-            "correos_error": CorreoPendiente.objects.filter(estado="error").count(),
+            "novedades": Paginator(novedades.order_by("-publicada_en", "-pk"), 20).get_page(request.GET.get("page")),
+            "correos_pendientes": cola["pendientes"],
+            "correos_error": cola["errores"],
+            "correos_cancelados": cola["cancelados"],
             "trabajador_activo": cache.get("notificaciones:trabajador"),
+            "q": q,
         },
     )
 
@@ -135,7 +158,7 @@ def crear_novedad(request):
             form.save_m2m()
             total = publicar_novedad(novedad)
         messages.success(
-            request, f"Novedad publicada para {total} usuarios. Los avisos por correo se procesarán en segundo plano."
+            request, f"Novedad publicada para {total} usuarios. Los correos se procesarán en segundo plano."
         )
         return redirect("notificaciones:novedades_admin")
     return render(
@@ -146,46 +169,155 @@ def crear_novedad(request):
             "heading": "Compartamos lo que está pasando.",
             "description": "Publica una novedad y notifícala a la comunidad.",
             "submit_label": "Publicar novedad",
+            "volver": reverse("notificaciones:novedades_admin"),
         },
     )
 
 
 @require_group("administrador")
 def plazos_admin(request):
-    plazos = PlazoReporte.objects.prefetch_related("grupos").order_by("-activo", "fecha_limite")
+    plazos = PlazoReporte.objects.prefetch_related("grupos").order_by("-activo", "fecha_limite", "pk")
+    q = request.GET.get("q", "").strip()[:100]
+    if q:
+        plazos = plazos.filter(Q(titulo__icontains=q) | Q(descripcion__icontains=q))
+    proyecto, estado = request.GET.get("proyecto", ""), request.GET.get("estado", "")
+    if proyecto:
+        plazos = plazos.filter(proyecto=proyecto)
+    if estado == "archivado":
+        plazos = plazos.filter(activo=False)
+    elif estado in {"programado", "vencido"}:
+        plazos = plazos.filter(activo=True)
+        plazos = (
+            plazos.filter(fecha_limite__lte=timezone.now())
+            if estado == "vencido"
+            else plazos.filter(fecha_limite__gt=timezone.now())
+        )
     return render(
-        request, "notificaciones/plazos_admin.html", {"plazos": Paginator(plazos, 25).get_page(request.GET.get("page"))}
+        request,
+        "notificaciones/plazos_admin.html",
+        {
+            "plazos": Paginator(plazos, 25).get_page(request.GET.get("page")),
+            "q": q,
+            "proyecto": proyecto,
+            "estado": estado,
+            "proyectos": PlazoReporte.PROYECTOS,
+        },
     )
 
 
 @require_group("administrador")
 def editar_plazo(request, pk=None):
-    plazo = get_object_or_404(PlazoReporte, pk=pk) if pk else None
-    fecha_anterior = plazo.fecha_limite if plazo else None
-    form = PlazoReporteForm(request.POST or None, instance=plazo)
+    plazo = get_object_or_404(PlazoReporte, pk=pk) if pk is not None else None
+    form = PlazoReporteForm(request.POST if request.method == "POST" else None, instance=plazo)
+    conflicto = False
     if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            plazo = form.save(commit=False)
-            if not plazo.pk:
-                plazo.creado_por = request.user
-            elif plazo.fecha_limite != fecha_anterior:
-                plazo.version += 1
-            plazo.save()
-            form.save_m2m()
-            if plazo.activo:
-                anunciar_plazo(plazo)
-        messages.success(request, "Plazo guardado. Los usuarios destinatarios recibirán la notificación.")
-        return redirect("notificaciones:plazos_admin")
+        try:
+            _, total, cambio = guardar_plazo(request.user, form.cleaned_data, pk=pk)
+        except ConflictoPlazo as error:
+            form.add_error(None, error)
+            conflicto = True
+        else:
+            messages.success(
+                request, f"Plazo guardado. Se prepararon {total} avisos." if cambio else "El plazo no tiene cambios."
+            )
+            return redirect("notificaciones:plazos_admin")
+    conflicto = conflicto or form.has_error("__all__", "conflicto")
     return render(
         request,
         "notificaciones/formulario_admin.html",
         {
             "form": form,
             "heading": "Un plazo claro, un equipo conectado.",
-            "description": "Define la entrega y la anticipación del recordatorio.",
+            "description": "Define la entrega y la anticipación del recordatorio. Las entregas previas conservan su fecha original.",
             "submit_label": "Guardar plazo",
+            "volver": reverse("notificaciones:plazos_admin"),
+            "conflicto": conflicto,
+        },
+        status=409 if conflicto else 200,
+    )
+
+
+@require_group("administrador")
+def seguimiento_plazo(request, pk):
+    plazo = get_object_or_404(PlazoReporte.objects.prefetch_related("grupos"), pk=pk)
+    return render(
+        request,
+        "notificaciones/seguimiento_plazo.html",
+        {
+            "plazo": plazo,
+            "seguimiento": resumen_seguimiento(plazo),
+            "destinatarios": Paginator(seguimiento_filtrado(plazo, request.GET), 25).get_page(request.GET.get("page")),
+            "q": request.GET.get("q", "")[:100],
+            "estado": request.GET.get("estado", ""),
         },
     )
+
+
+class _CSV:
+    def write(self, value):
+        return value
+
+
+@require_group("administrador")
+def seguimiento_csv(request, pk):
+    plazo = get_object_or_404(PlazoReporte, pk=pk)
+    usuarios = seguimiento_filtrado(plazo, request.GET)
+
+    def filas():
+        writer = csv.writer(_CSV())
+        yield "\ufeff"
+        yield writer.writerow(
+            ["Usuario", "Nombre", "Correo", "Entrega", "Última entrega (Colombia)", "Última revisión"]
+        )
+        for usuario in usuarios.iterator(chunk_size=500):
+            entrega = "Pendiente" if not usuario.entregado else "A tiempo" if usuario.a_tiempo else "Fuera de plazo"
+            revision = (
+                ""
+                if not usuario.entregado
+                else "Aprobada"
+                if usuario.ultima_aprobada
+                else "Rechazada"
+                if usuario.ultima_rechazada
+                else "En revisión"
+            )
+            fecha = (
+                timezone.localtime(usuario.ultima_entrega).strftime("%Y-%m-%d %H:%M:%S")
+                if usuario.ultima_entrega
+                else ""
+            )
+            yield writer.writerow(
+                [
+                    safe_csv_cell(v)
+                    for v in [usuario.username, usuario.get_full_name(), usuario.email, entrega, fecha, revision]
+                ]
+            )
+
+    response = StreamingHttpResponse(filas(), content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="seguimiento-plazo-{plazo.pk}.csv"'
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@require_group("administrador")
+@require_POST
+@sensitive_post_parameters("contrasena_actual")
+def accion_plazo(request, pk, accion):
+    actual = get_user_model().objects.get(pk=request.user.pk)
+    if not ConfirmarPasswordForm(request.POST, usuario=actual).is_valid():
+        messages.error(request, "Confirma tu contraseña actual para realizar esta acción.")
+    else:
+        try:
+            if accion == "recordar":
+                total = recordar_pendientes(actual, pk, request.POST.get("revision_actual"))
+                messages.success(
+                    request, f"Se prepararon {total} recordatorios adicionales. Los avisos existentes no se duplican."
+                )
+            elif accion == "archivar":
+                archivar_plazo(actual, pk, request.POST.get("revision_actual"))
+                messages.success(request, "Plazo archivado. Se cancelaron los correos pendientes de ese plazo.")
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+    return redirect("notificaciones:seguimiento_plazo", pk=pk)
 
 
 @require_group("administrador")

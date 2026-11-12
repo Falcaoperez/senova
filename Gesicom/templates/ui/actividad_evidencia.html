@@ -1,0 +1,10 @@
+{% load ui %}
+<a class="recent-item" href="{% url 'ver_evidencia' envio.pk %}">
+  <span class="document-icon">{% icon 'file' %}</span>
+  <span class="recent-info">
+    <strong>{{ envio.nombre|default:'Evidencia' }}</strong>
+    <small>{{ envio.proyecto }} · {% if ui_reviewer %}{% if envio.usuario %}{{ envio.usuario.get_full_name|default:envio.usuario.username }}{% else %}Cuenta no disponible{% endif %} · {% endif %}{{ envio.registrado_en|date:'d M Y' }}</small>
+  </span>
+  {% include "ui/status.html" %}
+  <span class="recent-arrow">{% icon 'arrow' %}</span>
+</a>

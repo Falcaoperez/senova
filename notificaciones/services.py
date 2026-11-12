@@ -19,24 +19,10 @@ from .models import (
     PlazoReporte,
     PreferenciasNotificacion,
 )
+from .selectors import destinatarios
+from .selectors import plazos_para_usuario as plazos_para_usuario
 
 User = get_user_model()
-
-
-def destinatarios(grupos):
-    queryset = User.objects.filter(is_active=True)
-    ids = [grupo.pk for grupo in grupos.all()]
-    if ids:
-        queryset = queryset.filter(groups__in=ids).distinct()
-    return queryset
-
-
-def plazos_para_usuario(user, pendientes=True):
-    grupos = user.groups.values_list("pk", flat=True)
-    queryset = PlazoReporte.objects.filter(activo=True).filter(Q(grupos__isnull=True) | Q(grupos__in=grupos)).distinct()
-    if pendientes:
-        queryset = queryset.exclude(envios__usuario=user)
-    return queryset
 
 
 def _crear_avisos(users, *, tipo, titulo, mensaje, enlace="", novedad=None, plazo=None, envio=None):
@@ -164,7 +150,11 @@ def notificar_correccion(envio, revisor, *, enlace=None):
 
 
 def procesar_correos(limite=50):
-    """Reclama un lote con bloqueo y arrendamiento; aplica reintentos con espera."""
+    """Reclama por lotes y comprueba que cada aviso siga siendo pertinente antes de SMTP."""
+    from django.core.cache import cache
+
+    from .acceso import destino_notificacion, motivo_cancelacion
+
     ahora = timezone.now()
     with transaction.atomic():
         candidatos = CorreoPendiente.objects.filter(
@@ -182,10 +172,21 @@ def procesar_correos(limite=50):
         )
     enviados = 0
     transport = get_connection(fail_silently=False)
+    latido = ahora
     try:
-        for correo in CorreoPendiente.objects.filter(pk__in=ids).select_related(
-            "notificacion__usuario__preferencias_notificacion"
-        ):
+        for pk in ids:
+            if (timezone.now() - latido).total_seconds() >= 30:
+                cache.set("notificaciones:trabajador", timezone.now().isoformat(), timeout=120)
+                latido = timezone.now()
+            correo = (
+                CorreoPendiente.objects.filter(pk=pk, estado=CorreoPendiente.Estado.PROCESANDO)
+                .select_related(
+                    "notificacion__usuario__preferencias_notificacion", "notificacion__plazo", "notificacion__novedad"
+                )
+                .first()
+            )
+            if not correo:
+                continue
             notification = correo.notificacion
             user = notification.usuario
             preferencias = getattr(user, "preferencias_notificacion", None)
@@ -196,15 +197,17 @@ def procesar_correos(limite=50):
                 if notification.tipo == Notificacion.Tipo.EVIDENCIA
                 else "correo_plazos"
             )
+            motivo = motivo_cancelacion(notification)
             if preferencias and not getattr(preferencias, campo):
-                correo.estado = CorreoPendiente.Estado.ERROR
-                correo.ultimo_error = "El usuario desactivó este tipo de avisos por correo."
-            elif not user.is_active or not user.email:
-                correo.estado = CorreoPendiente.Estado.ERROR
-                correo.ultimo_error = "Cuenta inactiva o sin dirección de correo."
+                motivo = "El usuario desactivó este tipo de avisos por correo."
+            aceptado = False
+            if motivo:
+                correo.estado = CorreoPendiente.Estado.CANCELADO
+                correo.ultimo_error = motivo
             else:
                 try:
-                    link = urljoin(settings.PUBLIC_BASE_URL.rstrip("/") + "/", notification.enlace)
+                    destino, _ = destino_notificacion(notification)
+                    link = urljoin(settings.PUBLIC_BASE_URL.rstrip("/") + "/", destino)
                     context = {"notificacion": notification, "usuario": user, "enlace": link}
                     message = EmailMultiAlternatives(
                         notification.titulo,
@@ -220,6 +223,7 @@ def procesar_correos(limite=50):
                     correo.estado = CorreoPendiente.Estado.ENVIADO
                     correo.enviado_en = timezone.now()
                     correo.ultimo_error = ""
+                    aceptado = True
                     enviados += 1
                 except Exception:
                     correo.intentos += 1
@@ -229,8 +233,20 @@ def procesar_correos(limite=50):
                     correo.proximo_intento = timezone.now() + timedelta(minutes=min(60, 2**correo.intentos))
                     correo.ultimo_error = "El proveedor no aceptó el envío; revisa la configuración SMTP."
                     transport.close()
-            correo.bloqueado_hasta = None
-            correo.save()
+            # No recrear una fila eliminada ni reactivar una cancelada durante el envío.
+            estados = (
+                [CorreoPendiente.Estado.PROCESANDO, CorreoPendiente.Estado.CANCELADO]
+                if aceptado
+                else [CorreoPendiente.Estado.PROCESANDO]
+            )
+            CorreoPendiente.objects.filter(pk=correo.pk, estado__in=estados).update(
+                estado=correo.estado,
+                intentos=correo.intentos,
+                proximo_intento=correo.proximo_intento,
+                ultimo_error=correo.ultimo_error,
+                enviado_en=correo.enviado_en,
+                bloqueado_hasta=None,
+            )
     finally:
         transport.close()
     return enviados

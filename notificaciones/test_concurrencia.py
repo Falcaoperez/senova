@@ -56,3 +56,66 @@ class TrabajadoresConcurrentesTests(TransactionTestCase):
         self.assertEqual(CorreoPendiente.objects.filter(estado="enviado").count(), 20)
         self.assertEqual(len(mail.outbox), 20)
         self.assertEqual(len({message.to[0] for message in mail.outbox}), 20)
+
+    def test_manual_reminders_from_two_administrators_are_not_duplicated(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from .models import PlazoReporte
+        from .plazos import recordar_pendientes
+
+        admin = User.objects.create_superuser(
+            "plazos_concurrentes", "concurrente@example.invalid", "PruebaConcurrente29!"
+        )
+        plazo = PlazoReporte.objects.create(
+            titulo="Seguimiento concurrente", fecha_limite=timezone.now() + timedelta(days=1)
+        )
+        plazo.grupos.add(Group.objects.get(name="instructor"))
+
+        def recordar():
+            return recordar_pendientes(User.objects.get(pk=admin.pk), plazo.pk, 1)
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            resultados = list(executor.map(lambda _: self.ejecutar(recordar), range(2)))
+        self.assertEqual(sum(resultados), 20)
+        self.assertEqual(Notificacion.objects.filter(tipo="seguimiento").count(), 20)
+        self.assertEqual(CorreoPendiente.objects.count(), 20)
+
+    def test_two_deadline_editors_cannot_overwrite_the_same_revision(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from .models import PlazoReporte
+        from .plazos import ConflictoPlazo, guardar_plazo
+
+        admin = User.objects.create_superuser("editar_concurrente", "edicion@example.invalid", "PruebaConcurrente29!")
+        plazo = PlazoReporte.objects.create(titulo="Antes de editar", fecha_limite=timezone.now() + timedelta(days=1))
+        grupo = Group.objects.get(name="instructor")
+        plazo.grupos.add(grupo)
+        datos = {
+            "descripcion": "",
+            "proyecto": "",
+            "fecha_limite": plazo.fecha_limite,
+            "recordatorio_horas": 24,
+            "activo": True,
+            "revision_actual": 1,
+            "grupos": [grupo],
+        }
+
+        def editar(indice):
+            try:
+                guardar_plazo(
+                    User.objects.get(pk=admin.pk), {**datos, "titulo": f"Versión del editor {indice}"}, pk=plazo.pk
+                )
+                return "guardado"
+            except ConflictoPlazo:
+                return "conflicto"
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            resultados = list(executor.map(lambda i: self.ejecutar(lambda: editar(i)), range(2)))
+        self.assertCountEqual(resultados, ["guardado", "conflicto"])
+        plazo.refresh_from_db()
+        self.assertEqual(plazo.revision, 2)
+        self.assertEqual(Notificacion.objects.filter(plazo=plazo).count(), 20)

@@ -2,60 +2,118 @@
 {% load ui %}
 {% block title %}Mis plazos · GESICOM SENA{% endblock %}
 {% block content %}
-  {% include "ui/page_heading.html" with section="GESICOM / PLAZOS DE REPORTES" heading="Un paso adelante de cada entrega." description="Consulta las fechas límite y asocia tus evidencias a cada reporte." %}
-  <section class="panel">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Entrega</th>
-            <th>Proyecto</th>
-            <th>Fecha límite · Colombia</th>
-            <th>Estado</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for plazo in plazos %}
+  {% include "ui/page_heading.html" with section="GESICOM / MIS PLAZOS" heading="Cada entrega, en su momento." description="Prioriza tus pendientes y consulta las evidencias que ya entregaste. Horarios de Colombia." %}
+  <div class="agenda-summary" aria-label="Resumen de mis plazos">
+    <a href="?estado=pendiente" class="agenda-stat">
+      <span>Próximas entregas</span>
+      <strong>{{ agenda.pendientes }}</strong>
+      <small>Por completar</small>
+    </a>
+    <a href="?estado=vencido" class="agenda-stat agenda-urgent">
+      <span>Plazos vencidos</span>
+      <strong>{{ agenda.vencidos }}</strong>
+      <small>Aún sin entrega</small>
+    </a>
+    <a href="?estado=entregado" class="agenda-stat">
+      <span>Entregas registradas</span>
+      <strong>{{ agenda.entregados }}</strong>
+      <small>De {{ agenda.total }} plazos activos</small>
+    </a>
+  </div>
+  <section class="panel" data-live-scope>
+    <form class="filters" method="get" data-live-form>
+      <input type="hidden" name="plazo" value="{{ plazo_id }}">
+      <div class="field search-field">
+        <label for="deadline-q">Buscar plazo</label>
+        <input id="deadline-q"
+               name="q"
+               value="{{ q }}"
+               maxlength="100"
+               data-live-input
+               placeholder="Nombre o indicaciones…">
+      </div>
+      <div class="field">
+        <label for="deadline-state">Estado</label>
+        <select id="deadline-state" name="estado">
+          <option value="">Todos</option>
+          <option value="pendiente" {% if estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+          <option value="vencido" {% if estado == 'vencido' %}selected{% endif %}>Vencido sin entrega</option>
+          <option value="entregado" {% if estado == 'entregado' %}selected{% endif %}>Entregado</option>
+          <option value="tardia" {% if estado == 'tardia' %}selected{% endif %}>Entregado fuera de plazo</option>
+        </select>
+      </div>
+      {% include "notificaciones/proyecto_filtro.html" %}
+      <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
+      <a class="text-link"
+         href="{% url 'notificaciones:mis_plazos' %}"
+         data-live-link>Limpiar</a>
+    </form>
+    <div data-live-region="deadlines">
+      <div class="table-toolbar">
+        <h2>{{ plazos.paginator.count }} plazos encontrados</h2>
+        <span class="password-help">Los plazos archivados salen de tu agenda.</span>
+      </div>
+      <div class="table-wrapper"
+           role="region"
+           aria-label="Mis plazos"
+           tabindex="0">
+        <table class="data-table deadline-table" role="table">
+          <thead>
             <tr>
-              <td>
-                <strong>{{ plazo.titulo }}</strong>
-                <small>{{ plazo.descripcion|truncatechars:90 }}</small>
-              </td>
-              <td>{{ plazo.proyecto|default:'Todos' }}</td>
-              <td>{{ plazo.fecha_limite|date:'d M Y · H:i' }}</td>
-              <td>
-                {% if plazo.pk in tardios %}<span class="badge badge-pending">Entregado fuera de plazo</span>{% elif plazo.pk in cumplidos %}
-                  <span class="badge badge-success">Entregado</span>
-                {% elif plazo.vencido %}
-                  <span class="badge badge-danger">Vencido</span>
-                {% else %}
-                  <span class="badge badge-pending">Pendiente</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if plazo.pk not in cumplidos %}
-                  <a class="button button-secondary button-sm"
-                     href="{% url 'evidencia' %}?plazo={{ plazo.pk }}">{% icon 'upload' %} Enviar reporte</a>
-                {% else %}
-                  <a class="text-link" href="{% url 'evidencias_list' %}">Ver evidencias {% icon 'arrow' %}</a>
-                {% endif %}
-              </td>
+              <th>Entrega</th>
+              <th>Proyecto</th>
+              <th>Fecha límite · Colombia</th>
+              <th>Estado</th>
+              <th>Acción</th>
             </tr>
-          {% empty %}
-            <tr>
-              <td colspan="5">
-                <div class="empty-state">
-                  <span class="empty-symbol">{% icon 'clock' %}</span>
-                  <h3>No tienes plazos asignados.</h3>
-                  <p>Cuando tu centro programe una entrega, aparecerá aquí.</p>
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for plazo in plazos %}
+              <tr>
+                <td>
+                  <strong>{{ plazo.titulo }}</strong>
+                  <small>{{ plazo.descripcion|truncatechars:120 }}</small>
+                </td>
+                <td data-label="Proyecto">{{ plazo.proyecto|default:'Todos' }}</td>
+                <td data-label="Fecha límite · Colombia">{{ plazo.fecha_limite|date:'d M Y · H:i' }}</td>
+                <td>
+                  {% if plazo.entregado %}
+                    <span class="badge {% if plazo.a_tiempo %}badge-success{% else %}badge-pending{% endif %}">
+                      {% if plazo.a_tiempo %}Entregado{% else %}Entregado fuera de plazo{% endif %}
+                    </span>
+                  {% elif plazo.vencido %}
+                    <span class="badge badge-danger">Vencido</span>
+                  {% else %}
+                    <span class="badge badge-pending">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if plazo.entregado %}
+                    <a class="text-link"
+                       href="{% url 'evidencias_list' %}?plazo={{ plazo.pk }}&amp;usuario={{ user.pk }}">Ver evidencias {% icon 'arrow' %}
+                    </a>
+                  {% else %}
+                    <a class="button button-secondary button-sm"
+                       href="{% url 'evidencia' %}?plazo={{ plazo.pk }}">{% icon 'upload' %} Enviar reporte</a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <span class="empty-symbol">{% icon 'clock' %}</span>
+                    <h3>No hay plazos con estos filtros.</h3>
+                    <p>Cuando tu centro asigne una entrega, aparecerá aquí.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "notificaciones/paginacion.html" with pagina=plazos %}
     </div>
-    {% include "notificaciones/paginacion.html" with pagina=plazos %}
+    <p class="sr-only" role="status" data-live-status></p>
   </section>
 {% endblock %}

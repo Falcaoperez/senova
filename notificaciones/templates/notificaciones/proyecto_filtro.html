@@ -1,0 +1,9 @@
+<div class="field">
+  <label for="deadline-project">Proyecto</label>
+  <select id="deadline-project" name="proyecto">
+    <option value="">Todos los proyectos</option>
+    {% for val,label in proyectos %}
+      <option value="{{ val }}" {% if proyecto == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</div>

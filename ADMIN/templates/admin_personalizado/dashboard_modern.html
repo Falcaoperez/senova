@@ -166,7 +166,7 @@
           </div>
           {% for plazo in plazos_proximos %}
             <a class="deadline-row"
-               href="{% url 'notificaciones:editar_plazo' plazo.pk %}">
+               href="{% url 'notificaciones:seguimiento_plazo' plazo.pk %}">
               <span class="date-tile">
                 <strong>{{ plazo.fecha_limite|date:'d' }}</strong>
                 <small>{{ plazo.fecha_limite|date:'M' }}</small>
