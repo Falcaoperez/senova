@@ -6,13 +6,16 @@ from django.core.validators import URLValidator
 from notificaciones.models import PlazoReporte
 from notificaciones.services import plazos_para_usuario
 
+from .adjuntos import EXTENSIONES_EVIDENCIA, MAX_ARCHIVO
 from .models import Envio
+from .solicitudes import crear_solicitud, verificar_solicitud
 from .validators import validar_archivo_evidencia
 
 User = get_user_model()
 
 
 class EvidenciaForm(forms.Form):
+    solicitud = forms.CharField(required=False, widget=forms.HiddenInput)
     nombre = forms.CharField(label="Nombre de la evidencia", max_length=80)
     proyecto = forms.ChoiceField(label="Proyecto", choices=[("", "Selecciona un proyecto"), *Envio.PROYECTO_CHOICES])
     plazo = forms.ModelChoiceField(
@@ -50,6 +53,7 @@ class EvidenciaForm(forms.Form):
 
     def __init__(self, data=None, files=None, *, usuario, envio=None, **kwargs):
         self.envio = envio
+        self.usuario = usuario
         if data is not None and not data.get("linkArchivo") and data.get("link_evidencia"):
             data = data.copy()
             data["linkArchivo"] = data["link_evidencia"]
@@ -61,11 +65,19 @@ class EvidenciaForm(forms.Form):
             + (" · Fuera de plazo" if plazo.vencido else "")
         )
         self.fields["archivo"].widget.attrs.update(
-            {"accept": ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.zip,.rar", "data-file-input": True}
+            {"accept": ",".join(sorted(EXTENSIONES_EVIDENCIA)), "data-file-input": True, "data-max-bytes": MAX_ARCHIVO}
         )
         self.fields["observaciones"].widget.attrs.update({"rows": 4})
         self.fields["plazo"].queryset = plazos_para_usuario(usuario)
         if envio:
+            if not envio.proyecto:
+                self.fields["proyecto"].required = False
+                self.fields["proyecto"].choices = [("", "Sin proyecto (registro anterior)"), *Envio.PROYECTO_CHOICES]
+            if envio.proyecto not in dict(self.fields["proyecto"].choices):
+                self.fields["proyecto"].choices = [
+                    *self.fields["proyecto"].choices,
+                    (envio.proyecto, envio.proyecto or "Sin proyecto"),
+                ]
             tipos = [
                 tipo.strip()
                 for tipo in envio.tipo_evidencia.split(",")
@@ -86,9 +98,15 @@ class EvidenciaForm(forms.Form):
             self.fields["version"].required = True
             self.fields["motivo"].required = True
             self.fields.pop("observaciones")
+            self.fields.pop("solicitud")
         else:
+            self.initial["solicitud"] = crear_solicitud(usuario)
             for name in ("eliminar_archivo", "motivo", "version"):
                 self.fields.pop(name)
+
+    def clean_solicitud(self):
+        valor = self.cleaned_data.get("solicitud")
+        return verificar_solicitud(valor, self.usuario) if valor else None
 
     def clean(self):
         data = super().clean()
@@ -96,7 +114,12 @@ class EvidenciaForm(forms.Form):
         if not (data.get("linkArchivo") or data.get("archivo") or archivo_previo):
             self.add_error(None, "Debe proporcionar un enlace o adjuntar un archivo (al menos uno).")
         plazo = data.get("plazo")
-        if plazo and plazo.proyecto and data.get("proyecto") != plazo.proyecto:
+        if (
+            plazo
+            and plazo.proyecto
+            and data.get("proyecto") != plazo.proyecto
+            and (not self.envio or data.get("proyecto") != self.envio.proyecto)
+        ):
             self.add_error("proyecto", "El proyecto debe coincidir con el plazo seleccionado.")
         if len(", ".join(data.get("evidencias", []))) > 50:
             self.add_error("evidencias", "La combinación de tipos supera los 50 caracteres permitidos.")

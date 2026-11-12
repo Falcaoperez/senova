@@ -11,6 +11,8 @@ erDiagram
     USER ||--o{ USER_PERMISSION : recibe
     PERMISSION ||--o{ USER_PERMISSION : autoriza
     USER ||--o{ ENVIO : entrega
+    USER ||--o{ SOLICITUD_ENVIO : identifica
+    ENVIO o|--o| SOLICITUD_ENVIO : resultado
     ENVIO ||--o{ MOVIMIENTO_EVIDENCIA : historial
     USER o|--o{ MOVIMIENTO_EVIDENCIA : realiza
     PLAZO_REPORTE o|--o{ ENVIO : recibe
@@ -36,7 +38,8 @@ erDiagram
 | --- | --- | --- |
 | Identidad | `auth_user`, `auth_group`, `auth_user_groups` | Correo normalizado único; contraseñas con hash; permisos de Django |
 | Permisos | `auth_permission`, `auth_group_permissions`, `auth_user_user_permissions` | Tablas nativas de Django; actualización transaccional por grupo y revisión calculada, sin tablas duplicadas |
-| Evidencias | `Gesicom_envio` | Propietario y plazo con claves foráneas; estados compatibles; índices por usuario, proyecto, estado, fecha y plazo/usuario/primera entrega |
+| Evidencias | `Gesicom_envio` | Propietario y plazo con claves foráneas; estados compatibles; índices por usuario, proyecto, estado, fecha, plazo/usuario/primera entrega y nombre de archivo |
+| Recibos de alta | `Gesicom_solicitudenvio` | UUID primario; propietario obligatorio; relación única opcional con la evidencia; conserva un recibo sin destino al eliminar la evidencia |
 | Historial de evidencia | `Gesicom_movimientoevidencia` | Actor opcional; unicidad por evidencia/versión; orden cronológico por versión |
 | Agenda | `notificaciones_plazoreporte` y tabla intermedia de grupos | Índice de activo/fecha; revisión de edición y versión de avisos; cada envío conserva el límite aplicado |
 | Publicaciones | `notificaciones_novedad` y grupos | Autor opcional; destinatarios por rol o toda la comunidad |
@@ -55,3 +58,5 @@ La desactivación de una cuenta revoca sus sesiones e invalida sus recuperacione
 Cada evidencia tiene una versión creciente y una fecha de última actualización. La migración 0013 incorpora el estado de los registros previos con actor desconocido, manteniendo sus fechas originales. El historial no contiene contraseñas ni copias de los adjuntos.
 
 El recordatorio adicional usa el tipo `seguimiento` y la unicidad existente de usuario/plazo/versión/tipo. No requiere una tabla duplicada. El cumplimiento se calcula con subconsultas `EXISTS` e índices; los listados de personas se paginan y no cargan la totalidad de evidencias.
+
+La migración `Gesicom.0015_solicitudes_adjuntos` añade el índice de archivo y los recibos de alta sin alterar datos existentes. El recibo se crea únicamente al aceptar un formulario identificado, en la misma transacción que su evidencia y movimiento. No guarda el formulario, la firma, archivos ni credenciales. No tiene permisos predeterminados ni panel propio. Al eliminar la cuenta desaparecen sus recibos; al eliminar solo una evidencia se conserva el UUID para impedir que un reintento la recree. Los archivos se retiran después del commit y únicamente cuando no quedan referencias a su nombre.
