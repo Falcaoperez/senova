@@ -90,7 +90,7 @@ def interface(request):
             acciones.append({"titulo": label, "url": url, "detalle": "Acceso rápido"})
     pendientes = 0
     recientes = []
-    if user.is_authenticated:
+    if user.is_authenticated and not getattr(request, "_gesicom_fragmento", False):
         from notificaciones.resumen import resumen_de_peticion
 
         resumen = resumen_de_peticion(request, recientes=True)

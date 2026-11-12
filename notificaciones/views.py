@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST, require_safe
 
 from cuentas.forms import ConfirmarPasswordForm
 from Gesicom.exportaciones import respuesta_csv
+from Gesicom.interfaz import render_panel
 from Gesicom.utils import require_group
 
 from .acceso import destino_notificacion
@@ -31,7 +32,7 @@ from .services import publicar_novedad
 @login_required
 def bandeja(request):
     preferencias, _ = PreferenciasNotificacion.objects.get_or_create(usuario=request.user)
-    return render(
+    return render_panel(
         request,
         "notificaciones/bandeja.html",
         {
@@ -117,7 +118,7 @@ def resumen(request):
 
 @login_required
 def mis_plazos(request):
-    return render(
+    return render_panel(
         request,
         "notificaciones/mis_plazos.html",
         {
@@ -147,7 +148,7 @@ def novedades_admin(request):
         errores=Count("pk", filter=Q(estado="error")),
         cancelados=Count("pk", filter=Q(estado="cancelado")),
     )
-    return render(
+    return render_panel(
         request,
         "notificaciones/novedades_admin.html",
         {
@@ -206,7 +207,7 @@ def plazos_admin(request):
             if estado == "vencido"
             else plazos.filter(fecha_limite__gt=timezone.now())
         )
-    return render(
+    return render_panel(
         request,
         "notificaciones/plazos_admin.html",
         {
@@ -254,7 +255,7 @@ def editar_plazo(request, pk=None):
 @require_group("administrador")
 def seguimiento_plazo(request, pk):
     plazo = get_object_or_404(PlazoReporte.objects.prefetch_related("grupos"), pk=pk)
-    return render(
+    return render_panel(
         request,
         "notificaciones/seguimiento_plazo.html",
         {

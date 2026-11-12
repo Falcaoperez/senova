@@ -150,3 +150,15 @@ La consulta periódica se programa cada 45 segundos después de terminar la ante
 Estas consultas no prolongan la sesión por inactividad. Cuando el servidor devuelve acceso caducado, el navegador vuelve al ingreso. Abrir un aviso continúa usando POST con CSRF y la autorización actual de su destino. Sin JavaScript, la lista inicial y esos formularios siguen funcionando.
 
 El resumen básico conserva su respuesta anterior con `pendientes`; `?detalle=1` añade cuatro avisos de la cuenta, con título, fecha, lectura y ruta de apertura. No devuelve el mensaje completo ni destinatarios. Su lectura utiliza una consulta de notificaciones para el contador y una segunda solo cuando se piden los avisos; el control de sesión realiza sus propias comprobaciones. No hay caché de respuestas ni estado compartido entre usuarios. Este bloque no cambia tablas: recopila estáticos y reinicia la aplicación web.
+
+## Filtros y conservación de ediciones
+
+Los nueve paneles con filtros actualizan el contenido del panel sin volver a generar la cabecera de navegación ni su resumen de avisos. Conservan las mismas rutas, filtros, permisos y formularios POST. Sin JavaScript, el botón sigue abriendo la página completa. El directorio valida búsqueda, estado y rol; una opción inválida muestra el error y ningún resultado.
+
+Una observación o cambio de roles pendiente pide confirmación antes de cambiar la lista o abandonar esa sección. Mientras hay una edición pendiente, escribir en la búsqueda espera al botón de filtros, sin interrumpir cada pausa con una confirmación. Escribir en una fila durante una actualización detiene esa actualización y conserva la edición. Guardar la observación o confirmar el envío de roles permite continuar.
+
+Cancelar Atrás o Adelante conserva tanto los datos visibles como la dirección y la entrada del historial. Aplicar exactamente los mismos filtros refresca los datos sin añadir otra entrada. La paginación con teclado lleva el foco a los nuevos resultados.
+
+Si una consulta falla o no responde en quince segundos, se conservan los resultados y filtros aplicados y aparece **Reintentar actualización**. Un fallo durante Atrás también puede reintentarse sin perder la entrada de Adelante. Una respuesta incompleta no sustituye una parte de las regiones. Las ediciones pendientes solo permanecen en la página actual: no se guardan como borradores en el navegador ni se recuperan después de cerrar la pestaña.
+
+No hay cambios de esquema en este bloque. Recopila los estáticos y reinicia la aplicación web para cargar el renderizado compartido y `navigation.js`.

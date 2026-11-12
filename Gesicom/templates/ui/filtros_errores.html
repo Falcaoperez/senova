@@ -12,7 +12,7 @@
           <li>{{ error }}</li>
         {% endfor %}
       </ul>
-      <p>No se muestran ni exportan registros hasta corregirlos.</p>
+      <p>{{ mensaje_filtros|default:"No se muestran ni exportan registros hasta corregirlos." }}</p>
     </div>
   </div>
 {% endif %}
