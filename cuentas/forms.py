@@ -8,6 +8,22 @@ from django.contrib.auth.password_validation import validate_password
 User = get_user_model()
 
 
+class ConfirmarPasswordForm(forms.Form):
+    contrasena_actual = forms.CharField(
+        label="Contraseña actual", strip=False, widget=forms.PasswordInput(attrs={"autocomplete": "current-password"})
+    )
+
+    def __init__(self, *args, usuario, **kwargs):
+        self.usuario = usuario
+        super().__init__(*args, **kwargs)
+
+    def clean_contrasena_actual(self):
+        value = self.cleaned_data["contrasena_actual"]
+        if not self.usuario.check_password(value):
+            raise forms.ValidationError("La contraseña actual no es correcta.")
+        return value
+
+
 def validar_correo_unico(email, user_id=None):
     correo = email.strip().lower()
     if User.objects.filter(email__iexact=correo).exclude(pk=user_id).exists():

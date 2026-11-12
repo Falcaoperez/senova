@@ -15,8 +15,12 @@
           type="font/ttf"
           crossorigin>
     <link rel="stylesheet" href="{% static 'css/sena.css' %}">
+    <link rel="stylesheet" href="{% static 'css/operations.css' %}">
     {% block extra_css %}{% endblock %}
     <script defer src="{% static 'js/sena.js' %}"></script>
+    {% if user.is_authenticated %}
+      <script defer src="{% static 'js/workspace.js' %}"></script>
+    {% endif %}
     {% block head %}{% endblock %}
   </head>
   <body class="{% block body_class %} {% if user.is_authenticated %}app-body{% else %}public-body{% endif %} {% endblock %}">
@@ -83,18 +87,23 @@
               <span class="topbar-product">Sistema de gestión <span class="muted">/</span> <strong>GESICOM</strong>
               </span>
             </div>
-            <form class="topbar-search"
-                  action="{% url 'evidencias_list' %}"
-                  method="get"
-                  role="search">
-              <label class="sr-only" for="global-search">Buscar evidencias</label>
-              {% icon 'search' %}
-              <input id="global-search"
-                     name="q"
-                     placeholder="Buscar una evidencia…"
-                     value="{{ q|default:'' }}">
-              <kbd>/</kbd>
-            </form>
+            <button class="topbar-search command-trigger"
+                    type="button"
+                    id="global-search"
+                    aria-haspopup="dialog"
+                    aria-controls="command-dialog"
+                    hidden>
+              {% icon 'search' %}<span>Buscar o ir a…</span><kbd>Ctrl K</kbd>
+            </button>
+            <noscript>
+              <form class="topbar-search"
+                    action="{% url 'evidencias_list' %}"
+                    method="get"
+                    role="search">
+                <label class="sr-only" for="fallback-search">Buscar evidencias</label>
+                <input id="fallback-search" name="q" placeholder="Buscar evidencias…">
+              </form>
+            </noscript>
             <div class="topbar-actions">
               <details class="notifications-menu"
                        data-notifications-summary="{% url 'notificaciones:resumen' %}">
@@ -178,6 +187,40 @@
          aria-live="polite"
          aria-atomic="true"
          id="toast-region"></div>
+    {% if user.is_authenticated %}
+      {{ ui_acciones|json_script:'workspace-actions' }}
+      <dialog class="command-dialog"
+              id="command-dialog"
+              aria-labelledby="command-title"
+              data-search-url="{% url 'busqueda_global' %}">
+        <div class="command-heading">
+          <h2 id="command-title">¿Qué quieres encontrar?</h2>
+          <button class="icon-button"
+                  type="button"
+                  data-command-close
+                  aria-label="Cerrar búsqueda">{% icon 'close' %}</button>
+        </div>
+        <div class="command-input-wrap">
+          {% icon 'search' %}
+          <input id="command-query"
+                 type="search"
+                 placeholder="Evidencias, personas, plazos…"
+                 maxlength="100"
+                 autocomplete="off"
+                 aria-label="Buscar en GESICOM"
+                 role="combobox"
+                 aria-autocomplete="list"
+                 aria-controls="command-results"
+                 aria-expanded="true">
+        </div>
+        <p class="command-status" id="command-status" role="status">Accesos rápidos</p>
+        <div id="command-results"
+             class="command-results"
+             role="listbox"
+             aria-label="Resultados de búsqueda"></div>
+        <div class="command-footer"><span><kbd>↑</kbd> <kbd>↓</kbd> navegar · <kbd>↵</kbd> abrir</span><span><kbd>Esc</kbd> cerrar</span></div>
+      </dialog>
+    {% endif %}
     {% block extra_js %}{% endblock %}
   </body>
 </html>

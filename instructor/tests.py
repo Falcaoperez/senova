@@ -22,7 +22,7 @@ class AuthFlowTests(TestCase):
         self.assertEqual(resp.url, "/login/?created=1")
 
         # Logout y login
-        self.client.get(reverse("logout"))
+        self.client.post(reverse("logout"))
         resp = self.client.post(
             reverse("login"),
             {

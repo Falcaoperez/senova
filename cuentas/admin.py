@@ -5,7 +5,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 
 from .forms import validar_correo_unico
-from .models import PasswordResetToken, RegistroSeguridad
+from .models import CorreoSeguridad, PasswordResetToken, RegistroSeguridad, SesionUsuario
 
 User = get_user_model()
 
@@ -56,6 +56,45 @@ class AuditoriaAdmin(admin.ModelAdmin):
     list_select_related = ["actor"]
     readonly_fields = ["accion", "actor", "direccion_ip", "ruta", "creado_en"]
     list_filter = ["accion"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CorreoSeguridad)
+class CorreoSeguridadAdmin(admin.ModelAdmin):
+    list_display = ["id", "tipo", "usuario", "estado", "intentos", "creado_en"]
+    list_filter = ["tipo", "estado"]
+    list_select_related = ["usuario"]
+    fields = [
+        "usuario",
+        "destinatario",
+        "tipo",
+        "estado",
+        "intentos",
+        "creado_en",
+        "proximo_intento",
+        "enviado_en",
+        "ultimo_error",
+    ]
+    readonly_fields = fields
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SesionUsuario)
+class SesionUsuarioAdmin(admin.ModelAdmin):
+    list_display = ["usuario", "creada_en", "ultimo_uso", "direccion_ip"]
+    list_select_related = ["usuario"]
+    fields = ["usuario", "creada_en", "ultimo_uso", "direccion_ip", "agente"]
+    readonly_fields = fields
 
     def has_add_permission(self, request):
         return False

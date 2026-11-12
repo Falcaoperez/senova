@@ -5,6 +5,9 @@ from django.core.management.base import BaseCommand
 from django.db import close_old_connections
 from django.utils import timezone
 
+from cuentas.correos import procesar_correos_seguridad
+from cuentas.models import CorreoSeguridad
+from notificaciones.models import CorreoPendiente
 from notificaciones.services import procesar_correos, sincronizar_plazos
 
 
@@ -21,11 +24,20 @@ class Command(BaseCommand):
             while True:
                 close_old_connections()
                 cache.set("notificaciones:trabajador", timezone.now().isoformat(), timeout=120)
+                seguridad = procesar_correos_seguridad(limite=max(1, min(options["lote"], 100)))
                 avisos = sincronizar_plazos()
                 enviados = procesar_correos(limite=max(1, min(options["lote"], 500)))
-                self.stdout.write(f"Avisos nuevos: {avisos}; correos enviados: {enviados}.")
+                self.stdout.write(
+                    f"Avisos nuevos: {avisos}; correos enviados: {enviados}; correos de seguridad: {seguridad}."
+                )
                 if not options["continuo"]:
                     return
+                pendientes = {"estado": "pendiente", "proximo_intento__lte": timezone.now()}
+                if (
+                    CorreoSeguridad.objects.filter(**pendientes).exists()
+                    or CorreoPendiente.objects.filter(**pendientes).exists()
+                ):
+                    continue
                 time.sleep(max(5, min(options["intervalo"], 60)))
         except KeyboardInterrupt:
             self.stdout.write("Trabajador detenido.")

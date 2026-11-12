@@ -11,6 +11,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from .correos import procesar_correos_seguridad
 from .models import PasswordResetToken
 
 
@@ -24,6 +25,7 @@ class PasswordResetTests(TestCase):
         client = client or self.client
         response = client.post(reverse("olvide_password"), {"email": "RESET@example.com"})
         self.assertEqual(response.status_code, 200)
+        procesar_correos_seguridad()
         pin = re.search(r"\b\d{6}\b", mail.outbox[-1].body).group()
         return pin
 
@@ -99,17 +101,22 @@ class PasswordResetTests(TestCase):
         self.solicitar()
         self.assertEqual(self.client.get(reverse("password_reset_new")).status_code, 302)
 
-    @patch("cuentas.views.EmailMultiAlternatives.send", side_effect=RuntimeError("SMTP unavailable"))
-    def test_mail_failure_invalidates_pin_and_hides_provider_details(self, send):
+    @patch("cuentas.correos.EmailMultiAlternatives.send", side_effect=RuntimeError("SMTP unavailable"))
+    def test_mail_failure_remains_generic_and_is_retried_outside_the_request(self, send):
         response = self.client.post(reverse("olvide_password"), {"email": self.user.email})
-        self.assertEqual(response.status_code, 503)
-        self.assertFalse(PasswordResetToken.objects.filter(utilizado=False).exists())
+        unknown = self.client.post(reverse("olvide_password"), {"email": "unknown@example.com"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), unknown.json())
+        send.assert_not_called()
+        self.assertEqual(procesar_correos_seguridad(), 0)
+        self.assertTrue(PasswordResetToken.objects.filter(utilizado=False).exists())
         self.assertNotIn("SMTP unavailable", response.content.decode())
 
     def test_unknown_email_has_same_success_message(self):
         response = self.client.post(reverse("olvide_password"), {"email": self.user.email})
         unknown = self.client.post(reverse("olvide_password"), {"email": "unknown@example.com"})
         self.assertEqual(response.json(), unknown.json())
+        procesar_correos_seguridad()
         self.assertEqual(len(mail.outbox), 1)
 
     @override_settings(RATE_LIMITS_ENABLED=True)

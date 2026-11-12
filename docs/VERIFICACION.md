@@ -4,10 +4,10 @@ Fecha: 11 de noviembre de 2026. Las mediciones corresponden al entorno local de 
 
 ## Pruebas y dependencias
 
-- 64 pruebas automatizadas aprobadas contra MySQL, incluidas concurrencia, permisos, recuperación y salud en producción.
+- 96 pruebas automatizadas contra MySQL, incluidas concurrencia, permisos, recuperación y salud en producción.
 - `check`, `check --deploy`, revisión de migraciones y Ruff sin incidencias.
 - Recopilación de archivos estáticos con manifiesto completada.
-- Auditoría de los 12 paquetes de ejecución fijados: sin vulnerabilidades conocidas en la consulta realizada.
+- Auditoría de los 15 paquetes de ejecución fijados: sin vulnerabilidades conocidas en la consulta realizada.
 - Chart.js 4.4.8: sin avisos en la consulta al registro de npm.
 - Imagen Docker construida y arrancada con usuario 10001: migraciones, estáticos, salud HTTP interna, redirección HTTPS, HSTS y acceso administrativo comprobados.
 
@@ -18,14 +18,14 @@ Estas comprobaciones no sustituyen una auditoría de penetración ni garantizan 
 - MySQL 8.4, Redis y Gunicorn con 4 procesos y 2 hilos.
 - 1.200 cuentas y 12.000 evidencias temporales.
 - 2.400 peticiones autenticadas, con 40 clientes concurrentes.
-- Cero errores; duración 17,28 s; mediana 230,27 ms; percentil 95 de 649,69 ms.
-- Rendimiento observado: 138,85 peticiones/s.
+- Cero errores; duración 15,97 s; mediana 187,42 ms; percentil 95 de 758,2 ms.
+- Rendimiento observado: 150,31 peticiones/s.
 
 La prueba alterna el panel de usuario y la lista de evidencias. No representa 1.200 inicios de sesión simultáneos, envíos SMTP reales ni descargas masivas. Los datos temporales se eliminaron al terminar.
 
 ## Consultas y cola
 
-Con 1.200 usuarios y 12.000 evidencias, las vistas administrativas, de evidencias y de reportes necesitaron 8, 7 y 9 consultas respectivamente. Publicar avisos para 1.200 usuarios utilizó 13 consultas, sin esperar envíos SMTP dentro de la petición web.
+Con 1.200 usuarios y 12.000 evidencias, las vistas administrativas, de evidencias y de reportes necesitaron 9, 8 y 10 consultas respectivamente. Publicar avisos para 1.200 usuarios utilizó 13 consultas, sin esperar envíos SMTP dentro de la petición web.
 
 Se comprobaron dos publicaciones simultáneas de una misma novedad y dos trabajadores reclamando correo: no duplicaron avisos ni tomaron los mismos mensajes.
 
@@ -42,7 +42,13 @@ Se comprobaron dos publicaciones simultáneas de una misma novedad y dos trabaja
 - Renderizado de los roles y adaptación a escritorio/móvil.
 - 129 vistas comprobadas en navegador, entre 320 y 1.440 píxeles, sin desbordamientos ni errores JavaScript.
 
-Los mensajes de la revisión se capturaron localmente; no se enviaron a Internet. El acceso SMTP real queda sujeto a la credencial institucional.
+Los mensajes de la revisión se capturaron localmente; no se enviaron a Internet. El acceso SMTP real queda sujeto a la credencial privada de Gmail.
+
+## Actualización de Gmail y seguridad
+
+Se comprobaron 30 pantallas adicionales en navegador, con los seis roles y escritorio/móvil: reautenticación, confirmación de contraseña, cierre de otras sesiones, recuperación en cola, remitente Gmail capturado en Mailpit, revocación después de recuperar y pantalla HTML de límite de intentos. No hubo errores JavaScript ni desbordamientos.
+
+Las pruebas incluyen dos trabajadores enviando correos de seguridad sin repetir destinatarios, eliminación del contenido cifrado, reintentos, clave de cifrado anterior durante una rotación, vinculación del PIN a las credenciales y rechazo de sesiones previas a la nueva política. Gmail real requiere su contraseña de aplicación; la captura local no valida esa autenticación.
 
 ## Repetición
 
@@ -56,3 +62,16 @@ python scripts/prueba_carga_http.py
 ```
 
 Las pruebas de concurrencia requieren MySQL y utilizan una base de pruebas independiente. Los archivos de resultados y las credenciales locales se guardan en `.local/`, fuera del repositorio.
+
+## Centro de operaciones e interacciones — 12 de noviembre de 2026
+
+- 117 pruebas automatizadas con MySQL, incluidas las 96 de la revisión anterior. Se añadieron regresiones de aislamiento de búsqueda, autorización tras retirar roles, limitación por cuenta, caída del contador, transacciones masivas, cuentas protegidas, revocación al desactivar y datos históricos sin propietario o autor.
+- 39 comprobaciones de navegador: seis roles en escritorio y móvil, y administración a 320, 768 y 1.440 píxeles. Sin errores JavaScript, CSP ni desbordamientos.
+- Gráfico real de 7/30/90 días, actualización sin recarga y navegación con Atrás; búsqueda con teclado, selección de resultados y cierre; filtros, paginación y observaciones tras sustituir filas; selección, cancelación, activación, desactivación y cambio de roles con confirmación.
+- Filtros y formularios de administración comprobados con JavaScript desactivado. La tabla de datos del gráfico se genera en el servidor.
+- Ruff, comprobación de migraciones, configuración de producción y recopilación de estáticos completados. No se requiere una migración nueva.
+- Las nueve consultas de `database/consultas/diagnostico.sql` se ejecutaron contra MySQL; solo consultan metadatos y contadores.
+
+La revisión utilizó dos cuentas, 33 evidencias y un plazo temporales. Se eliminaron al terminar; permanecen las seis cuentas y los datos de revisión previos. La contraseña solicitada para el administrador solo se aplicó a la base local y al archivo privado de credenciales. No forma parte del código, del workflow ni de la configuración SMTP.
+
+El workflow conserva el contenedor Python y las conexiones internas a MySQL/Redis ya corregidas. La imagen de aplicación y la medición HTTP de capacidad descritas arriba corresponden a la revisión anterior; este bloque se comprobó con Gunicorn, MySQL y Redis, además de la validación automática del PR.

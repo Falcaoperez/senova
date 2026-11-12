@@ -50,7 +50,7 @@ class LocalSMTPHandler(StreamRequestHandler):
     EMAIL_USE_TLS=False,
     EMAIL_USE_SSL=False,
     EMAIL_TIMEOUT=2,
-    DEFAULT_FROM_EMAIL="GESICOM SENA <noresponderGESICOM@soy.sena.edu.co>",
+    DEFAULT_FROM_EMAIL="GESICOM <santiagoocoy2025@gmail.com>",
 )
 class SMTPConfigurationTests(SimpleTestCase):
     def setUp(self):
@@ -80,13 +80,35 @@ class SMTPConfigurationTests(SimpleTestCase):
         self.assertEqual(result, 1)
         self.assertEqual(len(self.server.messages), 1)
         self.assertEqual(len(self.server.recipients), 3)
-        self.assertIn(b"noresponderGESICOM@soy.sena.edu.co", self.server.messages[0])
+        self.assertIn(b"santiagoocoy2025@gmail.com", self.server.messages[0])
 
     def test_connection_command_does_not_send_messages(self):
         output = StringIO()
         call_command("comprobar_correo", stdout=output)
         self.assertIn("Conexión SMTP y autenticación correctas", output.getvalue())
         self.assertEqual(self.server.messages, [])
+
+    @override_settings(
+        EMAIL_HOST_USER="sender@example.com",
+        EMAIL_HOST_PASSWORD="secret-test-only",
+        EMAIL_USE_TLS=False,
+        EMAIL_USE_SSL=False,
+    )
+    def test_credentials_cannot_be_sent_without_encryption(self):
+        with patch.object(SMTPBackend, "connection_class") as connection:
+            with self.assertRaises(ImproperlyConfigured):
+                SMTPBackend().open()
+            connection.assert_not_called()
+
+    @override_settings(
+        EMAIL_HOST="smtp.gmail.com",
+        EMAIL_HOST_USER="santiagoocoy2025@gmail.com",
+        DEFAULT_FROM_EMAIL="GESICOM <another@example.com>",
+        EMAIL_USE_TLS=True,
+    )
+    def test_gmail_requires_matching_sender(self):
+        with self.assertRaisesMessage(CommandError, "debe coincidir"):
+            call_command("comprobar_correo", solo_configuracion=True, stdout=StringIO())
 
     @override_settings(EMAIL_HOST_USER="sender@example.com")
     def test_missing_credentials_prevent_connection(self):

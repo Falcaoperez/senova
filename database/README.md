@@ -35,3 +35,11 @@ sh scripts/backup_mysql.sh
 El respaldo consistente se guarda comprimido dentro de `.local/backups/`, con permisos privados. Las copias y credenciales nunca se añaden a Git. Las restauraciones se verifican primero en una base vacía independiente; después se compara el número de cuentas y registros. En la revisión se comprobó una restauración con las seis cuentas locales.
 
 `preparar_pruebas.sql` crea y autoriza exclusivamente la base `test_senova` para las pruebas locales con los nombres predeterminados. No es parte del arranque de producción.
+
+## Navegación del esquema y diagnóstico
+
+- [Relaciones, tablas e integridad](documentacion/modelo.md).
+- [Consultas de diagnóstico de solo lectura](consultas/diagnostico.sql): motor, cotejamiento, índices y contadores de operación. Selecciona la base de la instalación antes de ejecutarlas; las cifras de `information_schema.tables.table_rows` son estimaciones.
+- `cuentas_correoseguridad` contiene el estado de entrega de PIN y cambios de credenciales; `cuentas_sesionusuario` enlaza cada sesión con su propietario. Sus datos confidenciales no aparecen en el diagnóstico.
+
+El SQL de diagnóstico y la documentación pueden versionarse. Los respaldos reales, datos personales, contraseñas y credenciales permanecen en almacenamiento privado. Consulta también [la organización del proyecto](../docs/ARQUITECTURA.md).

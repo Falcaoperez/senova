@@ -25,14 +25,14 @@ defaults = {
     "DB_PORT": "3307",
     "PUBLIC_BASE_URL": "http://127.0.0.1:8000",
     "EMAIL_BACKEND": "SENNOVA.email_backend.SMTPBackend",
-    "EMAIL_HOST": "smtp.office365.com",
+    "EMAIL_HOST": "smtp.gmail.com",
     "EMAIL_PORT": "587",
     "EMAIL_USE_TLS": "True",
     "EMAIL_USE_SSL": "False",
-    "EMAIL_HOST_USER": "noresponderGESICOM@soy.sena.edu.co",
+    "EMAIL_HOST_USER": "santiagoocoy2025@gmail.com",
     "EMAIL_HOST_PASSWORD": "",
     "EMAIL_OAUTH2_ACCESS_TOKEN": "",
-    "DEFAULT_FROM_EMAIL": "GESICOM SENA <noresponderGESICOM@soy.sena.edu.co>",
+    "DEFAULT_FROM_EMAIL": "GESICOM <santiagoocoy2025@gmail.com>",
 }
 for key, value in defaults.items():
     values.setdefault(key, value)

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Seguridad y sesiones · GESICOM{% endblock %}
+{% block content %}
+  {% include "ui/page_heading.html" with section="GESICOM / MI CUENTA" heading="Tu cuenta, bajo tu control." description="Consulta tus sesiones y cierra las que ya no necesitas." %}
+  {% if error_seguridad %}<div class="alert alert-error" role="alert">{{ error_seguridad }}</div>{% endif %}
+  <section class="panel security-overview">
+    <div class="panel-heading"><div><p class="eyebrow">PROTECCIÓN DE ACCESO</p><h2>Seguridad de tu cuenta</h2></div>{% icon 'shield' %}</div>
+    <p>Las acciones sensibles requieren tu contraseña actual. Al cambiar tu contraseña, las otras sesiones se cierran.</p>
+    {% if inactividad_minutos %}<p>La sesión termina después de {{ inactividad_minutos }} minutos de inactividad.</p>{% endif %}
+    <a class="text-link" href="{% url 'editar_perfil' %}">Actualizar mis datos o contraseña {% icon 'arrow' %}</a>
+  </section>
+  <section class="panel security-sessions">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">DISPOSITIVOS Y ACCESOS</p>
+        <h2>Sesiones registradas</h2>
+      </div>
+      <span class="badge badge-neutral">{{ sesiones.paginator.count }}</span>
+    </div>
+    <p class="password-help">La última actividad es aproximada. La dirección IP puede ser compartida por una red o cambiar con una VPN.</p>
+    {% for sesion in sesiones %}
+      <article class="session-entry">
+        <div class="session-entry-main">
+          <span class="stat-icon blue">{% icon 'shield' %}</span>
+          <div>
+            <h3>{{ sesion.dispositivo }}</h3>
+            <p>Última actividad: {{ sesion.ultimo_uso|date:'d M Y · H:i' }}</p>
+            <small>IP: {{ sesion.direccion_ip|default:'No disponible' }} · Inicio: {{ sesion.creada_en|date:'d M Y · H:i' }}</small>
+          </div>
+        </div>
+        {% if sesion.es_actual %}<span class="badge badge-success">Sesión actual</span>{% else %}
+          <details class="session-revoke">
+            <summary class="text-link">Cerrar esta sesión</summary>
+            <form method="post"
+                  action="{% url 'revocar_sesion' sesion.pk %}"
+                  data-submit>
+              {% csrf_token %}<div class="field"><label for="password-session-{{ sesion.pk }}">Contraseña actual</label><input id="password-session-{{ sesion.pk }}"
+                                                                                                                               type="password"
+                                                                                                                               name="contrasena_actual"
+                                                                                                                               autocomplete="current-password"
+                                                                                                                               required></div>
+              <button class="button button-secondary" type="submit">{% icon 'logout' %} Cerrar sesión</button>
+            </form>
+          </details>
+        {% endif %}
+      </article>
+{% empty %}<p>No hay otras sesiones registradas.</p>{% endfor %}
+{% if sesiones.has_other_pages %}<nav class="pagination" aria-label="Páginas de sesiones">{% if sesiones.has_previous %}<a href="?page={{ sesiones.previous_page_number }}">Anterior</a>{% endif %}<span>{{ sesiones.number }} de {{ sesiones.paginator.num_pages }}</span>{% if sesiones.has_next %}<a href="?page={{ sesiones.next_page_number }}">Siguiente</a>{% endif %}</nav>{% endif %}
+  </section>
+  <section class="panel security-close-others">
+    <div class="panel-heading"><div><p class="eyebrow">CONTROL DE SESIONES</p><h2>Cerrar las otras sesiones</h2></div>{% icon 'logout' %}</div>
+    <p>Esta acción conserva la sesión que estás utilizando ahora.</p>
+    <form method="post"
+          action="{% url 'cerrar_otras_sesiones' %}"
+          class="security-confirm"
+          data-submit>
+      {% csrf_token %}<div class="field"><label for="password-close-others">Contraseña actual</label><input id="password-close-others"
+                                                                                                            type="password"
+                                                                                                            name="contrasena_actual"
+                                                                                                            autocomplete="current-password"
+                                                                                                            required></div>
+      <button class="button button-secondary" type="submit">{% icon 'logout' %} Cerrar otras sesiones</button>
+    </form>
+  </section>
+{% endblock %}

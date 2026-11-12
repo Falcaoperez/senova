@@ -11,6 +11,7 @@
     <a class="button button-secondary"
        href="{% url 'admin_personalizado:gestionar_usuarios' %}">Volver a usuarios</a>
   </div>
+  {% if cuenta_protegida %}<p class="alert alert-info">Esta cuenta está protegida. Solo un superadministrador puede modificarla.</p>{% endif %}
   <div class="profile-grid">
     <aside class="panel profile-card">
       <span class="avatar avatar-lg">{{ usuario.first_name|default:usuario.username|slice:':1'|upper }}{{ usuario.last_name|slice:':1'|upper }}</span>
@@ -53,6 +54,13 @@
       <input type="hidden"
              name="accion"
              value="{% if usuario.is_active %}desactivar{% else %}activar{% endif %}">
+      <div class="field">
+        <label for="confirm-status">Tu contraseña actual</label><input type="password"
+                                                                       id="confirm-status"
+                                                                       name="contrasena_actual"
+                                                                       autocomplete="current-password"
+                                                                       required>
+      </div>
       <button class="button {% if usuario.is_active %}button-danger{% else %}button-primary{% endif %} button-block"
               type="submit"
               style="margin-top:20px">
@@ -83,6 +91,13 @@
         <form method="post" data-submit>
           {% csrf_token %}
           <input type="hidden" name="action" value="update_profile">
+          <div class="field">
+            <label for="confirm-update_profile">Tu contraseña actual</label><input id="confirm-update_profile"
+                                                                                   name="contrasena_actual"
+                                                                                   type="password"
+                                                                                   autocomplete="current-password"
+                                                                                   required><small>Confirma tu identidad para modificar esta cuenta.</small>
+          </div>
           <div class="form-grid">
             <div class="field">
               <label for="first_name">Nombre</label>
@@ -112,10 +127,17 @@
           </div>
         </form>
       </div>
-      <div id="panel-roles" role="tabpanel" aria-labelledby="tab-roles" hidden>
+      <div id="panel-roles" role="tabpanel" aria-labelledby="tab-roles">
         <form method="post" data-submit>
           {% csrf_token %}
           <input type="hidden" name="action" value="update_groups">
+          <div class="field">
+            <label for="confirm-update_groups">Tu contraseña actual</label><input id="confirm-update_groups"
+                                                                                  name="contrasena_actual"
+                                                                                  type="password"
+                                                                                  autocomplete="current-password"
+                                                                                  required><small>Confirma tu identidad para modificar esta cuenta.</small>
+          </div>
           <div class="field">
             <label>Roles de la cuenta</label>
             <div class="check-grid">
@@ -134,13 +156,17 @@
           </div>
         </form>
       </div>
-      <div id="panel-password"
-           role="tabpanel"
-           aria-labelledby="tab-password"
-           hidden>
+      <div id="panel-password" role="tabpanel" aria-labelledby="tab-password">
         <form method="post" data-submit>
           {% csrf_token %}
           <input type="hidden" name="action" value="change_password">
+          <div class="field">
+            <label for="confirm-change_password">Tu contraseña actual</label><input id="confirm-change_password"
+                                                                                    name="contrasena_actual"
+                                                                                    type="password"
+                                                                                    autocomplete="current-password"
+                                                                                    required><small>Confirma tu identidad para modificar esta cuenta.</small>
+          </div>
           <div class="field">
             <label for="nueva_password">Nueva contraseña</label>
             <div class="password-wrap">
@@ -183,12 +209,17 @@
           </h2>
         </div>
       </div>
-      <div class="field">
-        <label class="sr-only" for="searchEvidencias">Buscar evidencias de este usuario</label>
-        <input id="searchEvidencias"
-               placeholder="Buscar en las evidencias de este usuario…"
-               data-local-search="evidenciasTable">
-      </div>
+      <form class="filters" method="get">
+        <div class="field search-field">
+          <label class="sr-only" for="searchEvidencias">Buscar evidencias de este usuario</label>
+          <input id="searchEvidencias"
+                 placeholder="Buscar en las evidencias de este usuario…"
+                 name="q"
+                 value="{{ busqueda }}"
+                 maxlength="100">
+        </div>
+        <button class="button button-secondary" type="submit">Buscar</button>
+      </form>
       <div class="table-wrapper">
         <table class="data-table" id="evidenciasTable">
           <thead>
@@ -222,6 +253,7 @@
           </tbody>
         </table>
       </div>
+      {% include "notificaciones/paginacion.html" with pagina=evidencias %}
       <p class="password-help"
          style="margin-top:15px">{{ evidencias_con_archivo }} con archivo · {{ evidencias_con_link }} con enlace</p>
     </section>

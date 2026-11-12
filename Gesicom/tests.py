@@ -135,6 +135,8 @@ class ApplicationTests(TestCase):
             "apellido": "Pérez",
             "correo": "reader@example.com",
             "contrasena": "NuevaSegura42!",
+            "confirmar_contrasena": "NuevaSegura42!",
+            "contrasena_actual": "Strongpass42!",
         }
         response = self.client.post(reverse("editar_perfil"), payload)
         self.assertEqual(response.status_code, 302)
@@ -142,6 +144,7 @@ class ApplicationTests(TestCase):
         self.assertTrue(self.user.check_password("NuevaSegura42!"))
         self.assertEqual(self.client.get(reverse("editar_perfil")).status_code, 200)
         payload["contrasena"] = "short"
+        payload["contrasena_actual"] = "NuevaSegura42!"
         payload["nombre"] = "No guardar"
         self.assertEqual(self.client.post(reverse("editar_perfil"), payload).status_code, 200)
         self.user.refresh_from_db()

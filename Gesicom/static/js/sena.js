@@ -66,7 +66,7 @@
         const search = $("#global-search");
         if (search) {
           event.preventDefault();
-          search.focus();
+          search.click();
         }
       }
     });
@@ -164,54 +164,56 @@
       }
     }),
   );
-  $$("[data-remote-form], [data-observation-form]").forEach((form) =>
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const button = $("button[type=submit]", form),
-        error = $("[data-form-error]", form);
-      if (error) error.hidden = true;
+  document.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-remote-form], [data-observation-form]");
+    if (!form) return;
+    event.preventDefault();
+    const button = $("button[type=submit]", form),
+      error = $("[data-form-error]", form);
+    if (error) error.hidden = true;
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    }
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const result = await response.json().catch(() => {
+        throw new Error(
+          "No se pudo procesar la respuesta. Recarga la página e intenta de nuevo.",
+        );
+      });
+      if (!response.ok || result.error)
+        throw new Error(result.error || "No se pudo guardar el cambio.");
+      if (form.hasAttribute("data-observation-form")) {
+        form.dataset.dirty = "false";
+        $$("textarea", form).forEach((input) => { input.defaultValue = input.value; });
+        toast("Observaciones guardadas correctamente.");
+      } else {
+        const target = new URL(form.dataset.redirect, location.origin);
+        if (form.hasAttribute("data-email-redirect"))
+          target.searchParams.set("email", new FormData(form).get("email"));
+        location.assign(target);
+      }
+    } catch (exception) {
+      const message =
+        exception.message ||
+        "No se pudo establecer conexión. Intenta nuevamente.";
+      if (error) {
+        error.textContent = message;
+        error.hidden = false;
+      } else toast(message, true);
+    } finally {
       if (button) {
-        button.disabled = true;
-        button.setAttribute("aria-busy", "true");
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
       }
-      try {
-        const response = await fetch(form.action, {
-          method: "POST",
-          body: new FormData(form),
-          credentials: "same-origin",
-          headers: { Accept: "application/json" },
-        });
-        const result = await response.json().catch(() => {
-          throw new Error(
-            "No se pudo procesar la respuesta. Recarga la página e intenta de nuevo.",
-          );
-        });
-        if (!response.ok || result.error)
-          throw new Error(result.error || "No se pudo guardar el cambio.");
-        if (form.hasAttribute("data-observation-form"))
-          toast("Observaciones guardadas correctamente.");
-        else {
-          const target = new URL(form.dataset.redirect, location.origin);
-          if (form.hasAttribute("data-email-redirect"))
-            target.searchParams.set("email", new FormData(form).get("email"));
-          location.assign(target);
-        }
-      } catch (exception) {
-        const message =
-          exception.message ||
-          "No se pudo establecer conexión. Intenta nuevamente.";
-        if (error) {
-          error.textContent = message;
-          error.hidden = false;
-        } else toast(message, true);
-      } finally {
-        if (button) {
-          button.disabled = false;
-          button.removeAttribute("aria-busy");
-        }
-      }
-    }),
-  );
+    }
+  });
   $$("[data-tabs]").forEach((group) => {
     const tabs = $$("[role=tab]", group);
     const activate = (tab, focus = false) => {
@@ -290,6 +292,12 @@
           credentials: "same-origin",
           headers: { Accept: "application/json" },
         });
+        if (response.status === 401) {
+          const data = await response.json();
+          const login = data.login_url || "/login/";
+          location.assign(login.startsWith("/") && !login.startsWith("//") ? login : "/login/");
+          return;
+        }
         if (!response.ok) return;
         const data = await response.json();
         document.querySelectorAll("[data-unread-count]").forEach((el) => {

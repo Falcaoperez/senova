@@ -1,0 +1,9 @@
+{% extends "auth_base.html" %}
+{% load ui %}
+{% block title %}Acceso temporalmente limitado · GESICOM{% endblock %}
+{% block auth_content %}
+  <span class="eyebrow">PROTECCIÓN DE LA CUENTA · {{ estado }}</span>
+  <h2>Vuelve a intentarlo en unos minutos.</h2>
+  <p class="auth-description" role="alert">{{ mensaje }}</p>
+  <a class="button button-primary" href="{{ volver }}">{% icon 'arrow' %} Volver</a>
+{% endblock %}

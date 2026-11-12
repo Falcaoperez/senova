@@ -1,0 +1,75 @@
+name: Validación de GESICOM
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop, "feature/**", "fix/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gesicom-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    container: python:3.12-bookworm
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: senova
+          MYSQL_USER: gesicom_app
+          MYSQL_PASSWORD: ci-app-password
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_ROOT_HOST: "%"
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -pci-root-password --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+      redis:
+        image: redis:7.4-alpine
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=20
+    env:
+      DJANGO_SECRET_KEY: clave-exclusiva-de-pruebas-automaticas-no-usar-en-produccion-2026
+      DB_ENGINE: mysql
+      DB_NAME: senova
+      DB_USER: gesicom_app
+      DB_PASSWORD: ci-app-password
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      REDIS_URL: redis://redis:6379/0
+      EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bibliotecas de MySQL
+        run: apt-get update && apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config default-mysql-client
+      - name: Dependencias
+        run: python -m pip install -r requirements-dev.txt
+      - name: Base de pruebas independiente
+        env:
+          MYSQL_PWD: ci-root-password
+        run: mysql -h mysql -uroot < database/preparar_pruebas.sql
+      - name: Código y migraciones
+        run: |
+          ruff check .
+          python manage.py makemigrations --check --dry-run
+          python manage.py migrate --noinput
+      - name: Pruebas con MySQL
+        run: python manage.py test --settings=SENNOVA.test_settings --noinput
+      - name: Configuración de producción y archivos estáticos
+        env:
+          DJANGO_DEBUG: "False"
+        run: |
+          python manage.py check --deploy --fail-level WARNING
+          python manage.py collectstatic --noinput
+      - name: Dependencias de ejecución
+        run: pip-audit --no-deps --disable-pip -r requirements.txt

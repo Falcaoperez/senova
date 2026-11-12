@@ -10,6 +10,8 @@ from django.core.mail.backends.smtp import EmailBackend
 class SMTPBackend(EmailBackend):
     def open(self):
         token = getattr(settings, "EMAIL_OAUTH2_ACCESS_TOKEN", "")
+        if (self.password or token) and not (self.use_tls or self.use_ssl):
+            raise ImproperlyConfigured("Las credenciales SMTP requieren una conexión TLS o SSL.")
         if self.username and not (self.password or token):
             raise ImproperlyConfigured("Faltan las credenciales de la cuenta SMTP. Configúralas en el entorno.")
         if not token:

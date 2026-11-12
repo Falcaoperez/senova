@@ -6,120 +6,190 @@
     <div>
       <p class="eyebrow">GESICOM / ADMINISTRACIÓN / USUARIOS</p>
       <h1>El talento detrás de cada idea.</h1>
-      <p class="page-description">Administra usuarios, roles y estados de acceso desde un solo lugar.</p>
+      <p class="page-description">Encuentra personas, organiza sus roles y administra el acceso del equipo.</p>
     </div>
     <a class="button button-primary"
        href="{% url 'admin_personalizado:crear_usuario' %}">{% icon 'plus' %} Nuevo usuario</a>
   </div>
-  <section class="panel">
-    <form class="filters" method="get">
+  <section class="panel" data-live-scope>
+    <form class="filters" method="get" data-live-form>
       <div class="field search-field">
         <label for="user-search">Buscar usuario</label>
         <input id="user-search"
                name="q"
                value="{{ busqueda }}"
-               placeholder="Nombre, usuario o correo…">
+               maxlength="100"
+               placeholder="Nombre, usuario o correo…"
+               data-live-input>
       </div>
-      <button class="button button-dark" type="submit">{% icon 'search' %} Buscar</button>
-      <a class="button button-secondary" href="{{ request.path }}">Limpiar</a>
+      <div class="field">
+        <label for="user-state">Estado</label>
+        <select id="user-state" name="estado">
+          <option value="">Todos los estados</option>
+          <option value="activo" {% if estado == 'activo' %}selected{% endif %}>Activos</option>
+          <option value="inactivo" {% if estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="user-role">Rol</label>
+        <select id="user-role" name="rol">
+          <option value="">Todos los roles</option>{% for group in grupos_disponibles %}<option value="{{ group.pk }}"
+                                                                                                {% if rol == group.pk|stringformat:'s' %}selected{% endif %}>{{ group.name|capfirst }}</option>{% endfor %}</select>
+      </div>
+      <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
+      <a class="button button-secondary"
+         href="{{ request.path }}"
+         data-live-link>Limpiar</a>
     </form>
-    <div class="table-toolbar">
-      <h2>
-        Directorio de usuarios <span class="table-count">{{ usuarios|length }}</span>
-      </h2>
-      <p>Selecciona un usuario para consultar y editar su información.</p>
-    </div>
-    <form method="post"
-          action="{% url 'admin_personalizado:gestionar_usuarios' %}"
-          id="usersForm">
-      {% csrf_token %}
-      <div class="table-wrapper"
-           role="region"
-           aria-label="Directorio de usuarios"
-           tabindex="0">
-        <table class="data-table" id="usersTable">
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Correo electrónico</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for member in usuarios %}
-              <tr>
-                <td>
-                  <div class="table-title-cell">
-                    <span class="avatar">{{ member.username|slice:':1'|upper }}</span>
-                    <div>
-                      <strong>{{ member.get_full_name|default:member.username }}</strong>
-                      <small>@{{ member.username }}</small>
-                    </div>
-                  </div>
-                </td>
-                <td>{{ member.email|default:'Sin correo' }}</td>
-                <td>
-                  <label class="sr-only" for="role-{{ member.pk }}">Rol de {{ member.username }}</label>
-                  <select class="table-select"
-                          id="role-{{ member.pk }}"
-                          name="role_{{ member.pk }}">
-                    <option value="__keep__" selected>
-                      {% for group in member.groups.all %}{{ group.name|capfirst }}{% if not forloop.last %}, {% endif %}
-{% empty %}Sin rol{% endfor %}
-  </option>
-  <option value="">Sin rol</option>
-  {% for group in grupos_disponibles %}
-    <option value="{{ group.pk }}">{{ group.name|capfirst }}</option>
-  {% endfor %}
-  </select>
-  </td>
-  <td>
-    <span class="badge {% if member.is_active %}badge-success{% else %}badge-danger{% endif %}">
-      <span></span>
-      {% if member.is_active %}Activo{% else %}Inactivo{% endif %}
-    </span>
-  </td>
-  <td>
-    <a class="icon-button"
-       href="{% url 'admin_personalizado:detalle_usuario' member.pk %}"
-       aria-label="Editar {{ member.username }}">{% icon 'edit' %}</a>
-  </td>
-  </tr>
-{% empty %}
-  <tr>
-    <td colspan="5">
-      <div class="empty-state">
-        <h3>No encontramos usuarios</h3>
-        <p>Prueba con otra búsqueda o crea una nueva cuenta.</p>
+    <div data-live-region="users">
+      <div class="table-toolbar">
+        <div>
+          <h2>
+            Directorio de usuarios <span class="table-count">{{ usuarios.paginator.count }}</span>
+          </h2>
+          <p>Mostrando {{ usuarios.start_index }}–{{ usuarios.end_index }} de {{ usuarios.paginator.count }} resultados</p>
+        </div>
+        <span class="directory-hint">{% icon 'shield' %} Acciones con confirmación</span>
       </div>
-    </td>
-  </tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-{% if usuarios %}
-  <div class="form-actions">
-    <span class="form-note">{% icon 'info' %} Los roles solo cambian al guardar.</span>
-    <a class="button button-secondary" href="{{ request.path }}">Cancelar</a>
-    <button class="button button-primary" type="submit">{% icon 'check' %} Guardar roles</button>
-  </div>
-{% endif %}
-</form>
-{% if usuarios.has_next or usuarios.has_previous %}
-  <nav class="pagination" aria-label="Paginación de usuarios">
-    <span>Página {{ usuarios.number }} de {{ usuarios.paginator.num_pages }}</span>
-    <div class="pagination-links">
-      {% if usuarios.has_previous %}
-        <a href="{% querystring page=usuarios.previous_page_number %}">Anterior</a>
-      {% endif %}
-      {% if usuarios.has_next %}
-        <a href="{% querystring page=usuarios.next_page_number %}">Siguiente</a>
+      <form method="post"
+            action="{% url 'admin_personalizado:gestionar_usuarios' %}"
+            id="usersForm"
+            data-account-actions>
+        {% csrf_token %}
+        <div class="selection-toolbar">
+          <label class="check-label">
+            <input type="checkbox"
+                   data-select-all
+                   aria-label="Seleccionar las cuentas de esta página">
+            Esta página
+          </label>
+          <span data-selection-count>0 seleccionadas</span>
+          <div class="heading-actions">
+            <button class="button button-secondary button-sm"
+                    type="submit"
+                    name="accion"
+                    value="activar"
+                    data-selection-action>Activar</button>
+            <button class="button button-danger button-sm"
+                    type="submit"
+                    name="accion"
+                    value="desactivar"
+                    data-selection-action>Desactivar</button>
+          </div>
+        </div>
+        <div class="table-wrapper"
+             role="region"
+             aria-label="Directorio de usuarios"
+             tabindex="0">
+          <table class="data-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>
+                  <span class="sr-only">Seleccionar</span>
+                </th>
+                <th>Usuario</th>
+                <th>Correo electrónico</th>
+                <th>Roles</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for member in usuarios %}
+                <tr>
+                  <td>
+                    <input class="row-checkbox"
+                           type="checkbox"
+                           name="usuarios"
+                           value="{{ member.pk }}"
+                           aria-label="Seleccionar {{ member.username }}"
+                           {% if member.pk == user.pk %}disabled{% elif not user.is_superuser and member.is_staff or not user.is_superuser and member.is_superuser %}disabled{% endif %}>
+                  </td>
+                  <td>
+                    <div class="table-title-cell">
+                      <span class="avatar">{{ member.username|slice:':1'|upper }}</span>
+                      <div>
+                        <strong>{{ member.get_full_name|default:member.username }}</strong>
+                        <small>@{{ member.username }}{% if member.is_superuser or member.is_staff %} · Cuenta protegida{% endif %}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ member.email|default:'Sin correo' }}</td>
+                  <td>
+                    <label class="sr-only" for="role-{{ member.pk }}">Roles de {{ member.username }}</label>
+                    <select class="table-select"
+                            id="role-{{ member.pk }}"
+                            name="role_{{ member.pk }}"
+                            {% if not user.is_superuser and member.is_staff or not user.is_superuser and member.is_superuser %}disabled{% endif %}>
+                      <option value="__keep__" selected>{% for group in member.groups.all %}{{ group.name|capfirst }}{% if not forloop.last %}, {% endif %}{% empty %}Sin rol{% endfor %}</option>
+                      <option value="">Sin rol</option>{% for group in grupos_disponibles %}<option value="{{ group.pk }}">{{ group.name|capfirst }}</option>{% endfor %}</select>
+                  </td>
+                  <td>
+                    <span class="badge {% if member.is_active %}badge-success{% else %}badge-danger{% endif %}">
+                      <span></span>{% if member.is_active %}Activo{% else %}Inactivo{% endif %}</span>
+                    </td>
+                    <td>
+                      <a class="icon-button"
+                         href="{% url 'admin_personalizado:detalle_usuario' member.pk %}"
+                         aria-label="Editar {{ member.username }}">{% icon 'edit' %}</a>
+                    </td>
+                  </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6">
+                    <div class="empty-state">
+                      <span class="empty-symbol">{% icon 'search' %}</span>
+                      <h3>No encontramos usuarios</h3>
+                      <p>Prueba con otros filtros o crea una nueva cuenta.</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if usuarios %}
+          <div class="account-actions-footer">
+            <div class="field">
+              <label for="admin-confirm-password">Tu contraseña actual</label>
+              <input type="password"
+                     id="admin-confirm-password"
+                     name="contrasena_actual"
+                     autocomplete="current-password"
+                     required>
+              <small>Confirma tu identidad para aplicar cambios de roles o estado.</small>
+            </div>
+            <div>
+              <span class="form-note">Los roles solo cambian al guardar.</span>
+              <button class="button button-primary"
+                      type="submit"
+                      name="accion"
+                      value="roles">{% icon 'check' %} Guardar roles</button>
+            </div>
+          </div>
+        {% endif %}
+      </form>
+      {% if usuarios.has_next or usuarios.has_previous %}
+        <nav class="pagination" aria-label="Paginación de usuarios">
+          <span>Página {{ usuarios.number }} de {{ usuarios.paginator.num_pages }}</span>
+          <div class="pagination-links">{% if usuarios.has_previous %}<a href="{% querystring page=usuarios.previous_page_number %}"
+                                                                         data-live-link>Anterior</a>{% endif %}{% if usuarios.has_next %}<a href="{% querystring page=usuarios.next_page_number %}"
+                                                                                                                                            data-live-link>Siguiente</a>{% endif %}</div>
+        </nav>
       {% endif %}
     </div>
-  </nav>
-{% endif %}
-</section>
+    <p class="sr-only" role="status" data-live-status></p>
+  </section>
+  <dialog class="action-dialog"
+          id="account-confirm"
+          aria-labelledby="account-confirm-title">
+    <span class="action-dialog-icon">{% icon 'shield' %}</span>
+    <h2 id="account-confirm-title">Confirmar cambios</h2>
+    <p data-confirm-description></p>
+    <p class="password-help">Al desactivar una cuenta se cerrarán sus sesiones y se invalidarán sus solicitudes de recuperación.</p>
+    <div class="heading-actions">
+      <button class="button button-secondary" type="button" data-account-cancel>Volver</button>
+      <button class="button button-primary" type="button" data-account-accept>Confirmar</button>
+    </div>
+  </dialog>
 {% endblock %}

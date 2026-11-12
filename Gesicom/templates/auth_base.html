@@ -38,21 +38,23 @@
     </aside>
     <main id="main-content" class="auth-main" tabindex="-1">
       <div class="auth-top-link">
-        {% block auth_top %}¿Necesitas orientación? <a href="{% url 'ayuda' %}">Centro de ayuda {% icon 'arrow' %}</a>
-        {% endblock %}
-      </div>
-      <div class="auth-form-wrap">
-        <a class="brand auth-logo-mobile" href="{% url 'home' %}">
-          <img src="{% static 'img/brand/sena.svg' %}"
-               alt="SENA"
-               width="66"
-               height="66">
-          <span class="brand-divider"></span>
-          <strong>GESICOM</strong>
-        </a>
-        {% block auth_content %}{% endblock %}
-        <div class="auth-bottom">{% icon 'shield' %} GESICOM · Servicio Nacional de Aprendizaje</div>
-      </div>
-    </main>
-  </div>
+      {% block auth_top %}¿Necesitas orientación? <a href="{% url 'ayuda' %}">Centro de ayuda {% icon 'arrow' %}</a>
+{% endblock %}
+</div>
+<div class="auth-form-wrap">
+  <a class="brand auth-logo-mobile" href="{% url 'home' %}">
+    <img src="{% static 'img/brand/sena.svg' %}"
+         alt="SENA"
+         width="66"
+         height="66">
+    <span class="brand-divider"></span>
+    <strong>GESICOM</strong>
+  </a>
+  {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}"
+                                                     role="status">{{ message }}</div>{% endfor %}{% endif %}
+  {% block auth_content %}{% endblock %}
+  <div class="auth-bottom">{% icon 'shield' %} GESICOM · Servicio Nacional de Aprendizaje</div>
+</div>
+</main>
+</div>
 {% endblock %}

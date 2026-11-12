@@ -10,7 +10,9 @@ python manage.py procesar_notificaciones --continuo --intervalo 30 --lote 50
 
 El trabajador genera recordatorios y vencimientos, omite usuarios que ya entregaron el reporte y reclama mensajes con bloqueos de MySQL. Dos trabajadores no toman el mismo lote activo. Los errores de envío se reintentan con espera creciente hasta cinco veces. Después pueden reactivarse desde la página administrativa de Novedades.
 
-El estado visible del procesador se guarda en Redis. La bandeja funciona aunque SMTP esté temporalmente indisponible. Las preferencias se vuelven a comprobar justo antes de enviar. Los avisos de recuperación usan el transporte SMTP directamente y no se confirman si falla.
+El estado visible del procesador se guarda en Redis. La bandeja funciona aunque SMTP esté temporalmente indisponible. Las preferencias se vuelven a comprobar justo antes de enviar. El mismo trabajador procesa primero la cola de seguridad: PIN y avisos de cambios de credenciales. Mientras hay lotes listos, continúa sin esperar el intervalo de reposo.
+
+Los PIN no se envían dentro de la petición web. La respuesta de recuperación es genérica incluso si SMTP falla. La cola de seguridad reintenta tres veces con espera creciente, respeta la caducidad de 10 minutos y borra el contenido cifrado al enviar, cancelar o agotar los intentos. Un PIN caducado necesita una solicitud nueva; los errores ordinarios de novedades siguen el procedimiento de reactivación anterior.
 
 La cola ofrece entrega al menos una vez: un corte justo después de la aceptación del proveedor y antes de registrar el resultado puede producir una repetición. Los avisos internos por novedad/fase de plazo sí se deduplican con restricciones de la base de datos.
 
@@ -22,9 +24,27 @@ Cambiar la fecha de un plazo incrementa su versión y permite emitir los avisos 
 
 ## Correo de producción
 
-La cuenta remitente debe existir y tener autorización SMTP. El perfil local de Mailpit captura correos; no valida el acceso a Microsoft 365 ni envía mensajes reales. Para producción, usa `compose.yml` sin el perfil de desarrollo y añade una credencial autorizada en la configuración privada.
+El remitente es `santiagoocoy2025@gmail.com` por `smtp.gmail.com:587`, con STARTTLS y una contraseña de aplicación de Google. Se requiere verificación en dos pasos. El perfil local de Mailpit captura correos; no valida la autenticación de Gmail ni envía mensajes reales. Para producción, usa `compose.yml` sin el perfil de desarrollo y añade la credencial privada.
 
 Si se utiliza OAuth2, la renovación del token corresponde al servicio de identidad del despliegue. Comprueba la conexión con `python manage.py comprobar_correo`; no imprime secretos ni envía mensajes.
+
+Las cuentas personales de Gmail tienen cuotas de envío. Dimensiona el volumen de avisos antes de usarlo con todos los usuarios; la cola no aumenta los límites del proveedor. Las direcciones `example.invalid` de las cuentas de revisión solo sirven con la captura local.
+
+## Sesiones y cambios de cuenta
+
+`/mi-cuenta/seguridad/` muestra las sesiones del usuario y permite cerrarlas mediante POST, CSRF y contraseña actual. La eliminación alcanza la caché y MySQL. El inicio de sesión registra la sesión antes de la primera navegación. `SESSION_IDLE_TIMEOUT` controla la caducidad por inactividad, con 1.800 segundos por defecto; la actividad visible se actualiza como máximo una vez por minuto para limitar escrituras.
+
+Al cambiar la contraseña desde el perfil se conserva la sesión actual y se cierran las demás. Una recuperación cierra todas las sesiones autenticadas y solicita ingresar de nuevo. Los cambios sensibles invalidan las solicitudes de recuperación y generan avisos al correo anterior y al actual.
+
+Ejecuta `python manage.py clearsessions` periódicamente para retirar sesiones caducadas de MySQL; sus registros asociados se eliminan en cascada.
+
+La primera instalación de esta política exige iniciar sesión de nuevo: las sesiones anteriores que todavía no estaban registradas no se aceptan, aunque quedaran en caché. Esto permite que el cierre de otras sesiones abarque todos los accesos admitidos por la nueva versión.
+
+Las consultas automáticas de la campana no prolongan la sesión. Cuando el servidor responde que el acceso terminó, la interfaz vuelve a la pantalla de ingreso.
+
+## Actualizar esta versión
+
+Instala las dependencias, ejecuta `python manage.py migrate --noinput` y `python manage.py collectstatic --noinput`, y reinicia aplicación y trabajador. Las migraciones añaden la cola, el registro de sesiones y la vinculación de las solicitudes a las credenciales. Los PIN anteriores a esa vinculación dejan de ser válidos: debe solicitarse uno nuevo. No se eliminan cuentas ni evidencias.
 
 ## Capacidad
 
@@ -37,3 +57,18 @@ La capacidad real depende del hardware, consultas, conexiones SMTP y tamaño de 
 `/health/` devuelve un estado mínimo tras comprobar base de datos y caché. No muestra credenciales ni detalles internos. Docker utiliza esta ruta para supervisar la aplicación.
 
 Realiza copias de MySQL y del volumen de medios. Verifica una restauración independiente antes de reemplazar datos de una instalación existente.
+
+## Validación de GitHub Actions
+
+El workflow vigente es `.github/workflows/validacion.yml`. El trabajo corre dentro de `python:3.12-bookworm`; los servicios MySQL y Redis se resuelven como `mysql` y `redis`. No necesita publicar sus puertos en el servidor de GitHub ni buscar contenedores con `docker ps`.
+
+Esta configuración evita que la instalación de las bibliotecas de MySQL interactúe con un servidor MySQL preinstalado del runner. La preparación de `test_senova` usa el cliente dentro del contenedor de trabajo. No se ocultan fallos de paquetes con `dpkg --configure -a || true`: si una dependencia no se instala, la validación debe detenerse.
+
+Las claves que empiezan por `ci-` solo pertenecen a servicios efímeros de pruebas. Los secretos de la instalación y la contraseña de revisión no se incluyen en el workflow. Cada PR a `develop` verifica Ruff, migraciones, pruebas MySQL, configuración de producción, estáticos y dependencias antes de integrarse.
+
+## Interacciones del espacio de trabajo
+
+- `Ctrl K`, `Cmd K` o `/` abre la búsqueda; flechas y Enter eligen un resultado y Escape cierra.
+- Los filtros de usuarios y evidencias conservan su estado en la URL y permiten volver con el navegador. Los formularios GET continúan funcionando sin JavaScript.
+- El centro de operaciones permite períodos de 7, 30 o 90 días. El gráfico cuenta la fecha de envío de las evidencias y ofrece una tabla de datos accesible, también sin JavaScript.
+- La selección de cuentas se limita a la página visible. El cambio de roles solo afecta los desplegables modificados; puede conservar varios roles existentes. Las cuentas protegidas no se pueden modificar por un administrador sin privilegios de superusuario.

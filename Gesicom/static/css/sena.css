@@ -43,6 +43,22 @@
   --shadow: 0 3px 16px #13334805;
   --font: "Work Sans", Arial, sans-serif;
 }
+.security-overview, .security-sessions, .security-close-others { margin-bottom: 24px; }
+.security-overview > p, .security-close-others > p { margin: 12px 0; color: var(--muted); }
+.session-entry { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:24px 0; border-top:1px solid var(--line); }
+.session-entry-main { display:flex; align-items:flex-start; gap:16px; min-width:0; }
+.session-entry h3 { font-size:15px; margin-bottom:6px; }
+.session-entry p, .session-entry small { color:var(--muted); overflow-wrap:anywhere; }
+.session-revoke { flex:0 0 auto; max-width:280px; }
+.session-revoke form { display:grid; gap:12px; margin-top:14px; }
+.security-confirm { display:flex; align-items:end; gap:16px; margin-top:20px; }
+.security-confirm .field { flex:1; max-width:360px; }
+.mail-status-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; margin:20px 0; }
+.mail-status-grid strong { display:block; margin-top:8px; overflow-wrap:anywhere; }
+.mail-sender { overflow-wrap:anywhere; }
+@media(max-width:1000px) { .mail-status-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:430px) { .mail-status-grid { grid-template-columns:1fr; } }
+@media(max-width:700px) { .session-entry { align-items:flex-start; flex-direction:column; gap:16px; } .security-confirm { align-items:stretch; flex-direction:column; } .security-confirm .field { max-width:none; } }
 * {
   box-sizing: border-box;
 }
