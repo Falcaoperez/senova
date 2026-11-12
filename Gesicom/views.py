@@ -7,27 +7,31 @@ Incluye:
 - Control de acceso por grupos/roles
 """
 
-import csv
-import datetime
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
+from .exportaciones import respuesta_csv
 from .models import Envio
-from .selectors import _evidencias_context, _filtered_envios, _home_url_for_user, _panel_context, _visible_envios
+from .reportes import contexto_reportes, filas_evidencias, serie_trimestral
+from .selectors import (
+    _evidencias_context,
+    _filtered_envios,
+    _filtros,
+    _home_url_for_user,
+    _panel_context,
+    _visible_envios,
+)
 from .utils import (
     calculate_stats,
     require_group,
-    safe_csv_cell,
 )
 
 
@@ -106,74 +110,35 @@ def proyecciones(request):
 
 @login_required
 def reportes(request):
-    context = _evidencias_context(request, incluir_graficos=True)
-    context["download_query"] = "?" + request.GET.urlencode() if request.GET else ""
-    context["opciones_proyectos"] = [code for code, label in Envio.PROYECTO_CHOICES]
-    return render(request, "reportes.html", context)
+    return render(request, "reportes.html", contexto_reportes(request))
+
+
+def _error_exportacion(request):
+    form = _filtros(request)
+    if form.is_valid():
+        return None
+    return render(
+        request,
+        "error_filtros.html",
+        {"filtros_form": form, "volver": reverse("reportes") + "?" + request.GET.urlencode()},
+        status=400,
+    )
 
 
 @login_required
 def reportes_csv(request):
-    consulta = _filtered_envios(request)
-    respuesta = HttpResponse(content_type="text/csv")
-    respuesta["Content-Disposition"] = 'attachment; filename="reportes.csv"'
-    escritor = csv.writer(respuesta)
-    escritor.writerow(["fecha_envio", "nombre", "proyecto", "tipo_evidencia", "link_evidencia", "observaciones"])
-    for envio in consulta.order_by("fecha_envio"):
-        escritor.writerow(
-            [
-                safe_csv_cell(value)
-                for value in [
-                    envio.fecha_envio.isoformat() if envio.fecha_envio else "",
-                    envio.nombre,
-                    envio.proyecto,
-                    envio.tipo_evidencia,
-                    envio.link_evidencia or "",
-                    (envio.observaciones or "").replace("\r\n", " ").replace("\n", " "),
-                ]
-            ]
-        )
-    return respuesta
+    error = _error_exportacion(request)
+    return error if error is not None else respuesta_csv(filas_evidencias(request), "reportes.csv")
 
 
 @login_required
 def reportes_trimestrales_csv(request):
-    try:
-        num_quarters = int(request.GET.get("quarters", 4))
-    except Exception:
-        num_quarters = 4
-    num_quarters = max(1, min(24, num_quarters))
-    consulta = _filtered_envios(request)
-    hoy = timezone.localdate()
-    current_year = hoy.year
-    current_quarter = (hoy.month - 1) // 3 + 1
-    q_list = []
-    y = current_year
-    q = current_quarter
-    for _ in range(num_quarters):
-        q_list.insert(0, (y, q))
-        q -= 1
-        if q == 0:
-            q = 4
-            y -= 1
-    respuesta = HttpResponse(content_type="text/csv")
-    respuesta["Content-Disposition"] = 'attachment; filename="reportes_trimestrales.csv"'
-    escritor = csv.writer(respuesta)
-    escritor.writerow(["Trimestre", "Nuevas", "Aprobadas"])
-    for y, q in q_list:
-        start_month = (q - 1) * 3 + 1
-        start_date = datetime.date(y, start_month, 1)
-        end_month = start_month + 2
-        if end_month == 12:
-            end_day = 31
-        else:
-            next_month = end_month + 1
-            end_day = (datetime.date(y, next_month, 1) - datetime.timedelta(days=1)).day
-        end_date = datetime.date(y, end_month, end_day)
-        nuevas = consulta.filter(fecha_envio__gte=start_date, fecha_envio__lte=end_date).count()
-        aprob = consulta.filter(fecha_envio__gte=start_date, fecha_envio__lte=end_date, aprobada=True).count()
-        escritor.writerow([f"Q{q} {y}", nuevas, aprob])
-    return respuesta
+    error = _error_exportacion(request)
+    if error is not None:
+        return error
+    serie = serie_trimestral(_filtered_envios(request), _filtros(request))
+    filas = [["Trimestre", "Nuevas", "Aprobadas"], *[[f["etiqueta"], f["nuevas"], f["aprobadas"]] for f in serie]]
+    return respuesta_csv(filas, "reportes_trimestrales.csv")
 
 
 @login_required

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load ui %}
+{% block title %}Revisar filtros · GESICOM SENA{% endblock %}
+{% block content %}
+  {% include "ui/page_heading.html" with section="GESICOM / REPORTES" heading="Ajustemos la consulta." description="La descarga necesita filtros válidos para incluir la información que solicitaste." %}
+  <section class="panel export-error">
+    {% include "ui/filtros_errores.html" %}
+    <a class="button button-primary" href="{{ volver }}">{% icon 'filter' %} Corregir filtros</a>
+    <a class="button button-secondary" href="{% url 'reportes' %}">Volver a reportes</a>
+  </section>
+{% endblock %}

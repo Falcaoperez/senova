@@ -2,6 +2,8 @@ from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
 
+from .permisos import revision_permisos
+
 
 class AdminPanelTests(TestCase):
     def test_access_and_pages(self):
@@ -38,18 +40,34 @@ class AdminPanelTests(TestCase):
     def test_permissions_form_and_save_use_existing_fields(self):
         from django.contrib.auth.models import Permission
 
-        admin = User.objects.create_user("permission_admin")
+        admin = User.objects.create_user("permission_admin", password="PermisoLocal42!")
         admin.groups.add(Group.objects.get(name="administrador"))
         self.client.force_login(admin)
         group = Group.objects.create(name="grupo_prueba")
         permission = Permission.objects.get(codename="change_envio")
         url = reverse("admin_personalizado:permisos")
         response = self.client.get(url, {"group": group.pk})
-        self.assertContains(response, "perm_change_envio_1", count=1)
+        self.assertContains(response, 'name="perm_change_envio_1"', count=1)
         self.assertEqual(response.context["grupo_seleccionado"], group)
-        self.client.post(url, {"group": group.pk, "perm_change_envio_1": "allowed"})
+        self.client.post(
+            url,
+            {
+                "group": group.pk,
+                "perm_change_envio_1": "allowed",
+                "contrasena_actual": "PermisoLocal42!",
+                "revision_actual": revision_permisos(group),
+            },
+        )
         self.assertTrue(group.permissions.filter(pk=permission.pk).exists())
-        self.client.post(url, {"group": group.pk, "perm_change_envio_1": "denied"})
+        self.client.post(
+            url,
+            {
+                "group": group.pk,
+                "perm_change_envio_1": "denied",
+                "contrasena_actual": "PermisoLocal42!",
+                "revision_actual": revision_permisos(group),
+            },
+        )
         self.assertFalse(group.permissions.filter(pk=permission.pk).exists())
 
     def test_existing_profile_edit_actions_remain_available(self):

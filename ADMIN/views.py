@@ -2,12 +2,13 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import SetPasswordForm
-from django.contrib.auth.models import Group, Permission, User
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.debug import sensitive_post_parameters
 
 from cuentas.correos import encolar_aviso_cambio, invalidar_recuperaciones
@@ -31,117 +32,67 @@ def panel_control(request):
 
 @login_required
 @user_passes_test(_requerir_administrador, login_url="access_denied")
+@sensitive_post_parameters("contrasena_actual")
 def permisos(request):
-    """Gestión de permisos de grupos."""
-    grupos = Group.objects.all().order_by("name")
-    grupo_seleccionado = None
-    permisos = []
+    from django import forms
 
-    # Si se envió el formulario
-    if request.method == "POST":
-        id_grupo = request.POST.get("group")
-        if id_grupo:
-            try:
-                grupo_seleccionado = Group.objects.get(id=id_grupo)
+    from .permisos import ConflictoPermisos, PermisosGrupoForm, actualizar_permisos, grupo_protegido
 
-                # Procesar cada permiso enviado
-                for clave, valor in request.POST.items():
-                    if clave.startswith("perm_") and "_1" in clave:
-                        # Extraer el codename del permiso
-                        codename = clave.replace("perm_", "").replace("_1", "")
-                        permission_value = valor
-
-                        # Buscar el permiso en la base de datos
-                        try:
-                            origen = {
-                                "add_envio": "Gesicom",
-                                "change_envio": "Gesicom",
-                                "delete_envio": "Gesicom",
-                                "view_envio": "Gesicom",
-                                "change_user": "auth",
-                                "view_logentry": "admin",
-                            }.get(codename)
-                            if not origen:
-                                continue
-                            permiso = Permission.objects.get(codename=codename, content_type__app_label=origen)
-
-                            # Si es "permitido", agregar el permiso al grupo
-                            if permission_value == "allowed":
-                                grupo_seleccionado.permissions.add(permiso)
-                            # Si es "denegado" o "heredado", remover el permiso del grupo
-                            else:
-                                grupo_seleccionado.permissions.remove(permiso)
-                        except Permission.DoesNotExist:
-                            # El permiso no existe, ignorar
-                            pass
-
-                messages.success(request, f"Permisos del grupo {grupo_seleccionado.name} actualizados correctamente.")
-                return redirect(f"{request.path}?group={id_grupo}")
-            except Group.DoesNotExist:
-                messages.error(request, "El grupo seleccionado no existe.")
-
-    # Obtener el grupo seleccionado para mostrar
-    id_grupo = request.GET.get("group")
-    if id_grupo:
+    grupos = Group.objects.order_by("name")
+    raw = request.POST.get("group") if request.method == "POST" else request.GET.get("group")
+    seleccionado = None
+    estado = 200
+    form = None
+    editable = False
+    if raw:
         try:
-            grupo_seleccionado = Group.objects.get(id=id_grupo)
-        except Group.DoesNotExist:
-            messages.error(request, "El grupo seleccionado no existe.")
-
-    # Preparar los datos de permisos para mostrar
-    if grupo_seleccionado:
-        # Obtener todos los permisos del grupo
-        permisos_grupo = grupo_seleccionado.permissions.all()
-        nombres_permisos = [p.codename for p in permisos_grupo]
-
-        # Definir las acciones a mostrar
-        datos_permisos = [
-            {
-                "etiqueta": "Crear",
-                "nombre_codigo": "add_envio",
-                "estado_1": "allowed" if "add_envio" in nombres_permisos else "inherited",
-                "estado_2": "allowed",
-            },
-            {
-                "etiqueta": "Borrar",
-                "nombre_codigo": "delete_envio",
-                "estado_1": "allowed" if "delete_envio" in nombres_permisos else "inherited",
-                "estado_2": "inherited",
-            },
-            {
-                "etiqueta": "Editar",
-                "nombre_codigo": "change_envio",
-                "estado_1": "allowed" if "change_envio" in nombres_permisos else "inherited",
-                "estado_2": "allowed",
-            },
-            {
-                "etiqueta": "Editar estado",
-                "nombre_codigo": "change_user",
-                "estado_1": "allowed" if "change_user" in nombres_permisos else "inherited",
-                "estado_2": "allowed",
-            },
-            {
-                "etiqueta": "Acceso a la interfaz de administración",
-                "nombre_codigo": "view_logentry",
-                "estado_1": "allowed" if "view_logentry" in nombres_permisos else "inherited",
-                "estado_2": "inherited",
-            },
-            {
-                "etiqueta": "Solo opciones de configuración",
-                "nombre_codigo": "view_envio",
-                "estado_1": "allowed" if "view_envio" in nombres_permisos else "inherited",
-                "estado_2": "inherited",
-            },
-        ]
-
-        permisos = datos_permisos
-
-    context = {
-        "grupos": grupos,
-        "grupo_seleccionado": grupo_seleccionado,
-        "permisos": permisos,
-    }
-    return render(request, "admin_personalizado/permisos.html", context)
+            pk = forms.IntegerField(min_value=1, max_value=2**63 - 1).clean(raw)
+            seleccionado = Group.objects.filter(pk=pk).first()
+            if seleccionado is None:
+                raise ValidationError("El grupo ya no está disponible.")
+        except ValidationError:
+            messages.error(request, "Selecciona un grupo válido.")
+            estado = 400
+    elif request.method == "POST":
+        messages.error(request, "Selecciona el grupo que deseas actualizar.")
+        estado = 400
+    if seleccionado:
+        editable = request.user.is_superuser or not grupo_protegido(seleccionado)
+        form = PermisosGrupoForm(request.POST if request.method == "POST" else None, grupo=seleccionado)
+        if request.method == "POST" and form.is_valid():
+            try:
+                cambios = actualizar_permisos(
+                    request.user,
+                    seleccionado.pk,
+                    form.cleaned_data["revision_actual"],
+                    form.cambios(),
+                    form.cleaned_data["contrasena_actual"],
+                )
+            except ConflictoPermisos as error:
+                form.add_error(None, error)
+                estado = 409
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                messages.success(
+                    request, f"Permisos guardados: {cambios} cambios." if cambios else "Los permisos no tienen cambios."
+                )
+                return redirect(reverse("admin_personalizado:permisos") + f"?group={seleccionado.pk}")
+        if not editable:
+            for campo in form.fields.values():
+                campo.disabled = True
+    return render(
+        request,
+        "admin_personalizado/permisos.html",
+        {
+            "grupos": grupos,
+            "grupo_seleccionado": seleccionado,
+            "form": form,
+            "puede_editar": editable,
+            "conflicto": estado == 409,
+        },
+        status=estado,
+    )
 
 
 @login_required

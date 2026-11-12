@@ -172,8 +172,8 @@
     let controller, timer;
     const restoreFilters = (url) => {
       for (const control of form.elements) {
-        if (control.name) control.value = url.searchParams.get(control.name) ?? control.dataset
-          .defaultValue ?? "";
+        if (control.name) control.value = url.searchParams.get(control.name) || control.dataset
+          .defaultValue || "";
       }
     };
     const update = async (url, push = true) => {
@@ -309,6 +309,16 @@
     }
     if (event.target.matches("[data-notice-all], input[name=avisos]")) refreshNotices();
   });
+  const permissionForm = $("[data-permission-editor]");
+  if (permissionForm) {
+    const choices = $$("select[name^=perm_]", permissionForm);
+    const initial = new Map(choices.map((field) => [field.name, field.value]));
+    permissionForm.addEventListener("change", () => {
+      const count = choices.filter((field) => field.value !== initial.get(field.name)).length;
+      $("[data-permission-status]", permissionForm).textContent = count ?
+        `${count} cambio(s) por guardar. Se aplicarán a todo el grupo.` : "Los permisos no tienen cambios.";
+    });
+  }
   const confirmation = $("#account-confirm");
   const approved = new WeakSet();
   let pending;

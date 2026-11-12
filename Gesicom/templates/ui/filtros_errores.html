@@ -1,0 +1,18 @@
+{% if filtros_form.errors %}
+  <div class="alert alert-error" role="alert">
+    <div>
+      <strong>Revisa los filtros antes de continuar.</strong>
+      <ul>
+        {% for field in filtros_form %}
+          {% for error in field.errors %}
+            <li>{{ field.label }}: {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+        {% for error in filtros_form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+      <p>No se muestran ni exportan registros hasta corregirlos.</p>
+    </div>
+  </div>
+{% endif %}
