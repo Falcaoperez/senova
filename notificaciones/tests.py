@@ -161,7 +161,7 @@ class NotificationTests(TestCase):
                 "linkArchivo": "https://example.com",
             },
         )
-        self.assertTrue(response.context["exito"])
+        self.assertEqual(response.status_code, 302)
         envio = Envio.objects.get(nombre="Reporte correcto")
         self.assertEqual(envio.plazo, deadline)
         self.assertEqual(envio.limite_aplicado, deadline.fecha_limite)
@@ -183,7 +183,7 @@ class NotificationTests(TestCase):
             reverse("evidencia"),
             {"nombre": "Entrega tardía", "proyecto": "LEM", "plazo": deadline.pk, "linkArchivo": "https://example.com"},
         )
-        self.assertTrue(response.context["exito"])
+        self.assertEqual(response.status_code, 302)
         envio = Envio.objects.get(nombre="Entrega tardía")
         self.assertTrue(envio.entrega_tardia)
         deadline.fecha_limite = timezone.now() + timedelta(days=1)

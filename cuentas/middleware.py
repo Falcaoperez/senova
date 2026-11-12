@@ -21,7 +21,14 @@ class SesionesMiddleware:
 
     def __call__(self, request):
         resumen = request.path_info == "/notificaciones/resumen/"
-        respuesta_json = resumen or request.path_info == "/api/busqueda/"
+        respuesta_json = (
+            resumen
+            or request.path_info == "/api/busqueda/"
+            or (
+                request.path_info.startswith("/evidencias/")
+                and request.path_info.endswith("/actualizar-observaciones/")
+            )
+        )
 
         def acceso_caducado():
             response = JsonResponse(

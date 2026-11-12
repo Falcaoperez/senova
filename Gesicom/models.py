@@ -40,6 +40,8 @@ class Envio(models.Model):
     fecha_envio = models.DateField(default=timezone.localdate)
     registrado_en = models.DateTimeField(default=timezone.now, db_index=True)
     limite_aplicado = models.DateTimeField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1, db_default=1, editable=False)
+    actualizado_en = models.DateTimeField(null=True, blank=True, editable=False)
     plazo = models.ForeignKey(
         "notificaciones.PlazoReporte", null=True, blank=True, on_delete=models.SET_NULL, related_name="envios"
     )
@@ -59,5 +61,38 @@ class Envio(models.Model):
     def entrega_tardia(self):
         return bool(self.limite_aplicado and self.registrado_en > self.limite_aplicado)
 
+    @property
+    def estado(self):
+        return "aprobada" if self.aprobada else "rechazada" if self.rechazada else "pendiente"
+
     def __str__(self):
         return self.tipo_evidencia
+
+
+class MovimientoEvidencia(models.Model):
+    class Accion(models.TextChoices):
+        REGISTRO = "registro", "Evidencia registrada"
+        CORRECCION = "correccion", "Corrección enviada"
+        REVISION = "revision", "Estado revisado"
+        OBSERVACION = "observacion", "Observaciones actualizadas"
+        ADMINISTRACION = "administracion", "Registro actualizado por administración"
+        HISTORICO = "historico", "Estado previo incorporado al historial"
+
+    envio = models.ForeignKey(Envio, on_delete=models.CASCADE, related_name="historial")
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    accion = models.CharField(max_length=20, choices=Accion.choices)
+    version = models.PositiveIntegerField()
+    estado = models.CharField(
+        max_length=12, choices=[("pendiente", "En revisión"), ("aprobada", "Aprobada"), ("rechazada", "Rechazada")]
+    )
+    detalle = models.TextField(max_length=2000, blank=True)
+    creado_en = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-version", "-pk"]
+        verbose_name = "Movimiento de evidencia"
+        verbose_name_plural = "Historial de evidencias"
+        constraints = [models.UniqueConstraint(fields=["envio", "version"], name="movimiento_envio_version_unica")]
+
+    def __str__(self):
+        return f"Evidencia #{self.envio_id} · versión {self.version}"

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
-{% load ui %}
+{% load static ui %}
 {% block title %}{{ envio.nombre }} · GESICOM SENA{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/evidencias.css' %}">
+{% endblock %}
 {% block content %}
   <div class="page-heading">
     <div>
@@ -10,6 +13,8 @@
     </div>
     <div class="heading-actions">
       <a class="button button-secondary" href="{% url 'evidencias_list' %}">Volver a evidencias</a>
+      {% if puede_corregir %}<a class="button button-secondary"
+                                href="{% url 'corregir_evidencia' envio.pk %}">{% icon 'edit' %} Corregir evidencia</a>{% endif %}
       {% if envio.archivo_evidencia %}
         <a class="button button-primary"
            href="{{ archivo_url }}?descargar=1"
@@ -21,6 +26,10 @@
            rel="noopener noreferrer">{% icon 'external' %} Abrir enlace</a>
       {% endif %}
     </div>
+  </div>
+  <div class="evidence-version-strip">
+    <span class="badge">Versión {{ envio.version }}</span>
+    <span>Primera entrega: {{ envio.registrado_en|date:'d M Y · H:i' }}</span>{% if envio.actualizado_en %}<span>Último cambio: {{ envio.actualizado_en|date:'d M Y · H:i' }}</span>{% endif %}<a class="text-link" href="#evidence-history">Ver historial {% icon 'clock' %}</a>
   </div>
   <div class="preview-layout">
     <section class="preview-surface">
@@ -85,7 +94,7 @@
         <div>
           <dt>Registrada por</dt>
           <dd>
-            {{ envio.usuario.get_full_name|default:envio.usuario.username }}
+            {% if envio.usuario %}{{ envio.usuario.get_full_name|default:envio.usuario.username }}{% else %}Sin usuario asociado{% endif %}
           </dd>
         </div>
         <div>
@@ -124,11 +133,50 @@
               action="{% url 'set_aprobada' envio.pk %}"
               class="review-actions">
           {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.path }}">
+          <input type="hidden" name="version" value="{{ envio.version }}">
+          <input type="hidden" name="next" value="{% url 'ver_evidencia' envio.pk %}">
           <button type="submit" name="valor" value="1">Aprobar evidencia</button>
           <button type="submit" name="valor" value="0">Rechazar evidencia</button>
         </form>
       {% endif %}
     </aside>
   </div>
+  <section class="panel evidence-history" id="evidence-history">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">TRAZABILIDAD DEL APORTE</p>
+        <h2>Una historia de mejoras</h2>
+      </div>
+      <span class="badge">{{ historial.paginator.count }} movimientos</span>
+    </div>
+    <ol class="evidence-timeline">
+      {% for movimiento in historial %}
+        <li>
+          <span class="history-symbol">
+            {% if movimiento.accion == "revision" %}
+              {% icon 'check' %}
+            {% elif movimiento.accion == "correccion" %}
+              {% icon 'edit' %}
+            {% elif movimiento.accion == "observacion" %}
+              {% icon 'info' %}
+            {% else %}
+              {% icon 'file' %}
+            {% endif %}
+          </span>
+          <div class="history-entry">
+            <div class="history-heading">
+              <strong>{{ movimiento.get_accion_display }}</strong>
+              <span class="badge">{{ movimiento.get_estado_display }}</span>
+            </div>
+            <p>Versión {{ movimiento.version }} · {% if movimiento.actor %}{{ movimiento.actor.get_full_name|default:movimiento.actor.username }}{% else %}Sistema{% endif %} · {{ movimiento.creado_en|date:'d M Y · H:i' }}</p>{% if movimiento.detalle %}<div class="history-detail">{{ movimiento.detalle|linebreaksbr }}</div>{% endif %}</div>
+        </li>
+      {% empty %}
+        <li>
+          <p class="password-help">El seguimiento individual estará disponible a partir de la próxima actualización.</p>
+        </li>
+      {% endfor %}
+    </ol>
+    {% url 'ver_evidencia' envio.pk as historial_url %}
+    {% include "notificaciones/paginacion.html" with pagina=historial base_url=historial_url %}
+  </section>
 {% endblock %}

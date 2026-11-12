@@ -141,3 +141,25 @@ class SMTPConfigurationTests(SimpleTestCase):
             self.assertEqual(mechanism, "XOAUTH2")
             self.assertIn("auth=Bearer test-token", callback())
             backend.close()
+
+    @override_settings(
+        EMAIL_HOST_USER="sender@example.com", EMAIL_HOST_PASSWORD="private-test-secret", EMAIL_USE_TLS=True
+    )
+    def test_network_failure_is_distinguished_from_rejected_credentials(self):
+        import errno
+        import socket
+
+        for error, mensaje in [
+            (OSError(errno.ENETUNREACH, "private-test-secret"), "no tiene acceso de red"),
+            (socket.gaierror(-3, "private-test-secret"), "resolver el nombre"),
+            (TimeoutError("private-test-secret"), "tiempo configurado"),
+        ]:
+            with (
+                self.subTest(error=type(error).__name__),
+                patch("cuentas.management.commands.comprobar_correo.get_connection") as connection,
+            ):
+                connection.return_value.open.side_effect = error
+                with self.assertRaises(CommandError) as result:
+                    call_command("comprobar_correo", stdout=StringIO())
+                self.assertIn(mensaje, str(result.exception))
+                self.assertNotIn("private-test-secret", str(result.exception))

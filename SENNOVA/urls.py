@@ -39,6 +39,7 @@ urlpatterns = [
     path("evidencias/<int:pk>/archivo/", gesicom_views.archivo_evidencia, name="archivo_evidencia"),
     path("media/<path:ruta>", gesicom_views.archivo_por_ruta, name="archivo_por_ruta"),
     path("evidencias/<int:pk>/ver/", gesicom_views.ver_evidencia, name="ver_evidencia"),
+    path("evidencias/<int:pk>/corregir/", gesicom_views.evidencia, name="corregir_evidencia"),
     path("evidencias/<int:pk>/set_aprobada/", gesicom_views.set_aprobada, name="set_aprobada"),
     path(
         "evidencias/<int:envio_id>/actualizar-observaciones/",

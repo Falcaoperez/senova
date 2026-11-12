@@ -1,152 +1,134 @@
 {% extends "base.html" %}
-{% load ui %}
-{% block title %}Enviar evidencia · GESICOM SENA{% endblock %}
+{% load static ui %}
+{% block title %}{% if envio %}Corregir evidencia{% else %}Enviar evidencia{% endif %} · GESICOM SENA{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/evidencias.css' %}">
+{% endblock %}
 {% block content %}
-  {% include "ui/page_heading.html" with section="GESICOM / EVIDENCIAS" heading="Cada aporte cuenta." description="Registra una evidencia y conecta tu trabajo con los proyectos SENNOVA." %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / EVIDENCIAS / {% if envio %}CORRECCIÓN{% else %}NUEVO APORTE{% endif %}</p>
+      <h1>{% if envio %}Cada mejora cuenta.{% else %}Cada aporte cuenta.{% endif %}</h1>
+      <p class="page-description">{% if envio %}Actualiza tu evidencia y compártela de nuevo con el equipo revisor.{% else %}Registra una evidencia y conecta tu trabajo con los proyectos SENNOVA.{% endif %}</p>
+    </div>
+    {% if envio %}<a class="button button-secondary"
+                     href="{% url 'ver_evidencia' envio.pk %}">Ver versión actual {% icon 'arrow' %}</a>{% endif %}
+  </div>
   <div class="form-layout">
     <section class="panel">
+      {% if envio %}
+        <div class="revision-notice">
+          {% icon 'info' %}
+          <div>
+            <strong>Estás corrigiendo la versión {{ envio.version }}</strong>
+            <p>Al guardar, la evidencia volverá a revisión. Se conservan la fecha de entrega original y el plazo asociado.</p>
+          </div>
+        </div>
+      {% endif %}
       <form method="post"
-            action="{% url 'evidencia' %}"
             enctype="multipart/form-data"
             data-submit
             id="evidence-form">
         {% csrf_token %}
-        {% if errores %}
-          <div class="alert alert-error" role="alert">
-            <ul>
-              {% for error in errores %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
-        {% if exito %}
-          <div class="alert alert-success" role="status">
-            {% icon 'check' %}
-            <span>{{ mensaje_exito|default:'Evidencia enviada correctamente' }}. <a href="{% url 'evidencias_list' %}">Ver mis evidencias</a>
-            </span>
-          </div>
-        {% endif %}
+        {% if envio %}{{ form.version }}{% endif %}
+        {% if form.non_field_errors or form.version.errors %}<div class="alert alert-error" role="alert">{{ form.non_field_errors }}{{ form.version.errors }}</div>{% endif %}
         <div class="form-section">
           <h2>01. Información de la evidencia</h2>
-          <p>Cuéntanos qué vas a compartir y a qué proyecto pertenece.</p>
+          <p>Un nombre claro permite reconocer tu aporte.</p>
           <div class="form-grid">
             <div class="field">
-              <label for="nombre">
-                Nombre de la evidencia <span aria-hidden="true">*</span>
-              </label>
-              <input id="nombre"
-                     name="nombre"
-                     maxlength="80"
-                     value="{{ nombre|default:'' }}"
-                     placeholder="Ej. Informe de avance del proyecto"
-                     required>
+              <label for="{{ form.nombre.id_for_label }}">
+                {{ form.nombre.label }} <span aria-hidden="true">*</span>
+              </label>{{ form.nombre }}{% include "ui/field_errors.html" with field=form.nombre %}</div>
+              <div class="field">
+                <label for="{{ form.proyecto.id_for_label }}">
+                  {{ form.proyecto.label }} <span aria-hidden="true">*</span>
+                </label>{{ form.proyecto }}{% include "ui/field_errors.html" with field=form.proyecto %}</div>
+              </div>
+              <div class="field">
+                <label for="{{ form.plazo.id_for_label }}">{{ form.plazo.label }}</label>{{ form.plazo }}{% include "ui/field_errors.html" with field=form.plazo %}<small>{% if envio %}El plazo original permanece asociado a esta evidencia.{% else %}Asocia el registro a una entrega para completar su seguimiento. Las entregas tardías quedarán identificadas.{% endif %}</small>
+              </div>
+              <fieldset class="field evidence-types">
+                <legend>{{ form.evidencias.label }}</legend>
+                <div class="choice-grid">{% for checkbox in form.evidencias %}<label class="choice-chip">{{ checkbox.tag }}{{ checkbox.choice_label }}</label>{% endfor %}</div>{% include "ui/field_errors.html" with field=form.evidencias %}</fieldset>
             </div>
-            <div class="field">
-              <label for="opcion">
-                Proyecto <span aria-hidden="true">*</span>
-              </label>
-              <select id="opcion" name="proyecto" required>
-                <option value="">Selecciona un proyecto</option>
-                {% for code,label in proyectos_evidencia %}
-                  <option value="{{ code }}" {% if proyecto == code %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
+            <div class="form-section">
+              <h2>02. Archivos y enlaces</h2>
+              <p>Adjunta un archivo, añade un enlace o utiliza ambas opciones.</p>
+              {% if envio.archivo_evidencia %}
+                <div class="current-attachment">
+                  <span class="document-icon">{% icon 'file' %}</span>
+                  <div>
+                    <strong>Tu archivo actual está disponible</strong>
+                    <a class="text-link"
+                       href="{% url 'archivo_evidencia' envio.pk %}?descargar=1">Consultar adjunto {% icon 'download' %}</a>
+                  </div>
+                </div>
+                <label class="check-label remove-attachment">{{ form.eliminar_archivo }} {{ form.eliminar_archivo.label }}</label>
+              {% endif %}
+              <div class="dropzone" data-dropzone>
+                {% icon 'upload' %}<label for="{{ form.archivo.id_for_label }}">{% if envio.archivo_evidencia %}Selecciona un archivo para sustituir el actual{% else %}Selecciona un archivo o arrástralo aquí{% endif %}</label>
+                <p>PDF, documentos, imágenes o comprimidos · Hasta 10 MB</p>
+                {{ form.archivo }}<span class="file-selection" aria-live="polite" data-file-label></span>
+              </div>
+              {% include "ui/field_errors.html" with field=form.archivo %}
+              {% if form.errors and form.files %}<p class="password-help">Vuelve a seleccionar el archivo antes de enviar el formulario corregido.</p>{% endif %}
+              <div class="section-divider">o comparte un enlace</div>
+              <div class="field">
+                <label for="{{ form.linkArchivo.id_for_label }}">{{ form.linkArchivo.label }}</label>{{ form.linkArchivo }}{% include "ui/field_errors.html" with field=form.linkArchivo %}<small>Comprueba que el equipo revisor tenga acceso al enlace.</small>
+              </div>
+            </div>
+            {% if envio %}
+              {% if envio.observaciones %}
+                <div class="review-feedback">
+                  <p class="eyebrow">OBSERVACIONES REGISTRADAS</p>
+                  <p>{{ envio.observaciones|linebreaksbr }}</p>
+                </div>
+              {% endif %}
+              <div class="field">
+                <label for="{{ form.motivo.id_for_label }}">
+                  {{ form.motivo.label }} <span aria-hidden="true">*</span>
+                </label>{{ form.motivo }}{% include "ui/field_errors.html" with field=form.motivo %}<small>El equipo podrá consultar este detalle en el historial de la evidencia.</small>
+              </div>
+            {% else %}
+              <div class="field">
+                <label for="{{ form.observaciones.id_for_label }}">{{ form.observaciones.label }}</label>{{ form.observaciones }}{% include "ui/field_errors.html" with field=form.observaciones %}</div>
+            {% endif %}
+            <div class="form-actions">
+              <span class="form-note">{% icon 'shield' %} Tu aporte quedará registrado en tu cuenta.</span>
+              <a class="button button-secondary"
+                 href="{% if envio %}{% url 'ver_evidencia' envio.pk %}{% else %}{% url 'evidencias_list' %}{% endif %}">Cancelar</a>
+              <button class="button button-primary"
+                      type="submit">{% if envio %}Guardar corrección{% else %}Enviar evidencia{% endif %} {% icon 'arrow' %}</button>
+            </div>
+          </form>
+        </section>
+        <aside class="panel side-guide">
+          <p class="eyebrow">ANTES DE {% if envio %}CORREGIR{% else %}ENVIAR{% endif %}</p>
+          <h3>Una evidencia bien preparada hace la diferencia.</h3>
+          <div class="guide-step">
+            <span>1</span>
+            <div>
+              <strong>Identifica tu aporte</strong>
+              <p>Usa un nombre que describa el documento o resultado.</p>
             </div>
           </div>
-          <div class="field">
-            <label for="plazo">Plazo de reporte (opcional)</label>
-            <select id="plazo" name="plazo">
-              <option value="">Evidencia sin plazo asociado</option>
-              {% for deadline in plazos_evidencia %}
-                <option value="{{ deadline.pk }}"
-                        {% if plazo_seleccionado == deadline.pk|stringformat:'s' %}selected{% endif %}>{{ deadline.titulo }} · {{ deadline.fecha_limite|date:'d/m/Y H:i' }}{% if deadline.vencido %} · Fuera de plazo{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-            <small>Asocia el registro a una entrega para completar su seguimiento. Las entregas tardías quedarán identificadas.</small>
-          </div>
-          <fieldset class="field" style="border:0;padding:0">
-            <legend>Tipo de evidencia</legend>
-            <div class="choice-grid">
-              {% for code,label in tipos_evidencia %}
-                <label class="choice-chip">
-                <input type="checkbox"
-                       name="evidencias"
-                       value="{{ label }}"
-                       {% if label in tipos %}checked{% endif %}>{{ label }}</label>
-              {% endfor %}
+          <div class="guide-step">
+            <span>2</span>
+            <div>
+              <strong>Verifica el contenido</strong>
+              <p>El enlace y el archivo deben estar disponibles para el equipo revisor.</p>
             </div>
-          </fieldset>
-        </div>
-        <div class="form-section">
-          <h2>02. Archivos y enlaces</h2>
-          <p>Adjunta un archivo, añade un enlace o utiliza ambas opciones.</p>
-          <div class="dropzone" data-dropzone>
-            {% icon 'upload' %}
-            <label for="archivo">Selecciona un archivo o arrástralo aquí</label>
-            <p>PDF, documentos, imágenes o comprimidos · Hasta 10 MB</p>
-            <input type="file"
-                   id="archivo"
-                   name="archivo"
-                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.zip,.rar"
-                   data-file-input>
-            <span class="file-selection" aria-live="polite" data-file-label></span>
           </div>
-          <div class="section-divider">o comparte un enlace</div>
-          <div class="field">
-            <label for="link_evidencia">Enlace de la evidencia</label>
-            <input type="url"
-                   id="link_evidencia"
-                   name="linkArchivo"
-                   value="{{ enlace_archivo|default:'' }}"
-                   placeholder="https://"
-                   maxlength="200">
-            <small>Comprueba que el equipo revisor tenga acceso al enlace.</small>
+          <div class="guide-step">
+            <span>3</span>
+            <div>
+              <strong>{% if envio %}Explica qué cambió{% else %}Consulta el seguimiento{% endif %}</strong>
+              <p>{% if envio %}Tu corrección conserva la entrega original y añade un movimiento al historial.{% else %}Podrás consultar el estado, las observaciones y el historial desde el detalle de la evidencia.{% endif %}</p>
+            </div>
           </div>
-        </div>
-        <div class="field">
-          <label for="observaciones">
-            Observaciones <span class="muted">(opcional)</span>
-          </label>
-          <textarea id="observaciones"
-                    name="observaciones"
-                    rows="4"
-                    placeholder="Añade contexto que ayude a comprender tu evidencia…">{{ observaciones|default:'' }}</textarea>
-        </div>
-        <div class="form-actions">
-          <span class="form-note">{% icon 'shield' %} Tu aporte quedará registrado en tu cuenta.</span>
-          <a class="button button-secondary" href="{% url 'evidencias_list' %}">Cancelar</a>
-          <button class="button button-primary" type="submit">Enviar evidencia {% icon 'arrow' %}</button>
-        </div>
-      </form>
-    </section>
-    <aside class="panel side-guide">
-      <p class="eyebrow">ANTES DE ENVIAR</p>
-      <h3>Una evidencia bien preparada hace la diferencia.</h3>
-      <div class="guide-step">
-        <span>1</span>
-        <div>
-          <strong>Elige un nombre claro</strong>
-          <p>Describe el documento o resultado que vas a registrar.</p>
-        </div>
+          <hr>
+          <a class="text-link" href="{% url 'ayuda' %}">Consultar la guía {% icon 'arrow' %}</a>
+        </aside>
       </div>
-      <div class="guide-step">
-        <span>2</span>
-        <div>
-          <strong>Verifica tu proyecto</strong>
-          <p>Selecciona el proyecto al que corresponde el aporte.</p>
-        </div>
-      </div>
-      <div class="guide-step">
-        <span>3</span>
-        <div>
-          <strong>Revisa los adjuntos</strong>
-          <p>El archivo debe ser legible y pesar menos de 10 MB.</p>
-        </div>
-      </div>
-      <hr>
-      <a class="text-link" href="{% url 'ayuda' %}">Consultar la guía {% icon 'arrow' %}</a>
-    </aside>
-  </div>
 {% endblock %}

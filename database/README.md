@@ -43,3 +43,5 @@ El respaldo consistente se guarda comprimido dentro de `.local/backups/`, con pe
 - `cuentas_correoseguridad` contiene el estado de entrega de PIN y cambios de credenciales; `cuentas_sesionusuario` enlaza cada sesión con su propietario. Sus datos confidenciales no aparecen en el diagnóstico.
 
 El SQL de diagnóstico y la documentación pueden versionarse. Los respaldos reales, datos personales, contraseñas y credenciales permanecen en almacenamiento privado. Consulta también [la organización del proyecto](../docs/ARQUITECTURA.md).
+
+`Gesicom_movimientoevidencia` conserva los movimientos de creación, corrección, revisión y observaciones. La versión única por evidencia evita registrar dos cambios con la misma identidad. La primera entrega y el límite aplicado permanecen en `Gesicom_envio`; la fecha de corrección se consulta en el historial.
