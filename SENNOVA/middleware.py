@@ -76,7 +76,7 @@ class RateLimitMiddleware:
             else "admin_personalizado:gestionar_usuarios"
             if request.resolver_match.namespace == "admin_personalizado"
             else "admin:auth_group_changelist"
-            if request.resolver_match.namespace == "admin"
+            if name in {"auth_group_change", "auth_group_add"}
             else "notificaciones:plazos_admin"
             if request.resolver_match.namespace == "notificaciones"
             else "centro_seguridad"
