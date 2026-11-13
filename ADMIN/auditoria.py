@@ -11,6 +11,7 @@ from cuentas.models import RegistroSeguridad
 
 CODIGO_HTTP = re.compile(r"[1-5][0-9]{2}")
 SUFIJO_HTTP = r"^:[1-5][0-9]{2}$"
+IDENTIDAD_ACTOR = ("actor__id", "actor__username", "actor__first_name", "actor__last_name")
 ETIQUETAS = {
     "login": "Inicio de sesión",
     "login_root": "Inicio de sesión",
@@ -51,7 +52,11 @@ def etiqueta_accion(accion):
 
 
 def registros_filtrados(form):
-    consulta = RegistroSeguridad.objects.select_related("actor").order_by("-creado_en", "-pk")
+    consulta = (
+        RegistroSeguridad.objects.select_related("actor")
+        .only("pk", "accion", "creado_en", "ruta", "direccion_ip", *IDENTIDAD_ACTOR)
+        .order_by("-creado_en", "-pk")
+    )
     if not form.is_valid():
         return consulta.none()
     datos = form.cleaned_data

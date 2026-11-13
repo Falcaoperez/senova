@@ -1,5 +1,13 @@
 # Seguridad
 
+## Permisos y transporte de MySQL
+
+La cuenta de ejecución tiene únicamente `SELECT`, `INSERT`, `UPDATE` y `DELETE` en el esquema exacto de la instalación. Migraciones y pruebas utilizan credenciales distintas; sus permisos DDL se limitan a la base real y a `test_<DB_NAME>`, respectivamente. Compose mantiene esas claves y la de root fuera de web y trabajador. La cuenta de ejecución todavía puede modificar o eliminar registros: la autorización por rol y propietario continúa en Django.
+
+Los perfiles exigen `REQUIRE SSL`. Django exige TLS, deshabilita `LOCAL INFILE` y las sentencias encadenadas. `REQUIRED` cifra sin validar identidad; para un servidor remoto utiliza `VERIFY_IDENTITY` con una CA de confianza y el nombre correcto del servidor. El servidor de Compose exige transporte seguro y deshabilita cargas locales. Consulta la [guía de preparación y actualización](../database/seguridad/README.md) antes de aplicar cambios a cuentas existentes.
+
+`comprobar_base_datos --estricto` y Administración → Permisos comprueban la conexión mediante metadatos de solo lectura. No cambian concesiones ni exponen nombres de cuentas, servidores, SQL de permisos o credenciales. Una comprobación correcta no certifica toda la instalación ni reemplaza copias, revisiones de acceso y actualizaciones del servidor.
+
 ## Acceso y recuperación
 
 - Validación de contraseñas de Django, hash PBKDF2 y sesiones de servidor.

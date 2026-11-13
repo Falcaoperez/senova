@@ -12,7 +12,14 @@ if path.exists():
         if line and not line.startswith("#") and "=" in line:
             key, value = line.split("=", 1)
             values[key] = value
-for key in ["DJANGO_SECRET_KEY", "DB_PASSWORD", "MYSQL_ROOT_PASSWORD", "REDIS_PASSWORD"]:
+for key in [
+    "DJANGO_SECRET_KEY",
+    "DB_PASSWORD",
+    "DB_MIGRATION_PASSWORD",
+    "DB_TEST_PASSWORD",
+    "MYSQL_ROOT_PASSWORD",
+    "REDIS_PASSWORD",
+]:
     if not values.get(key) or values[key].startswith("replace-"):
         values[key] = secrets.token_urlsafe(48 if key == "DJANGO_SECRET_KEY" else 28)
 defaults = {
@@ -21,6 +28,9 @@ defaults = {
     "DB_ENGINE": "mysql",
     "DB_NAME": "senova",
     "DB_USER": "gesicom_app",
+    "DB_MIGRATION_USER": "gesicom_migraciones",
+    "DB_TEST_USER": "gesicom_pruebas",
+    "DB_SSL_MODE": "REQUIRED",
     "DB_HOST": "127.0.0.1",
     "DB_PORT": "3307",
     "PUBLIC_BASE_URL": "http://127.0.0.1:8000",
