@@ -11,6 +11,7 @@ from django.db import DatabaseError
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.cache import add_never_cache_headers, patch_vary_headers
 
 logger = logging.getLogger(__name__)
 
@@ -63,15 +64,25 @@ class RateLimitMiddleware:
 
     @staticmethod
     def _error(request, message, status):
+        from cuentas.presentacion import prefiere_html
+
         name = request.resolver_match.url_name
-        if name in {
-            "olvide_password",
-            "verificar_pin",
-            "restablecer_password",
-        } or "application/json" in request.headers.get("Accept", ""):
-            return JsonResponse({"error": message}, status=status)
+        recuperacion = {
+            "olvide_password": "password_reset",
+            "verificar_pin": "password_reset_update",
+            "restablecer_password": "password_reset_new",
+        }
+        if (name in recuperacion and not prefiere_html(request)) or (
+            name not in recuperacion and "application/json" in request.headers.get("Accept", "")
+        ):
+            response = JsonResponse({"error": message}, status=status)
+            add_never_cache_headers(response)
+            patch_vary_headers(response, ["Accept"])
+            return response
         route = (
-            "evidencias_list"
+            recuperacion[name]
+            if name in recuperacion
+            else "evidencias_list"
             if name in {"evidencia", "corregir_evidencia", "set_aprobada", "actualizar_observaciones"}
             else "admin_personalizado:gestionar_usuarios"
             if request.resolver_match.namespace == "admin_personalizado"
@@ -91,7 +102,10 @@ class RateLimitMiddleware:
         html = render_to_string(
             "cuentas/error_acceso.html", {"mensaje": message, "estado": status, "volver": reverse(route)}
         )
-        return HttpResponse(html, status=status)
+        response = HttpResponse(html, status=status)
+        add_never_cache_headers(response)
+        patch_vary_headers(response, ["Accept"])
+        return response
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         if request.method != "POST" or not settings.RATE_LIMITS_ENABLED:

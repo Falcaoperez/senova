@@ -37,6 +37,8 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Inicio de sesión por usuario o correo y panel según el rol.
 - Registro y edición de perfil con validación de correo y contraseña.
 - Recuperación en tres pasos: solicitud, PIN de **6 dígitos**, y nueva contraseña después de verificarlo.
+- Recuperación disponible con y sin JavaScript, con progreso por pasos, caducidad visible y conservación del avance verificado.
+- Ante una respuesta incierta se ofrece comprobar el siguiente paso; los envíos de recuperación no se repiten automáticamente.
 - PIN válido durante 10 minutos, máximo 5 intentos, hash en la base de datos y autorización ligada a la sesión.
 - Envío del PIN mediante cola, con cifrado temporal y eliminación del contenido al terminar el envío.
 - Invalidación automática del PIN si cambian el correo o la contraseña de la cuenta.

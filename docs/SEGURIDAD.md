@@ -8,6 +8,14 @@ Los perfiles exigen `REQUIRE SSL`. Django exige TLS, deshabilita `LOCAL INFILE` 
 
 `comprobar_base_datos --estricto` y Administración → Permisos comprueban la conexión mediante metadatos de solo lectura. No cambian concesiones ni exponen nombres de cuentas, servidores, SQL de permisos o credenciales. Una comprobación correcta no certifica toda la instalación ni reemplaza copias, revisiones de acceso y actualizaciones del servidor.
 
+## Formularios de recuperación
+
+Las rutas históricas de recuperación mantienen JSON por defecto y para `Accept: application/json`. Una navegación que prefiera explícitamente `text/html` obtiene formularios con sus errores y redirecciones entre pasos. Los dos flujos comparten validación, CSRF, caducidad, cinco intentos y prueba ligada a la sesión. Las respuestas no confirman si una dirección tiene cuenta activa. Los formularios y respuestas sensibles deshabilitan caché y las respuestas negociadas varían por `Accept`.
+
+El controlador de recuperación aplica una espera de quince segundos y bloquea envíos duplicados. Si falta confirmación, no repite el POST: ofrece una consulta GET del siguiente paso o el inicio de sesión tras un cambio de contraseña incierto. Una pérdida de cabeceras o de la cookie de sesión puede requerir solicitar un PIN nuevo. Una respuesta tardía no sustituye esa comprobación. Los errores 429 respetan `Retry-After`; al terminar la espera se habilita la acción explícita del usuario.
+
+Los PIN y contraseñas se borran de los campos al abandonar la página o ante un resultado incierto, incluso cuando la contraseña está visible. No se guardan en almacenamiento del navegador. Restaurar la página desde el historial consulta una ruta GET de formulario; no recarga automáticamente una página POST. La cuenta solo se muestra en el paso final después de comprobar la prueba de esa sesión. La caducidad visible es orientativa: el servidor conserva la decisión de validez.
+
 ## Acceso y recuperación
 
 - Validación de contraseñas de Django, hash PBKDF2 y sesiones de servidor.
