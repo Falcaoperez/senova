@@ -20,9 +20,11 @@
     {% block extra_css %}{% endblock %}
     <script defer src="{% static 'js/sena.js' %}"></script>
     {% if user.is_authenticated %}
+      <link rel="stylesheet" href="{% static 'css/clock.css' %}">
       <script defer src="{% static 'js/workspace.js' %}"></script>
       <script defer src="{% static 'js/navigation.js' %}"></script>
       <script defer src="{% static 'js/notifications.js' %}"></script>
+      <script defer src="{% static 'js/clock.js' %}"></script>
     {% endif %}
     {% block head %}{% endblock %}
   </head>
@@ -127,9 +129,7 @@
                           class="text-link notification-retry"
                           data-notification-retry
                           hidden>Reintentar actualización</button>
-                  <div data-notification-items>
-                    {% include "notificaciones/avisos_recientes.html" %}
-                  </div>
+                  <div data-notification-items>{% include "notificaciones/avisos_recientes.html" %}</div>
                   <template data-notification-template>
                     <form class="notification-preview" method="post">
                       {% csrf_token %}
@@ -184,9 +184,12 @@
           {% include "ui/messages.html" %}
           {% block content %}{% endblock %}
         </main>
-        <footer class="app-footer">
+        <footer class="app-footer {% if user.is_authenticated %}has-colombia-clock{% endif %}">
           <span>
             <strong>SENA</strong> · Servicio Nacional de Aprendizaje</span>
+          {% if user.is_authenticated %}
+            {% include "ui/reloj_colombia.html" %}
+          {% endif %}
           <span>GESICOM <span class="footer-dot">·</span> {% now "Y" %}
           </span>
         </footer>

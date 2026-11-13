@@ -11,6 +11,7 @@
 .report-chart-panel .eyebrow { font-size: 9px; color: var(--green-dark); margin-bottom: 8px; }
 .report-chart-panel .report-chart-note { min-height: 34px; font-size: 10px; line-height: 1.6; }
 .report-chart-panel .chart-box { margin-bottom: 18px; }
+.report-chart-panel .chart-box canvas { max-width: 100%; }
 .chart-data { border-top: 1px solid var(--line); padding-top: 14px; }
 .chart-data summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; font-size: 11px; color: var(--navy); font-weight: 600; padding: 4px 0 12px; }
 .chart-data summary .icon { width: 14px; }

@@ -12,6 +12,8 @@ from cuentas.models import CorreoSeguridad, RegistroSeguridad
 from Gesicom.models import Envio
 from notificaciones.models import CorreoPendiente, PlazoReporte
 
+from .auditoria import etiqueta_accion
+
 
 def centro_operaciones(periodo):
     dias = int(periodo) if str(periodo) in {"7", "30", "90"} else 30
@@ -47,21 +49,9 @@ def centro_operaciones(periodo):
             estados[fila["estado"]] = estados.get(fila["estado"], 0) + fila["total"]
     actividad = []
     for registro in RegistroSeguridad.objects.select_related("actor")[:6]:
-        accion = registro.accion.lower()
-        etiqueta = (
-            "Administración de cuentas"
-            if accion.startswith(("admin:", "mantenimiento:"))
-            else "Cambio de contraseña"
-            if any(p in accion for p in ("password", "contrasena", "contraseña"))
-            else "Gestión de sesiones"
-            if "sesion" in accion or "logout" in accion
-            else "Acceso a la cuenta"
-            if "login" in accion
-            else "Actualización del espacio"
-        )
         actividad.append(
             {
-                "etiqueta": etiqueta,
+                "etiqueta": etiqueta_accion(registro.accion),
                 "actor": (registro.actor.get_full_name() or registro.actor.username) if registro.actor else "Sistema",
                 "fecha": registro.creado_en,
             }

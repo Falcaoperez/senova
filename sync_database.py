@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""Actualiza el esquema y los estáticos; se detiene si una operación falla."""
-import subprocess
-import sys
-from pathlib import Path
+"""Acceso histórico; la implementación se mantiene en scripts/."""
 
-root = Path(__file__).resolve().parent
-for arguments in [['check'], ['migrate', '--noinput'], ['collectstatic', '--noinput']]:
-    subprocess.run([sys.executable, str(root / 'manage.py'), *arguments], cwd=root, check=True)
+from scripts.actualizar_instalacion import main
+
+if __name__ == "__main__":
+    main()

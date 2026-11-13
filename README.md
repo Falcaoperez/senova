@@ -48,8 +48,11 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
 - Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.
 - Bandeja personal, lectura de avisos y preferencias de correo.
+- Filtros por fechas de Colombia y cambios de lectura individuales o masivos sin recargar la bandeja.
+- Reloj con hora y fecha de Colombia en el pie de la aplicación, adaptable a móvil.
 - Cola de correo con lotes, bloqueo entre trabajadores y reintentos con espera.
 - Administración de usuarios, roles y permisos; edición de datos, estado, roles y contraseña.
+- Historial administrativo con búsqueda, fechas de Colombia, detalles y CSV filtrado de todos los resultados.
 
 ## Roles y acceso
 
@@ -106,7 +109,7 @@ docs/           operación, seguridad y resultados de verificación
 scripts/        configuración, respaldo y prueba de carga
 ```
 
-`core/` conserva alias a la configuración de `SENNOVA/`. La separación de consultas y operaciones, y las relaciones de MySQL, se describen en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) y [database/documentacion/modelo.md](database/documentacion/modelo.md). Los nombres históricos de las aplicaciones se mantienen para conservar las migraciones. Se retiraron estilos sin uso, pantallas prototipo, fixtures con cuentas fijas y scripts de limpieza destructiva.
+Cada aplicación mantiene sus rutas en `urls.py` y sus pruebas en `tests/`. `SENNOVA/urls.py` compone el proyecto y `core/` conserva alias a su configuración. La [guía de desarrollo y archivos](docs/DESARROLLO.md) indica dónde realizar cada cambio y cómo ejecutar una funcionalidad por separado. La separación de consultas y operaciones, y las relaciones de MySQL, se describen en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) y [database/documentacion/modelo.md](database/documentacion/modelo.md). Los nombres históricos de las aplicaciones se mantienen para conservar las migraciones. Se retiraron estilos sin uso, pantallas prototipo, fixtures con cuentas fijas y scripts de limpieza destructiva.
 
 ## Desarrollo sin contenedor de aplicación
 
