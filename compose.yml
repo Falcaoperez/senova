@@ -109,7 +109,7 @@ services:
     environment:
       <<: *application-environment
       DB_TEST_USER: "${DB_TEST_USER:-gesicom_pruebas}"
-      DB_TEST_PASSWORD: ${DB_TEST_PASSWORD:?Configura DB_TEST_PASSWORD}
+      DB_TEST_PASSWORD: "${DB_TEST_PASSWORD:-}"
     command: ["python", "manage.py", "test", "--settings=SENNOVA.test_settings", "--noinput"]
     depends_on:
       database:
