@@ -11,10 +11,28 @@
     appliedIndex = 0,
     restoring = false;
   let controller,
-    timer,
+    timer = null,
+    refreshPending = false,
+    refreshFocus = false,
     failed,
     editRevision = 0,
     applying = false;
+  const cancelScheduled = () => {
+    clearTimeout(timer);
+    timer = null;
+  };
+  const flushRefresh = () => {
+    if (!refreshPending || controller || restoring || timer !== null) return;
+    const focus = refreshFocus;
+    refreshPending = false;
+    refreshFocus = false;
+    update(appliedURL, false, focus);
+  };
+  scope.addEventListener("workspace:refresh", (event) => {
+    refreshPending = true;
+    refreshFocus ||= event.detail?.focus === true;
+    flushRefresh();
+  });
   const stateFor = (index) => ({
     ...(typeof history.state === "object" && history.state
       ? history.state
@@ -84,7 +102,7 @@
     previous?.abort();
     scope.removeAttribute("aria-busy");
   };
-  const update = async (value, push = true) => {
+  const update = async (value, push = true, focusAfterRefresh = false) => {
     const url = safeURL(value);
     if (!url || restoring) return;
     stopPending();
@@ -139,7 +157,11 @@
       const focused =
         pairs.find(([current]) =>
           current.contains(document.activeElement),
-        )?.[1] || (focusResults ? pairs[0][1] : null);
+        )?.[1] ||
+        (focusResults ||
+        (focusAfterRefresh && document.activeElement === document.body)
+          ? pairs[0][1]
+          : null);
       // Retirar un campo enfocado puede emitir change; ese evento pertenece a la edición ya confirmada.
       applying = true;
       try {
@@ -190,6 +212,7 @@
       if (requestController === controller) {
         controller = null;
         scope.removeAttribute("aria-busy");
+        queueMicrotask(flushRefresh);
       }
     }
   };
@@ -206,12 +229,12 @@
   };
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    clearTimeout(timer);
+    cancelScheduled();
     submit();
   });
   form.addEventListener("input", (event) => {
     if (!event.target.matches("[data-live-input]")) return;
-    clearTimeout(timer);
+    cancelScheduled();
     if ($('[data-dirty="true"]')) {
       failed = null;
       showFeedback(
@@ -219,11 +242,14 @@
       );
       return;
     }
-    timer = setTimeout(submit, 400);
+    timer = setTimeout(() => {
+      timer = null;
+      submit();
+    }, 400);
   });
   form.addEventListener("change", (event) => {
-    if (event.target.matches("select, input[type=month]")) {
-      clearTimeout(timer);
+    if (event.target.matches("select, input[type=month], input[type=date]")) {
+      cancelScheduled();
       submit();
     }
   });
@@ -241,7 +267,7 @@
     const url = safeURL(link.href);
     if (!url) return;
     event.preventDefault();
-    clearTimeout(timer);
+    cancelScheduled();
     update(url);
   });
   const trackEdit = (event) => {
@@ -259,7 +285,7 @@
         );
     dirtyForm.dataset.dirty = String(dirty);
     editRevision++;
-    clearTimeout(timer);
+    cancelScheduled();
     if (controller) {
       stopPending();
       restoreFilters(appliedURL);
@@ -271,16 +297,18 @@
   scope.addEventListener("input", trackEdit);
   scope.addEventListener("change", trackEdit);
   window.addEventListener("popstate", (event) => {
-    clearTimeout(timer);
+    cancelScheduled();
     if (restoring) {
       restoring = false;
       restoreFilters(appliedURL);
+      flushRefresh();
       return;
     }
     update(location.href, false);
   });
   window.addEventListener("pagehide", () => {
-    clearTimeout(timer);
+    refreshPending = refreshFocus = false;
+    cancelScheduled();
     stopPending();
   });
   window.addEventListener("beforeunload", (event) => {

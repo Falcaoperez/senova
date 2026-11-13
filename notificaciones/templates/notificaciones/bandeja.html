@@ -1,5 +1,8 @@
 {% extends base_panel|default:"base.html" %}
-{% load ui %}
+{% load static ui %}
+{% block head %}
+  <script defer src="{% static 'js/inbox.js' %}"></script>
+{% endblock %}
 {% block title %}Notificaciones · GESICOM SENA{% endblock %}
 {% block content %}
   <div class="page-heading">
@@ -12,7 +15,7 @@
        href="{% url 'notificaciones:mis_plazos' %}">{% icon 'clock' %} Consultar mis plazos</a>
   </div>
   <div class="form-layout">
-    <section class="panel" data-live-scope>
+    <section class="panel" data-live-scope data-inbox>
       <form class="filters" method="get" data-live-form>
         <input type="hidden" name="aviso" value="{{ aviso_id }}">
         <div class="field search-field">
@@ -41,98 +44,129 @@
             {% endfor %}
           </select>
         </div>
+        <div class="field">
+          <label for="notice-from">Desde</label>
+          <input id="notice-from"
+                 type="date"
+                 name="desde"
+                 value="{{ desde }}"
+                 min="1000-01-01"
+                 max="9998-12-31">
+        </div>
+        <div class="field">
+          <label for="notice-until">Hasta</label>
+          <input id="notice-until"
+                 type="date"
+                 name="hasta"
+                 value="{{ hasta }}"
+                 min="1000-01-01"
+                 max="9998-12-31">
+        </div>
         <button class="button button-dark" type="submit">{% icon 'filter' %} Filtrar</button>
         <a class="text-link"
            href="{% url 'notificaciones:bandeja' %}"
            data-live-link>Limpiar</a>
       </form>
       <div data-live-region="inbox">
+        {% include "ui/filtros_errores.html" %}
         <div class="table-toolbar">
           <div>
             <h2>{{ avisos.paginator.count }} avisos encontrados</h2>
             <p>{{ sin_leer }} sin leer en tu bandeja</p>
           </div>
-          <form method="post" action="{% url 'notificaciones:marcar_todas' %}">
+          <form method="post"
+                action="{% url 'notificaciones:marcar_todas' %}"
+                data-inbox-action>
             {% csrf_token %}
             <input type="hidden" name="alcance" value="filtradas">
             <input type="hidden" name="q" value="{{ q }}">
             <input type="hidden" name="tipo" value="{{ tipo }}">
             <input type="hidden" name="estado" value="{{ estado }}">
             <input type="hidden" name="aviso" value="{{ aviso_id }}">
+            <input type="hidden" name="desde" value="{{ desde }}">
+            <input type="hidden" name="hasta" value="{{ hasta }}">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button class="button button-secondary button-sm" type="submit">Marcar resultados como leídos</button>
+            <button class="button button-secondary button-sm"
+                    type="submit"
+                    {% if filtros_form.errors or not avisos %}disabled{% endif %}>Marcar resultados como leídos</button>
           </form>
         </div>
-        {% if avisos %}
-          <form id="notification-bulk"
-                class="selection-toolbar"
-                method="post"
-                action="{% url 'notificaciones:lectura_seleccion' %}"
-                data-notice-selection>
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <label class="check-label">
-              <input type="checkbox"
-                     data-notice-all
-                     aria-label="Seleccionar avisos de esta página">
-              Esta página
-            </label>
-            <span data-notice-count role="status">Selecciona avisos</span>
-            <button class="button button-secondary button-sm"
-                    type="submit"
-                    name="accion"
-                    value="leida"
-                    data-notice-action>Marcar leídos</button>
-            <button class="button button-secondary button-sm"
-                    type="submit"
-                    name="accion"
-                    value="pendiente"
-                    data-notice-action>Marcar sin leer</button>
-          </form>
-        {% endif %}
-        {% for aviso in avisos %}
-          <article class="notice-item {% if not aviso.leida_en %}notice-unread{% endif %}">
-            <input class="notice-selector"
-                   type="checkbox"
-                   name="avisos"
-                   value="{{ aviso.pk }}"
-                   form="notification-bulk"
-                   aria-label="Seleccionar {{ aviso.titulo }}">
-            <div class="notice-content">
-              <div class="notice-heading">
-                <h3>{{ aviso.titulo }}</h3>
-                {% if not aviso.leida_en %}
-                  <span class="badge badge-success">Sin leer</span>
-                {% endif %}
+        {% if not filtros_form.errors %}
+          {% if avisos %}
+            <form id="notification-bulk"
+                  class="selection-toolbar"
+                  method="post"
+                  action="{% url 'notificaciones:lectura_seleccion' %}"
+                  data-notice-selection
+                  data-inbox-action>
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <label class="check-label">
+                <input type="checkbox"
+                       data-notice-all
+                       aria-label="Seleccionar avisos de esta página">
+                Esta página
+              </label>
+              <span data-notice-count role="status">Selecciona avisos</span>
+              <button class="button button-secondary button-sm"
+                      type="submit"
+                      name="accion"
+                      value="leida"
+                      data-notice-action>Marcar leídos</button>
+              <button class="button button-secondary button-sm"
+                      type="submit"
+                      name="accion"
+                      value="pendiente"
+                      data-notice-action>Marcar sin leer</button>
+            </form>
+          {% endif %}
+          {% for aviso in avisos %}
+            <article class="notice-item {% if not aviso.leida_en %}notice-unread{% endif %}">
+              <input class="notice-selector"
+                     type="checkbox"
+                     name="avisos"
+                     value="{{ aviso.pk }}"
+                     form="notification-bulk"
+                     aria-label="Seleccionar {{ aviso.titulo }}">
+              <div class="notice-content">
+                <div class="notice-heading">
+                  <h3>{{ aviso.titulo }}</h3>
+                  {% if not aviso.leida_en %}
+                    <span class="badge badge-success">Sin leer</span>
+                  {% endif %}
+                </div>
+                <small>{{ aviso.creada_en|date:'d M Y · H:i' }} · {{ aviso.get_tipo_display }}</small>
+                <p>{{ aviso.mensaje|linebreaksbr }}</p>
+                <div class="heading-actions">
+                  <form method="post" action="{% url 'notificaciones:abrir' aviso.pk %}">
+                    {% csrf_token %}
+                    <button class="button button-secondary button-sm"
+                            type="submit">Consultar {% icon 'arrow' %}</button>
+                  </form>
+                  <form method="post"
+                        action="{% url 'notificaciones:lectura' aviso.pk %}"
+                        data-inbox-action>
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="text-link"
+                            type="submit"
+                            name="accion"
+                            value="{% if aviso.leida_en %}pendiente{% else %}leida{% endif %}">
+                      {% if aviso.leida_en %}Marcar sin leer{% else %}Marcar como leído{% endif %}
+                    </button>
+                  </form>
+                </div>
               </div>
-              <small>{{ aviso.creada_en|date:'d M Y · H:i' }} · {{ aviso.get_tipo_display }}</small>
-              <p>{{ aviso.mensaje|linebreaksbr }}</p>
-              <div class="heading-actions">
-                <form method="post" action="{% url 'notificaciones:abrir' aviso.pk %}">
-                  {% csrf_token %}
-                  <button class="button button-secondary button-sm" type="submit">Consultar {% icon 'arrow' %}</button>
-                </form>
-                <form method="post" action="{% url 'notificaciones:lectura' aviso.pk %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                  <button class="text-link"
-                          type="submit"
-                          name="accion"
-                          value="{% if aviso.leida_en %}pendiente{% else %}leida{% endif %}">
-                    {% if aviso.leida_en %}Marcar sin leer{% else %}Marcar como leído{% endif %}
-                  </button>
-                </form>
-              </div>
+            </article>
+          {% empty %}
+            <div class="empty-state">
+              <span class="empty-symbol">{% icon 'bell' %}</span>
+              <h3>No hay avisos con estos filtros.</h3>
+              <p>Prueba otra búsqueda o consulta toda tu bandeja.</p>
             </div>
-          </article>
-        {% empty %}
-          <div class="empty-state">
-            <span class="empty-symbol">{% icon 'bell' %}</span>
-            <h3>No hay avisos con estos filtros.</h3>
-            <p>Prueba otra búsqueda o consulta toda tu bandeja.</p>
-          </div>
-        {% endfor %}
-        {% include "notificaciones/paginacion.html" with pagina=avisos %}
+          {% endfor %}
+          {% include "ui/paginacion.html" with pagina=avisos %}
+        {% endif %}
       </div>
       <p class="sr-only" role="status" data-live-status></p>
     </section>

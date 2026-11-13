@@ -7,7 +7,8 @@
     {% include "ui/filtros_errores.html" %}
     <a class="button button-primary" href="{{ volver }}">{% icon 'filter' %} Corregir filtros</a>
     {% if regreso_error %}
-      <a class="button button-secondary" href="{{ regreso_error }}">Volver a mis plazos</a>
+      <a class="button button-secondary"
+         href="{{ regreso_error }}">{{ regreso_texto|default:"Volver a mis plazos" }}</a>
     {% else %}
       <a class="button button-secondary" href="{% url 'reportes' %}">Volver a reportes</a>
     {% endif %}

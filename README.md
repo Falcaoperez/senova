@@ -15,6 +15,8 @@ Requiere Docker Compose y Python 3 para generar la configuración privada.
 
 ```bash
 python scripts/configurar_local.py
+docker compose -f compose.yml -f compose.dev.yml up -d database redis mailpit
+python scripts/preparar_mysql.py --aplicar --con-pruebas
 docker compose -f compose.yml -f compose.dev.yml up --build -d
 docker compose exec app python manage.py crear_usuarios_revision
 mkdir -p .local
@@ -48,8 +50,12 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
 - Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.
 - Bandeja personal, lectura de avisos y preferencias de correo.
+- Filtros por fechas de Colombia y cambios de lectura individuales o masivos sin recargar la bandeja.
+- Reloj con hora y fecha de Colombia en el pie de la aplicación, adaptable a móvil.
 - Cola de correo con lotes, bloqueo entre trabajadores y reintentos con espera.
 - Administración de usuarios, roles y permisos; edición de datos, estado, roles y contraseña.
+- Historial administrativo con búsqueda, fechas de Colombia, detalles y CSV filtrado de todos los resultados.
+- Consulta administrativa de permisos mínimos, TLS e integridad de MySQL, sin modificar la base.
 
 ## Roles y acceso
 
@@ -106,7 +112,7 @@ docs/           operación, seguridad y resultados de verificación
 scripts/        configuración, respaldo y prueba de carga
 ```
 
-`core/` conserva alias a la configuración de `SENNOVA/`. La separación de consultas y operaciones, y las relaciones de MySQL, se describen en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) y [database/documentacion/modelo.md](database/documentacion/modelo.md). Los nombres históricos de las aplicaciones se mantienen para conservar las migraciones. Se retiraron estilos sin uso, pantallas prototipo, fixtures con cuentas fijas y scripts de limpieza destructiva.
+Cada aplicación mantiene sus rutas en `urls.py` y sus pruebas en `tests/`. `SENNOVA/urls.py` compone el proyecto y `core/` conserva alias a su configuración. La [guía de desarrollo y archivos](docs/DESARROLLO.md) indica dónde realizar cada cambio y cómo ejecutar una funcionalidad por separado. La separación de consultas y operaciones, y las relaciones de MySQL, se describen en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) y [database/documentacion/modelo.md](database/documentacion/modelo.md). Los nombres históricos de las aplicaciones se mantienen para conservar las migraciones. Se retiraron estilos sin uso, pantallas prototipo, fixtures con cuentas fijas y scripts de limpieza destructiva.
 
 ## Desarrollo sin contenedor de aplicación
 
@@ -117,25 +123,28 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python scripts/configurar_local.py
-python manage.py migrate
+python manage.py migrate --settings=SENNOVA.migration_settings
 python manage.py collectstatic --noinput
 python manage.py runserver
 ```
 
-Configura `DB_*` y `REDIS_URL` para los servicios existentes. `.env` se carga automáticamente; las variables del proceso tienen prioridad. SQLite queda disponible con `DB_ENGINE=sqlite` para desarrollo puntual. MySQL es el destino principal y la base utilizada en las verificaciones de capacidad y concurrencia.
+Configura `DB_*` y `REDIS_URL` para los servicios existentes. Prepara primero las cuentas dedicadas con `scripts/preparar_mysql.py --aplicar --con-pruebas` si MySQL está en el servicio Docker del proyecto; para otro servidor utiliza el procedimiento de [perfiles de MySQL](database/seguridad/README.md). `.env` se carga automáticamente; las variables del proceso tienen prioridad. SQLite queda disponible con `DB_ENGINE=sqlite` para desarrollo puntual. MySQL es el destino principal y la base utilizada en las verificaciones de capacidad y concurrencia.
 
 ## Verificación
 
 ```bash
-# Preparar una base independiente para las pruebas de MySQL con los nombres predeterminados.
-docker compose exec -T database sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot' < database/preparar_pruebas.sql
+# Preparar una cuenta exclusiva para test_<DB_NAME>, sin permisos en la base real.
+python scripts/preparar_mysql.py --aplicar --con-pruebas
 
-docker compose exec app python manage.py test --settings=SENNOVA.test_settings --noinput
+docker compose --profile tools run --rm test
+docker compose exec app python manage.py comprobar_base_datos --estricto
 docker compose exec app python manage.py check
 docker compose exec app python manage.py makemigrations --check --dry-run
 ```
 
 Para analizar el código: `pip install -r requirements-dev.txt` y `ruff check .`. Los resultados y el alcance de las pruebas están en [docs/VERIFICACION.md](docs/VERIFICACION.md). La prueba HTTP reproducible es `python scripts/prueba_carga_http.py`; crea y elimina exclusivamente sus registros temporales.
+
+La cuenta web solo tiene `SELECT`, `INSERT`, `UPDATE` y `DELETE` en su esquema. Las migraciones utilizan `SENNOVA.migration_settings` y una cuenta independiente; las pruebas utilizan otra cuenta, limitada a `test_<DB_NAME>`. Compose mantiene esas credenciales fuera de los servicios web y trabajador. Las conexiones exigen TLS y deshabilitan cargas locales y sentencias encadenadas. Consulta [la preparación, actualización y verificación de los perfiles](database/seguridad/README.md) antes de actualizar una instalación existente.
 
 ## Operación y despliegue
 

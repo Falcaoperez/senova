@@ -111,3 +111,26 @@ button.text-link { border: 0; background: transparent; font: inherit; font-size:
 .notification-preview strong {
   overflow-wrap: anywhere;
 }
+.inbox-feedback {
+  border: 1px solid #d3e7c7;
+  border-radius: 10px;
+  background: #f5faef;
+  color: var(--ink);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.inbox-feedback p {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.inbox-feedback.is-error {
+  border-color: #efcfc7;
+  background: #fff5f1;
+}

@@ -1,0 +1,47 @@
+{% extends base_panel|default:"base.html" %}
+{% load static ui %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/database-security.css' %}">
+{% endblock %}
+{% block title %}Seguridad de la base de datos · GESICOM SENA{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">GESICOM / ADMINISTRACIÓN / PERMISOS</p>
+      <h1>Una base protegida para trabajar.</h1>
+      <p class="page-description">Consulta los controles de la conexión de MySQL que utiliza la aplicación.</p>
+    </div>
+    <a class="button button-secondary"
+       href="{% url 'admin_personalizado:permisos' %}">{% icon 'arrow' %} Volver a permisos</a>
+  </div>
+  <section class="panel database-summary" aria-labelledby="estado-sql">
+    <div class="database-summary-copy">
+      <span class="empty-symbol">{% icon 'shield' %}</span>
+      <div>
+        <p class="eyebrow">SEGURIDAD DE LA CONEXIÓN</p>
+        <h2 id="estado-sql">{% if informe_sql.correcto %}Controles comprobados{% elif informe_sql.estado == "revisar" %}Hay controles por revisar{% else %}Comprobación no disponible{% endif %}</h2>
+        <p>Última consulta: <time datetime="{{ comprobado_en|date:'c' }}">{{ comprobado_en|date:"d/m/Y H:i:s" }}</time> · Colombia</p>
+      </div>
+    </div>
+    <a class="button button-dark"
+       href="{% url 'admin_personalizado:base_datos' %}">{% icon 'shield' %} Volver a comprobar</a>
+  </section>
+  {% if informe_sql.controles %}
+    <div class="database-controls">
+      {% for control in informe_sql.controles %}
+        <section class="panel database-control"
+                 aria-labelledby="sql-{{ control.codigo }}">
+          <div class="panel-heading">
+            <h2 id="sql-{{ control.codigo }}">{{ control.titulo }}</h2>
+            <span class="badge {% if control.correcto %}badge-success{% else %}badge-pending{% endif %}">{% if control.correcto %}Comprobado{% else %}Revisar{% endif %}</span>
+          </div>
+          <p>{{ control.detalle }}</p>
+        </section>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info"
+         role="status">No se pudo completar la consulta. Revisa la disponibilidad de MySQL y vuelve a comprobar.</div>
+  {% endif %}
+  <p class="database-help">Esta consulta es de solo lectura. Los ajustes de cuentas, permisos y certificados corresponden al responsable de la instalación. Los controles describen esta conexión y no sustituyen una revisión completa del servidor.</p>
+{% endblock %}

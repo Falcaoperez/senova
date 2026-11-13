@@ -5,7 +5,55 @@ from django import forms
 from django.db import connection
 from django.utils import timezone
 
-from .models import Novedad, PlazoReporte, PreferenciasNotificacion
+from .models import Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
+
+
+class FiltrosBandejaForm(forms.Form):
+    q = forms.CharField(label="Buscar aviso", required=False, max_length=100)
+    tipo = forms.ChoiceField(
+        label="Tipo",
+        required=False,
+        choices=[("", "Todos los tipos"), *Notificacion.Tipo.choices],
+        error_messages={"invalid_choice": "Selecciona un tipo válido."},
+    )
+    estado = forms.ChoiceField(
+        label="Lectura",
+        required=False,
+        choices=[("", "Todos"), ("pendiente", "Sin leer"), ("leida", "Leídos")],
+        error_messages={"invalid_choice": "Selecciona un estado válido."},
+    )
+    aviso = forms.IntegerField(label="Aviso", min_value=1, max_value=2**63 - 1, required=False)
+    desde = forms.CharField(label="Desde", required=False, max_length=10)
+    hasta = forms.CharField(label="Hasta", required=False, max_length=10)
+
+    def clean_aviso(self):
+        value = self.cleaned_data.get("aviso")
+        if self.data.get("aviso") and not re.fullmatch(r"[0-9]{1,19}", str(self.data["aviso"])):
+            raise forms.ValidationError("Selecciona un aviso válido.")
+        return value
+
+    def _fecha(self, nombre):
+        value = self.cleaned_data[nombre]
+        if not value:
+            return None
+        if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value) and 1000 <= int(value[:4]) <= 9998:
+            try:
+                return datetime.date.fromisoformat(value)
+            except ValueError:
+                pass
+        raise forms.ValidationError("Elige una fecha válida entre 1000-01-01 y 9998-12-31.")
+
+    def clean_desde(self):
+        return self._fecha("desde")
+
+    def clean_hasta(self):
+        return self._fecha("hasta")
+
+    def clean(self):
+        data = super().clean()
+        if data.get("desde") and data.get("hasta") and data["desde"] > data["hasta"]:
+            self.add_error("hasta", "La fecha final debe ser igual o posterior a la inicial.")
+        return data
 
 
 class FiltrosAgendaForm(forms.Form):

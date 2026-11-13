@@ -1,0 +1,89 @@
+.app-footer.has-colombia-clock {
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.colombia-clock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 420px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #dce8d6;
+  border-radius: 12px;
+  background: #fbfef8;
+  color: var(--ink);
+}
+.colombia-clock-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #eef6e7;
+  color: var(--green-dark);
+}
+.colombia-clock-icon .icon {
+  width: 20px;
+  height: 20px;
+}
+.colombia-clock-content {
+  min-width: 0;
+  flex: 1;
+}
+.colombia-clock-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.colombia-clock-label span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.colombia-clock time {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.colombia-clock [data-clock-time] {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.025em;
+  font-variant-numeric: tabular-nums;
+}
+.colombia-clock [data-clock-date] {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.colombia-clock-zone {
+  font-size: 9px;
+  color: var(--green-dark);
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .app-footer.has-colombia-clock .colombia-clock {
+    flex-basis: 100%;
+    max-width: none;
+    order: -1;
+  }
+}
+@media (max-width: 480px) {
+  .colombia-clock {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+  .colombia-clock-zone {
+    display: none;
+  }
+}
+@media print {
+  .colombia-clock {
+    display: none;
+  }
+}

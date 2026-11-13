@@ -12,6 +12,8 @@ from cuentas.models import CorreoSeguridad, RegistroSeguridad
 from Gesicom.models import Envio
 from notificaciones.models import CorreoPendiente, PlazoReporte
 
+from .auditoria import IDENTIDAD_ACTOR, etiqueta_accion
+
 
 def centro_operaciones(periodo):
     dias = int(periodo) if str(periodo) in {"7", "30", "90"} else 30
@@ -46,22 +48,11 @@ def centro_operaciones(periodo):
         for fila in modelo.objects.values("estado").annotate(total=Count("pk")):
             estados[fila["estado"]] = estados.get(fila["estado"], 0) + fila["total"]
     actividad = []
-    for registro in RegistroSeguridad.objects.select_related("actor")[:6]:
-        accion = registro.accion.lower()
-        etiqueta = (
-            "Administración de cuentas"
-            if accion.startswith(("admin:", "mantenimiento:"))
-            else "Cambio de contraseña"
-            if any(p in accion for p in ("password", "contrasena", "contraseña"))
-            else "Gestión de sesiones"
-            if "sesion" in accion or "logout" in accion
-            else "Acceso a la cuenta"
-            if "login" in accion
-            else "Actualización del espacio"
-        )
+    recientes = RegistroSeguridad.objects.select_related("actor").only("accion", "creado_en", *IDENTIDAD_ACTOR)[:6]
+    for registro in recientes:
         actividad.append(
             {
-                "etiqueta": etiqueta,
+                "etiqueta": etiqueta_accion(registro.accion),
                 "actor": (registro.actor.get_full_name() or registro.actor.username) if registro.actor else "Sistema",
                 "fecha": registro.creado_en,
             }
@@ -77,7 +68,9 @@ def centro_operaciones(periodo):
         "proximos_plazos": proximos.count(),
         "plazos_proximos": proximos[:4],
         "evidencias_pendientes": envios.filter(aprobada=False, rechazada=False).select_related("usuario")[:5],
-        "usuarios_recientes": User.objects.order_by("-date_joined", "-pk").prefetch_related("groups")[:5],
+        "usuarios_recientes": User.objects.only("id", "username", "first_name", "last_name", "is_active")
+        .order_by("-date_joined", "-pk")
+        .prefetch_related("groups")[:5],
         "actividad_reciente": actividad,
         "proyectos": proyectos,
         "actividad_grafico": {

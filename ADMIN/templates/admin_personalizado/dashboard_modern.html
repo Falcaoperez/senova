@@ -143,7 +143,7 @@
               <span class="document-icon">{% icon 'file' %}</span>
               <span class="row-main">
                 <strong>{{ envio.nombre|default:envio.tipo_evidencia }}</strong>
-              <small>{% if envio.usuario %}{{ envio.usuario.get_full_name|default:envio.usuario.username }}{% else %}Sin usuario{% endif %} · {{ envio.proyecto|default:'Sin proyecto' }}</small>
+                <small>{% if envio.usuario %}{{ envio.usuario.get_full_name|default:envio.usuario.username }}{% else %}Sin usuario{% endif %} · {{ envio.proyecto|default:'Sin proyecto' }}</small>
               </span>
               <span class="row-date">{{ envio.fecha_envio|date:'d M' }}</span>{% icon 'arrow' %}</a>
           {% empty %}
@@ -212,7 +212,7 @@
         <p class="eyebrow">TRAZABILIDAD</p>
         <h2>Actividad reciente</h2>
       </div>
-      {% icon 'shield' %}
+      <a class="text-link" href="{% url 'admin_personalizado:actividad' %}">Ver historial {% icon 'arrow' %}</a>
     </div>
     <ol class="audit-timeline">
       {% for item in actividad_reciente %}
@@ -220,7 +220,7 @@
           <span class="timeline-dot"></span>
           <div>
             <strong>{{ item.etiqueta }}</strong>
-                  <small>{{ item.actor }} · {{ item.fecha|date:'d M · H:i' }}</small>
+            <small>{{ item.actor }} · {{ item.fecha|date:'d M · H:i' }}</small>
           </div>
         </li>
       {% empty %}
