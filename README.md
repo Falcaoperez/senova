@@ -48,6 +48,8 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
 - Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.
 - Bandeja personal, lectura de avisos y preferencias de correo.
+- Filtros por fechas de Colombia y cambios de lectura individuales o masivos sin recargar la bandeja.
+- Reloj con hora y fecha de Colombia en el pie de la aplicación, adaptable a móvil.
 - Cola de correo con lotes, bloqueo entre trabajadores y reintentos con espera.
 - Administración de usuarios, roles y permisos; edición de datos, estado, roles y contraseña.
 - Historial administrativo con búsqueda, fechas de Colombia, detalles y CSV filtrado de todos los resultados.

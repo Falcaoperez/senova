@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -22,7 +22,7 @@ from Gesicom.utils import require_group
 from .acceso import destino_notificacion
 from .bandeja import cambiar_lectura, regreso_bandeja
 from .calendario import cuadricula_mensual
-from .forms import FiltrosAgendaForm, NovedadForm, PlazoReporteForm, PreferenciasForm
+from .forms import FiltrosAgendaForm, FiltrosBandejaForm, NovedadForm, PlazoReporteForm, PreferenciasForm
 from .icalendar import respuesta_calendario
 from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
 from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
@@ -32,13 +32,15 @@ from .services import publicar_novedad
 
 
 @login_required
+@require_safe
 def bandeja(request):
     preferencias, _ = PreferenciasNotificacion.objects.get_or_create(usuario=request.user)
+    filtros = FiltrosBandejaForm(request.GET)
     return render_panel(
         request,
         "notificaciones/bandeja.html",
         {
-            "avisos": Paginator(avisos_filtrados(request.user, request.GET), 20).get_page(request.GET.get("page")),
+            "avisos": Paginator(avisos_filtrados(request.user, filtros), 20).get_page(request.GET.get("page")),
             "sin_leer": resumen_de_peticion(request)["pendientes"],
             "preferencias_form": PreferenciasForm(instance=preferencias),
             "tipos": Notificacion.Tipo.choices,
@@ -46,6 +48,10 @@ def bandeja(request):
             "estado": request.GET.get("estado", ""),
             "tipo": request.GET.get("tipo", ""),
             "aviso_id": request.GET.get("aviso", ""),
+            "desde": request.GET.get("desde", "")[:10],
+            "hasta": request.GET.get("hasta", "")[:10],
+            "filtros_form": filtros,
+            "mensaje_filtros": "No se muestran ni marcan resultados hasta corregir los filtros.",
         },
     )
 
@@ -70,19 +76,38 @@ def lectura(request, pk=None):
         total = cambiar_lectura(
             request.user, [str(pk)] if pk is not None else request.POST.getlist("avisos"), request.POST.get("accion")
         )
-        messages.success(request, f"{total} notificaciones actualizadas.")
     except ValidationError as error:
-        messages.error(request, " ".join(error.messages))
+        return _respuesta_lectura(request, " ".join(error.messages), status=400)
+    except Http404:
+        if request.headers.get("X-Inbox-Action") == "1":
+            return _respuesta_lectura(request, "No se pudo actualizar la selección de avisos.", status=404)
+        raise
+    return _respuesta_lectura(request, f"{total} notificaciones actualizadas.", total=total)
+
+
+def _respuesta_lectura(request, mensaje, *, total=0, status=200):
+    if request.headers.get("X-Inbox-Action") == "1":
+        response = JsonResponse(
+            {"mensaje": mensaje, "actualizados": total} if status == 200 else {"error": mensaje}, status=status
+        )
+        response["Cache-Control"] = "private, no-store"
+        return response
+    if status == 200:
+        messages.success(request, mensaje)
+    else:
+        messages.error(request, mensaje)
     return redirect(regreso_bandeja(request.POST.get("next")))
 
 
 @login_required
 @require_POST
 def marcar_todas(request):
-    params = request.POST if request.POST.get("alcance") == "filtradas" else {}
-    total = avisos_filtrados(request.user, params).filter(leida_en__isnull=True).update(leida_en=timezone.now())
-    messages.success(request, f"{total} notificaciones marcadas como leídas.")
-    return redirect(regreso_bandeja(request.POST.get("next")))
+    alcance = request.POST.get("alcance", "todas")
+    filtros = FiltrosBandejaForm(request.POST if alcance == "filtradas" else {})
+    if alcance not in {"todas", "filtradas"} or not filtros.is_valid():
+        return _respuesta_lectura(request, "Revisa los filtros antes de marcar los resultados como leídos.", status=400)
+    total = avisos_filtrados(request.user, filtros).filter(leida_en__isnull=True).update(leida_en=timezone.now())
+    return _respuesta_lectura(request, f"{total} notificaciones marcadas como leídas.", total=total)
 
 
 @login_required

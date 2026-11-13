@@ -192,3 +192,21 @@ La página y descarga funcionan también sin JavaScript. La navegación con filt
 `python scripts/actualizar_instalacion.py` ejecuta comprobaciones, migraciones y recopilación de estáticos, deteniéndose al primer error. Resuelve el directorio del proyecto desde el archivo, incluso al invocarlo desde otra carpeta. `sync_database.py` y `sync.ps1` mantienen los accesos anteriores y remiten a esa implementación. `--help` muestra el uso sin ejecutar la actualización.
 
 Las rutas están junto a cada aplicación y las pruebas en `tests/`; los comandos de CI siguen usando `SENNOVA.test_settings`. Consulta [DESARROLLO.md](DESARROLLO.md) para ubicar archivos o ejecutar solo una funcionalidad. Las migraciones permanecen con sus aplicaciones; el esquema de MySQL no tiene una segunda definición SQL.
+
+## Bandeja, fechas y cambios de lectura
+
+La bandeja permite filtrar la fecha de creación de los avisos por días completos de Colombia. Las fechas, búsqueda, tipo, estado e identificador se validan tanto al consultar como al marcar resultados. Un filtro inválido muestra el error, oculta los resultados y deshabilita la operación sobre ellos; una petición filtrada inválida no modifica avisos. Los accesos históricos sin alcance explícito conservan la operación sobre toda la bandeja personal; un alcance desconocido se rechaza.
+
+Con JavaScript, marcar leído o sin leer actualiza los resultados y la campana sin recargar el documento. La selección se limita a la página; **Marcar resultados como leídos** abarca todas las páginas de los filtros. La operación conserva los filtros aplicados, la página y las preferencias que se estén editando. Mientras se procesa una acción se bloquean sus controles para evitar un segundo envío; una búsqueda iniciada entretanto conserva su texto y termina antes de refrescar los resultados vigentes.
+
+Si no se confirma una respuesta en quince segundos se informa de la incertidumbre y se ofrece **Actualizar bandeja**. Ese botón consulta los datos actuales, sin repetir la operación de lectura. Si el cambio se confirmó pero falla la consulta posterior, **Reintentar actualización** vuelve a consultar. Repetir explícitamente una marca de leído ya aplicada no sustituye su primera fecha de lectura. Sin JavaScript, los mismos formularios siguen funcionando con su redirección y CSRF.
+
+El protocolo de lectura interactivo utiliza la cabecera exacta `X-Inbox-Action: 1` en las rutas POST existentes. Devuelve `mensaje` y `actualizados` al confirmar, o un `error` con HTTP 400/404 ante filtros o selección inválidos. La cabecera no evita la autenticación ni CSRF. Abrir el destino de un aviso mantiene su flujo de navegación anterior.
+
+## Reloj de Colombia
+
+El pie de las páginas autenticadas muestra hora de 24 horas, segundos, fecha y zona de Bogotá. Permanece en el flujo del documento, separado de formularios y tablas, y se adapta a pantallas pequeñas. No se incluye en la impresión de reportes ni anuncia los segundos repetidamente a lectores de pantalla.
+
+Con JavaScript utiliza la hora del dispositivo en `America/Bogota`, incluso si el navegador tiene otra zona horaria. Se actualiza localmente, funciona sin conexión y pausa su temporizador cuando la pestaña está oculta; al volver recupera la hora vigente. Sin JavaScript presenta la referencia del servidor al cargar la página. Las fechas límite y la caducidad de credenciales continúan calculándose en el servidor.
+
+Este bloque no cambia tablas ni añade dependencias. Recopila estáticos y reinicia la aplicación web para cargar la bandeja, el controlador de actualización y el reloj.

@@ -1,7 +1,16 @@
 from django import template
+from django.utils import timezone
 from django.utils.html import format_html
 
 register = template.Library()
+
+
+@register.simple_tag
+def instante_actual():
+    """Una misma referencia temporal para la hora y la fecha del reloj."""
+    return timezone.now()
+
+
 PATHS = {
     "bell": '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
