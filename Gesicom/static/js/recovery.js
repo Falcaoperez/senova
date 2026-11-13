@@ -64,6 +64,7 @@
       )
       .forEach((field) => {
         field.value = "";
+        field.dispatchEvent(new Event("input", { bubbles: true }));
       });
   };
   const unconfirmed = () => {
