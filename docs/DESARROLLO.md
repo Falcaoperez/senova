@@ -37,6 +37,8 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Evidencias, páginas, perfil y reportes | `Gesicom/urls.py` y módulos de esa aplicación |
 | Inicio de sesión, registro y salida | `instructor/urls.py` y sus vistas |
 | Recuperación de contraseña y sesiones | `cuentas/urls.py` y sus módulos |
+| Formularios de recuperación HTML/JSON | `cuentas/presentacion.py`, `cuentas/views.py` y parciales de `cuentas/templates/cuentas/` |
+| Interacción y estados de recuperación | `Gesicom/static/js/recovery.js` y `css/recovery.css` |
 | Comunidad, permisos y actividad | `ADMIN/urls.py` y sus módulos |
 | Plazos, novedades, bandeja y calendario | `notificaciones/urls.py` y sus módulos |
 | Validación de filtros | Formularios de la aplicación, compartidos con la descarga |

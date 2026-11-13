@@ -228,9 +228,7 @@
     }),
   );
   document.addEventListener("submit", async (event) => {
-    const form = event.target.closest(
-      "[data-remote-form], [data-observation-form]",
-    );
+    const form = event.target.closest("[data-observation-form]");
     if (!form) return;
     event.preventDefault();
     const button = $("button[type=submit]", form),
@@ -261,26 +259,19 @@
       }
       if (!response.ok || result.error)
         throw new Error(result.error || "No se pudo guardar el cambio.");
-      if (form.hasAttribute("data-observation-form")) {
-        form.dataset.dirty = "false";
-        $$("textarea", form).forEach((input) => {
-          input.defaultValue = input.value;
+      form.dataset.dirty = "false";
+      $$("textarea", form).forEach((input) => {
+        input.defaultValue = input.value;
+      });
+      if (Number.isInteger(result.version)) {
+        $$(
+          "input[name=version]",
+          form.closest("[data-evidence-record]") || form,
+        ).forEach((input) => {
+          input.value = String(result.version);
         });
-        if (Number.isInteger(result.version)) {
-          $$(
-            "input[name=version]",
-            form.closest("[data-evidence-record]") || form,
-          ).forEach((input) => {
-            input.value = String(result.version);
-          });
-        }
-        toast("Observaciones guardadas correctamente.");
-      } else {
-        const target = new URL(form.dataset.redirect, location.origin);
-        if (form.hasAttribute("data-email-redirect"))
-          target.searchParams.set("email", new FormData(form).get("email"));
-        location.assign(target);
       }
+      toast("Observaciones guardadas correctamente.");
     } catch (exception) {
       const message =
         exception.message ||
@@ -373,21 +364,4 @@
         location.reload();
       });
   });
-})();
-// Caducidad visible del PIN de recuperación.
-(() => {
-  const expiry = document.querySelector("[data-pin-expiry]");
-  if (expiry) {
-    const deadline = Date.parse(expiry.dataset.pinExpiry);
-    const tick = () => {
-      const seconds = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
-      expiry.textContent = seconds
-        ? `El PIN caduca en ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}.`
-        : "El PIN ha caducado. Solicita uno nuevo.";
-    };
-    if (Number.isFinite(deadline)) {
-      tick();
-      setInterval(tick, 1000);
-    }
-  }
 })();

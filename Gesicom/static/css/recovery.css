@@ -1,0 +1,68 @@
+.recovery-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+}
+
+.recovery-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.recovery-steps li span {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.recovery-steps [aria-current="step"] {
+  border-color: var(--green);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.recovery-steps [aria-current="step"] span {
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+  color: white;
+}
+
+.recovery-error {
+  overflow-wrap: anywhere;
+}
+
+.recovery-account {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.recovery-account strong {
+  color: var(--ink);
+}
+
+.recovery-check {
+  margin-bottom: 1.25rem;
+}
+
+.recovery-check p,
+.recovery-restart {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0.75rem 0;
+}
