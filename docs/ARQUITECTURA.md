@@ -12,6 +12,7 @@
 | `Gesicom/archivos.py` | Acceso autorizado a adjuntos y metadatos de disponibilidad |
 | `Gesicom/interfaz.py` | Renderizado completo o del contenido del panel con las mismas vistas y permisos |
 | `Gesicom/templates/ui/paginacion.html` | Paginación común para evidencias, administración y notificaciones |
+| `Gesicom/templates/ui/reloj_colombia.html` | Reloj compartido en el pie de las páginas autenticadas, con referencia inicial del servidor |
 | `ADMIN/forms.py` | Validación del directorio contra el catálogo de roles mostrado |
 | `Gesicom/filtros.py` | Validación y normalización de filtros compartidos, con errores visibles y descarga cerrada ante parámetros inválidos |
 | `Gesicom/reportes.py` | Series históricas, resúmenes autorizados y filas exportables |
@@ -59,3 +60,7 @@ Los archivos compartidos se buscan por nombre indexado y se retiran después del
 El estado del historial contiene solo un identificador del documento y un índice, sin datos de formularios. Una navegación cancelada o fallida vuelve a la entrada aplicada sin borrar Adelante. Las nuevas ediciones cancelan las actualizaciones en curso; los eventos de cambio generados al retirar un campo enfocado no se confunden con otra edición del usuario. Los fragmentos se comprueban antes de sustituir regiones y cada consulta tiene un tiempo máximo de espera.
 
 La lista, el calendario y la descarga de **Mis plazos** comparten `FiltrosAgendaForm` y `agenda_filtrada`: validan búsqueda, proyecto, estado, identificador y mes antes de consultar. La pertenencia actual a los grupos y las entregas de la cuenta se resuelven con subconsultas `Exists`, sin una consulta por evento. La cuadrícula admite hasta 500 plazos por mes y avisa si hay más; la lista paginada y la descarga conservan todos los resultados autorizados. El calendario reutiliza el panel y el controlador de navegación existentes, sin tablas ni rutas de administración duplicadas.
+
+`FiltrosBandejaForm` valida búsqueda, tipo, lectura, identificador y fechas antes de consultar o marcar resultados. `inbox.js` envía los formularios de lectura con CSRF y solicita una actualización al controlador de navegación compartido. `workspace:refresh` conserva la consulta aplicada y espera si hay una búsqueda o actualización en curso. `notifications:changed` solicita el contador vigente mediante el controlador existente de la campana. Las acciones nativas conservan su redirección cuando no se solicita el protocolo JSON.
+
+`clock.js` y `clock.css` presentan un único reloj en el pie del documento completo. Los fragmentos no lo reconstruyen. El cliente reutiliza dos formateadores `Intl.DateTimeFormat` en `America/Bogota`, actualiza los segundos y pausa el temporizador al ocultar la página. El componente obtiene una sola referencia temporal del servidor para su estado inicial; el reloj no consulta la base de datos ni un servicio de hora.

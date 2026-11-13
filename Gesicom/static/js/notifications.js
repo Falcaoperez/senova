@@ -174,6 +174,7 @@
     controller?.abort();
   };
   retry.addEventListener("click", () => refresh(true));
+  document.addEventListener("notifications:changed", () => refresh(menu.open));
   menu.addEventListener("toggle", () => {
     if (menu.open) refresh(true);
   });

@@ -41,6 +41,8 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Auditoría administrativa | `ADMIN/auditoria.py`: consulta y presentación sin mutaciones |
 | Correcciones y entregas | `Gesicom/services.py`, con formularios y selectores |
 | Horarios mensuales e iCalendar | `notificaciones/calendario.py` y `notificaciones/icalendar.py` |
+| Lectura interactiva de avisos | `Gesicom/static/js/inbox.js`, con filtros y servicios de `notificaciones/` |
+| Hora de Colombia en el pie | `Gesicom/templates/ui/reloj_colombia.html`, `static/js/clock.js` y `static/css/clock.css` dentro de `Gesicom/` |
 | Cambios del esquema | `migrations/` de la aplicación propietaria del modelo |
 
 `SENNOVA/urls.py` incluye las rutas de las aplicaciones. La separación conserva direcciones, nombres y vistas existentes; las rutas públicas históricas mantienen su espacio de nombres. `core/` y las plantillas antiguas que extienden las actuales permanecen como accesos de compatibilidad.

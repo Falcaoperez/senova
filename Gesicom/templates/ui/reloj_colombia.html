@@ -1,0 +1,17 @@
+{% load ui tz %}
+{% timezone "America/Bogota" %}
+  {% instante_actual as instante %}
+  <aside class="colombia-clock"
+         aria-label="Hora de Colombia"
+         data-colombia-clock>
+    <span class="colombia-clock-icon" aria-hidden="true">{% icon 'clock' %}</span>
+    <div class="colombia-clock-content">
+      <span class="colombia-clock-label">Hora de Colombia <span>· Bogotá</span></span>
+      <time datetime="{{ instante|date:'c' }}" aria-live="off" data-clock-instant>
+        <strong data-clock-time>{{ instante|date:'H:i:s' }}</strong>
+        <span data-clock-date>{{ instante|date:'l d \d\e F \d\e Y' }}</span>
+      </time>
+    </div>
+    <span class="colombia-clock-zone">UTC−5</span>
+  </aside>
+{% endtimezone %}

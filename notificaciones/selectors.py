@@ -1,5 +1,7 @@
 """Consultas de agenda, bandeja y cumplimiento sin cargar listas completas."""
 
+import datetime
+
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Exists, F, OuterRef, Q, Subquery
 from django.utils import timezone
@@ -83,18 +85,30 @@ def agenda_filtrada(user, params):
 
 
 def avisos_filtrados(user, params):
+    from .forms import FiltrosBandejaForm
+
     queryset = Notificacion.objects.filter(usuario=user)
-    q = params.get("q", "").strip()[:100]
+    form = params if isinstance(params, FiltrosBandejaForm) else FiltrosBandejaForm(params)
+    if not form.is_valid():
+        return queryset.none()
+    datos = form.cleaned_data
+    q = datos["q"]
     if q:
         queryset = queryset.filter(Q(titulo__icontains=q) | Q(mensaje__icontains=q))
-    if params.get("tipo") in dict(Notificacion.Tipo.choices):
-        queryset = queryset.filter(tipo=params["tipo"])
-    estado = params.get("estado", "")
+    if datos["tipo"]:
+        queryset = queryset.filter(tipo=datos["tipo"])
+    estado = datos["estado"]
     if estado in {"pendiente", "leida"}:
         queryset = queryset.filter(leida_en__isnull=estado == "pendiente")
-    pk = params.get("aviso", "")
-    if pk.isascii() and pk.isdigit() and len(pk) <= 18:
-        queryset = queryset.filter(pk=pk)
+    if datos["aviso"]:
+        queryset = queryset.filter(pk=datos["aviso"])
+    if desde := datos["desde"]:
+        queryset = queryset.filter(
+            creada_en__gte=timezone.make_aware(datetime.datetime.combine(desde, datetime.time.min))
+        )
+    if hasta := datos["hasta"]:
+        fin = hasta + datetime.timedelta(days=1)
+        queryset = queryset.filter(creada_en__lt=timezone.make_aware(datetime.datetime.combine(fin, datetime.time.min)))
     return queryset
 
 
