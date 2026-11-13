@@ -180,11 +180,33 @@
 
 [aria-busy="true"] [data-live-region] {
   opacity: .5;
-  pointer-events: none;
 }
 
 [aria-busy="true"] .filters {
   cursor: progress;
+}
+
+.workspace-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border: 1px solid #c7ddba;
+  border-radius: 10px;
+  background: #f5faef;
+}
+.workspace-feedback.is-error {
+  border-color: #e3c2ac;
+  background: #fff8f1;
+}
+.workspace-feedback p {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .heading-dot {

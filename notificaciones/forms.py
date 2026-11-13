@@ -1,8 +1,83 @@
+import datetime
+import re
+
 from django import forms
 from django.db import connection
 from django.utils import timezone
 
 from .models import Novedad, PlazoReporte, PreferenciasNotificacion
+
+
+class FiltrosAgendaForm(forms.Form):
+    q = forms.CharField(label="Buscar plazo", required=False, max_length=100)
+    proyecto = forms.ChoiceField(
+        label="Proyecto",
+        required=False,
+        choices=[("", "Todos los proyectos"), *PlazoReporte.PROYECTOS],
+        error_messages={"invalid_choice": "Selecciona un proyecto válido."},
+    )
+    estado = forms.ChoiceField(
+        label="Estado",
+        required=False,
+        choices=[
+            ("", "Todos"),
+            ("pendiente", "Pendiente"),
+            ("vencido", "Vencido sin entrega"),
+            ("entregado", "Entregado"),
+            ("tardia", "Entregado fuera de plazo"),
+        ],
+        error_messages={"invalid_choice": "Selecciona un estado válido."},
+    )
+    plazo = forms.IntegerField(label="Plazo", min_value=1, max_value=2**63 - 1, required=False)
+    vista = forms.ChoiceField(
+        label="Vista",
+        required=False,
+        choices=[("lista", "Lista"), ("calendario", "Calendario")],
+        error_messages={"invalid_choice": "Selecciona una vista válida."},
+    )
+    mes = forms.CharField(label="Mes", required=False, max_length=7)
+
+    def __init__(self, data=None, **kwargs):
+        data = data.copy() if data is not None else {}
+        if not data.get("vista"):
+            data["vista"] = "lista"
+        self.mes_automatico = data.get("vista") == "calendario" and "mes" not in data
+        if self.mes_automatico:
+            data["mes"] = timezone.localdate().strftime("%Y-%m")
+        super().__init__(data, **kwargs)
+
+    def clean_mes(self):
+        value = self.cleaned_data.get("mes", "")
+        if value and (not re.fullmatch(r"[0-9]{4}-(0[1-9]|1[0-2])", value) or not 1000 <= int(value[:4]) <= 9998):
+            raise forms.ValidationError("Elige un mes válido entre 1000-01 y 9998-12.")
+        return value
+
+    def clean_plazo(self):
+        value = self.cleaned_data.get("plazo")
+        if self.data.get("plazo") and not re.fullmatch(r"[0-9]{1,19}", str(self.data["plazo"])):
+            raise forms.ValidationError("Selecciona un plazo válido.")
+        return value
+
+    def clean(self):
+        data = super().clean()
+        if data.get("vista") == "calendario" and "mes" in data and not data["mes"]:
+            self.add_error("mes", "Elige un mes para ver el calendario.")
+        return data
+
+    def fecha_mes(self):
+        value = self.cleaned_data.get("mes")
+        return datetime.date.fromisoformat(value + "-01") if value else None
+
+    def consulta_url(self, **cambios):
+        from django.http import QueryDict
+
+        datos = self.cleaned_data if self.is_valid() else self.data
+        params = QueryDict(mutable=True)
+        for nombre in self.fields:
+            value = cambios.get(nombre, datos.get(nombre))
+            if value not in (None, ""):
+                params[nombre] = value
+        return "?" + params.urlencode() if params else ""
 
 
 class NovedadForm(forms.ModelForm):

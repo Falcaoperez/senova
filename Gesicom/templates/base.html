@@ -21,6 +21,7 @@
     <script defer src="{% static 'js/sena.js' %}"></script>
     {% if user.is_authenticated %}
       <script defer src="{% static 'js/workspace.js' %}"></script>
+      <script defer src="{% static 'js/navigation.js' %}"></script>
       <script defer src="{% static 'js/notifications.js' %}"></script>
     {% endif %}
     {% block head %}{% endblock %}

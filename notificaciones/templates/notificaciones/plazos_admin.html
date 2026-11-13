@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_panel|default:"base.html" %}
 {% load ui %}
 {% block title %}Plazos de reportes · GESICOM SENA{% endblock %}
 {% block content %}
@@ -8,8 +8,12 @@
       <h1>Entregas claras. Seguimiento sencillo.</h1>
       <p class="page-description">Programa reportes y consulta quién ha entregado, quién falta y qué requiere revisión.</p>
     </div>
-    <a class="button button-primary"
-       href="{% url 'notificaciones:crear_plazo' %}">{% icon 'plus' %} Nuevo plazo</a>
+    <div class="heading-actions">
+      <a class="button button-secondary"
+         href="{% url 'notificaciones:mis_plazos' %}?vista=calendario&amp;mes={% now 'Y-m' %}">{% icon 'calendar' %} Mi calendario</a>
+      <a class="button button-primary"
+         href="{% url 'notificaciones:crear_plazo' %}">{% icon 'plus' %} Nuevo plazo</a>
+    </div>
   </div>
   <section class="panel" data-live-scope>
     <form class="filters" method="get" data-live-form>

@@ -46,6 +46,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Publicación de novedades por grupo o para todos los usuarios activos.
 - Plazos de reportes con aviso inicial, recordatorio y notificación de vencimiento.
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
+- Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.
 - Bandeja personal, lectura de avisos y preferencias de correo.
 - Cola de correo con lotes, bloqueo entre trabajadores y reintentos con espera.
 - Administración de usuarios, roles y permisos; edición de datos, estado, roles y contraseña.
