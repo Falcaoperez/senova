@@ -11,6 +11,7 @@
 | `Gesicom/adjuntos.py` | Formatos admitidos, comprobaciones de contenido y lectura limitada de texto |
 | `Gesicom/archivos.py` | Acceso autorizado a adjuntos y metadatos de disponibilidad |
 | `Gesicom/interfaz.py` | Renderizado completo o del contenido del panel con las mismas vistas y permisos |
+| `Gesicom/templates/ui/paginacion.html` | Paginación común para evidencias, administración y notificaciones |
 | `ADMIN/forms.py` | Validación del directorio contra el catálogo de roles mostrado |
 | `Gesicom/filtros.py` | Validación y normalización de filtros compartidos, con errores visibles y descarga cerrada ante parámetros inválidos |
 | `Gesicom/reportes.py` | Series históricas, resúmenes autorizados y filas exportables |
@@ -22,6 +23,7 @@
 | `ADMIN/permisos.py` | Catálogo de permisos, protección de grupos, revisión y transacciones compartidas con Django admin |
 | `ADMIN/admin.py` | Formularios nativos de grupo con confirmación, revisión y conservación de los roles del sistema |
 | `ADMIN/services.py` | Cambios de estado y roles, protección de cuentas y auditoría |
+| `ADMIN/auditoria.py` | Consultas filtradas, etiquetas y filas CSV del historial administrativo |
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
@@ -31,6 +33,8 @@
 | `database/` | Documentación del esquema, diagnóstico SQL y preparación de la base de pruebas |
 | `scripts/` | Operación, copias de seguridad y medición de carga |
 | `docs/` | Operación, seguridad, arquitectura y verificaciones |
+
+Cada aplicación mantiene sus propias rutas en `urls.py`. `SENNOVA/urls.py` compone estos archivos y conserva los nombres públicos anteriores, junto con los accesos de compatibilidad de `core/`. Las pruebas se agrupan en seis carpetas `tests/`, por aplicación y por funcionalidad; la configuración `SENNOVA.test_settings` conserva su ruta. La [guía de desarrollo](DESARROLLO.md) incluye el mapa de archivos y los comandos por módulo.
 
 Las migraciones permanecen dentro de sus aplicaciones, como espera Django. Los módulos de compatibilidad y las plantillas históricas que remiten a las vistas actuales no generan menús adicionales. Solo se retiran funciones sin llamadas ni rutas activas.
 
@@ -50,7 +54,7 @@ Los archivos compartidos se buscan por nombre indexado y se retiran después del
 
 `notifications.js` concentra la actualización de la campana en todos los paneles autenticados; `sena.js` conserva las interacciones generales y la caducidad visible del PIN. La lista inicial se genera en `notificaciones/avisos_recientes.html`, con POST y CSRF, para funcionar también sin JavaScript. Las actualizaciones utilizan el mismo resumen autorizado y crean los elementos con `textContent`; no incorporan HTML de los títulos. La bandeja y el procesador de contexto comparten el conteo únicamente dentro de la misma petición.
 
-`navigation.js` gestiona los filtros, la paginación, el historial y las ediciones pendientes de los nueve paneles interactivos. `workspace.js` mantiene la búsqueda y las acciones administrativas; no hay un segundo controlador de filtros. Las solicitudes GET con `X-Workspace-Fragment: 1` usan `ui/base_fragmento.html` y omiten la cabecera y sus consultas de avisos. Las mismas vistas generan el documento completo sin esa cabecera HTTP. `Vary` identifica ambas representaciones y la respuesta privada conserva `no-store`.
+`navigation.js` gestiona los filtros, la paginación, el historial y las ediciones pendientes de los paneles interactivos. `workspace.js` mantiene la búsqueda y las acciones administrativas; no hay un segundo controlador de filtros. Las solicitudes GET con `X-Workspace-Fragment: 1` usan `ui/base_fragmento.html` y omiten la cabecera y sus consultas de avisos. Las mismas vistas generan el documento completo sin esa cabecera HTTP. `Vary` identifica ambas representaciones y la respuesta privada conserva `no-store`.
 
 El estado del historial contiene solo un identificador del documento y un índice, sin datos de formularios. Una navegación cancelada o fallida vuelve a la entrada aplicada sin borrar Adelante. Las nuevas ediciones cancelan las actualizaciones en curso; los eventos de cambio generados al retirar un campo enfocado no se confunden con otra edición del usuario. Los fragmentos se comprueban antes de sustituir regiones y cada consulta tiene un tiempo máximo de espera.
 

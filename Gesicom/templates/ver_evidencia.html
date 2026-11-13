@@ -216,6 +216,6 @@
       {% endfor %}
     </ol>
     {% url 'ver_evidencia' envio.pk as historial_url %}
-    {% include "notificaciones/paginacion.html" with pagina=historial base_url=historial_url %}
+    {% include "ui/paginacion.html" with pagina=historial base_url=historial_url %}
   </section>
 {% endblock %}
