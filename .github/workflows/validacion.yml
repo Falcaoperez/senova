@@ -42,6 +42,10 @@ jobs:
       DB_NAME: senova
       DB_USER: gesicom_app
       DB_PASSWORD: ci-app-password
+      DB_MIGRATION_USER: gesicom_migraciones
+      DB_MIGRATION_PASSWORD: ci-migration-password
+      DB_TEST_USER: gesicom_pruebas
+      DB_TEST_PASSWORD: ci-test-password
       DB_HOST: mysql
       DB_PORT: "3306"
       REDIS_URL: redis://redis:6379/0
@@ -54,15 +58,19 @@ jobs:
         run: apt-get update && apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config default-mysql-client
       - name: Dependencias
         run: python -m pip install -r requirements-dev.txt
-      - name: Base de pruebas independiente
+      - name: Cuentas de ejecución, migraciones y pruebas
         env:
           MYSQL_PWD: ci-root-password
-        run: mysql -h mysql -uroot < database/preparar_pruebas.sql
+        run: |
+          python scripts/preparar_mysql.py --guardar-sql --con-pruebas
+          mysql -h mysql -uroot < .local/mysql/perfiles.sql
+          rm .local/mysql/perfiles.sql
       - name: Código y migraciones
         run: |
           ruff check .
           python manage.py makemigrations --check --dry-run
-          python manage.py migrate --noinput
+          python manage.py migrate --noinput --settings=SENNOVA.migration_settings
+          python manage.py comprobar_base_datos --estricto
       - name: Pruebas con MySQL
         run: python manage.py test --settings=SENNOVA.test_settings --noinput
       - name: Configuración de producción y archivos estáticos

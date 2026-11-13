@@ -7,6 +7,8 @@ SENNOVA/
   settings.py, urls.py, wsgi.py   configuración y composición del proyecto
   tests/                        comprobaciones del proyecto
   test_settings.py              configuración exclusiva de pruebas
+  migration_settings.py         cuenta exclusiva de migraciones
+  database_security.py          diagnóstico de la conexión, solo lectura
 ADMIN/, Gesicom/, cuentas/, instructor/, notificaciones/
   urls.py                       rutas de la aplicación
   models.py, migrations/        persistencia e historial del esquema
@@ -24,7 +26,7 @@ scripts/                        configuración, actualización, respaldo y medic
 database/
   consultas/                    diagnóstico SQL de solo lectura
   documentacion/                modelo y relaciones
-  preparar_pruebas.sql          base independiente para pruebas de MySQL
+  seguridad/                    perfiles de cuentas y guía de permisos de MySQL
 docs/                           arquitectura, desarrollo, operación y verificación
 ```
 
@@ -70,6 +72,6 @@ python scripts/actualizar_instalacion.py
 sh scripts/backup_mysql.sh
 ```
 
-La actualización ejecuta `check`, `migrate --noinput` y `collectstatic --noinput`, y se detiene ante el primer fallo. Resuelve la raíz desde el archivo, por lo que puede invocarse desde otro directorio. `sync_database.py` y `sync.ps1` remiten a esa implementación; importar el módulo no aplica migraciones.
+La actualización ejecuta `check`, `migrate --noinput --settings=SENNOVA.migration_settings` y `collectstatic --noinput`, y se detiene ante el primer fallo. Requiere las credenciales privadas de migraciones. Resuelve la raíz desde el archivo, por lo que puede invocarse desde otro directorio. `sync_database.py` y `sync.ps1` remiten a esa implementación; importar el módulo no aplica migraciones.
 
 El esquema se mantiene con migraciones de Django. La [documentación de MySQL](../database/README.md) describe diagnóstico y copias. Los resultados de pruebas, datos locales, credenciales, respaldos y archivos de usuarios se guardan fuera del código versionado.

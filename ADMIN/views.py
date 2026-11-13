@@ -9,6 +9,8 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_safe
 
@@ -18,6 +20,7 @@ from cuentas.sesiones import cerrar_sesiones
 from Gesicom.exportaciones import respuesta_csv
 from Gesicom.interfaz import render_panel
 from Gesicom.utils import require_group
+from SENNOVA.database_security import inspeccionar_conexion
 
 from .auditoria import filas_auditoria, presentar_registro, registros_filtrados
 from .forms import FiltrosAuditoriaForm, FiltrosUsuariosForm
@@ -35,6 +38,17 @@ def _requerir_administrador(usuario):
 def panel_control(request):
     return render_panel(
         request, "admin_personalizado/dashboard_modern.html", centro_operaciones(request.GET.get("periodo"))
+    )
+
+
+@require_group("administrador")
+@require_safe
+@never_cache
+def base_datos(request):
+    return render_panel(
+        request,
+        "admin_personalizado/base_datos.html",
+        {"informe_sql": inspeccionar_conexion(), "comprobado_en": timezone.now()},
     )
 
 

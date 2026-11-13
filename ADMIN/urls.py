@@ -15,4 +15,5 @@ urlpatterns = [
     path("usuario/<int:usuario_id>/activar-desactivar/", views.activar_desactivar, name="activar_desactivar"),
     path("crear-usuario/", views.crear_usuario, name="crear_usuario"),
     path("permisos/", views.permisos, name="permisos"),
+    path("base-datos/", views.base_datos, name="base_datos"),
 ]
