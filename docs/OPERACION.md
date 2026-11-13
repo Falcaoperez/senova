@@ -162,3 +162,17 @@ Cancelar Atrás o Adelante conserva tanto los datos visibles como la dirección 
 Si una consulta falla o no responde en quince segundos, se conservan los resultados y filtros aplicados y aparece **Reintentar actualización**. Un fallo durante Atrás también puede reintentarse sin perder la entrada de Adelante. Una respuesta incompleta no sustituye una parte de las regiones. Las ediciones pendientes solo permanecen en la página actual: no se guardan como borradores en el navegador ni se recuperan después de cerrar la pestaña.
 
 No hay cambios de esquema en este bloque. Recopila los estáticos y reinicia la aplicación web para cargar el renderizado compartido y `navigation.js`.
+
+## Calendario personal y descarga de plazos
+
+**Mis plazos** conserva la lista inicial de todos los meses. El selector **Calendario** abre el mes actual, con navegación al anterior, siguiente y actual. Búsqueda, proyecto, estado y mes se comparten entre ambas vistas. Seleccionar un evento abre sus indicaciones completas y permite enviar el reporte o consultar sus evidencias. En pantallas pequeñas se muestran los días con entregas, con sus fechas y estados. Administración de plazos incluye un acceso a **Mi calendario**; mantiene el alcance personal de la cuenta.
+
+El campo de mes es opcional en la lista y obligatorio en calendario. Se aceptan meses de `1000-01` a `9998-12`; el mes se incorpora a la URL para que Atrás y Adelante recuperen la misma consulta. Un filtro inválido muestra el error, oculta los resultados y deshabilita la descarga. Los límites mensuales y las horas visibles se interpretan en Colombia, incluyendo el último minuto de cada mes.
+
+**Descargar plazos (.ics)** incluye todos los resultados de los filtros, aunque ocupen varias páginas. El archivo se puede importar manualmente en un calendario compatible, como Google Calendar u Outlook. Los eventos indican la hora límite, el proyecto, el estado de entrega y las instrucciones. Se exportan fechas UTC para conservar el instante; revisa la zona horaria elegida en el calendario de destino. No se envían invitaciones ni se programa una alarma externa.
+
+Es una copia del momento de la descarga, sin sincronización. Una entrega posterior, un cambio de fecha o el archivo de un plazo no modifica las copias ya importadas. La aplicación de destino decide cómo trata una nueva importación; revisa los eventos existentes antes de repetirla. El identificador del evento es estable por plazo mientras se conserve `PUBLIC_BASE_URL`. Configura esa variable con la dirección pública correcta antes de distribuir archivos; nunca se toma el dominio de la cabecera `Host`. Una dirección inválida omite los enlaces al portal y utiliza un espacio de identificadores de reserva.
+
+La cuadrícula limita a 500 los eventos visibles y lo indica al superar esa cantidad. Aplica filtros, usa la lista o descarga para consultar los demás. El archivo es personal y puede contener instrucciones del centro; compártelo solo con quien deba consultarlo. El endpoint `/notificaciones/plazos/calendario.ics` requiere iniciar sesión y no admite enlaces públicos de suscripción.
+
+Este bloque no requiere migraciones. Recopila estáticos y reinicia la aplicación web para cargar las plantillas y `calendar.css`.

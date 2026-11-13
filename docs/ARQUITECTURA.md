@@ -26,6 +26,8 @@
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
 | `notificaciones/resumen.py` | Conteo y cuatro avisos recientes compartidos durante una petición, sin caché entre cuentas |
+| `notificaciones/calendario.py` | Límites mensuales de Colombia y distribución acotada de plazos en 42 días |
+| `notificaciones/icalendar.py` | Descarga privada iCalendar, escape de texto y plegado UTF-8 sin dependencias adicionales |
 | `database/` | Documentación del esquema, diagnóstico SQL y preparación de la base de pruebas |
 | `scripts/` | Operación, copias de seguridad y medición de carga |
 | `docs/` | Operación, seguridad, arquitectura y verificaciones |
@@ -51,3 +53,5 @@ Los archivos compartidos se buscan por nombre indexado y se retiran después del
 `navigation.js` gestiona los filtros, la paginación, el historial y las ediciones pendientes de los nueve paneles interactivos. `workspace.js` mantiene la búsqueda y las acciones administrativas; no hay un segundo controlador de filtros. Las solicitudes GET con `X-Workspace-Fragment: 1` usan `ui/base_fragmento.html` y omiten la cabecera y sus consultas de avisos. Las mismas vistas generan el documento completo sin esa cabecera HTTP. `Vary` identifica ambas representaciones y la respuesta privada conserva `no-store`.
 
 El estado del historial contiene solo un identificador del documento y un índice, sin datos de formularios. Una navegación cancelada o fallida vuelve a la entrada aplicada sin borrar Adelante. Las nuevas ediciones cancelan las actualizaciones en curso; los eventos de cambio generados al retirar un campo enfocado no se confunden con otra edición del usuario. Los fragmentos se comprueban antes de sustituir regiones y cada consulta tiene un tiempo máximo de espera.
+
+La lista, el calendario y la descarga de **Mis plazos** comparten `FiltrosAgendaForm` y `agenda_filtrada`: validan búsqueda, proyecto, estado, identificador y mes antes de consultar. La pertenencia actual a los grupos y las entregas de la cuenta se resuelven con subconsultas `Exists`, sin una consulta por evento. La cuadrícula admite hasta 500 plazos por mes y avisa si hay más; la lista paginada y la descarga conservan todos los resultados autorizados. El calendario reutiliza el panel y el controlador de navegación existentes, sin tablas ni rutas de administración duplicadas.

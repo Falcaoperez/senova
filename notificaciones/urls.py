@@ -12,6 +12,7 @@ urlpatterns = [
     path("<int:pk>/abrir/", views.abrir, name="abrir"),
     path("<int:pk>/lectura/", views.lectura, name="lectura"),
     path("plazos/", views.mis_plazos, name="mis_plazos"),
+    path("plazos/calendario.ics", views.calendario_ics, name="calendario_ics"),
     path("administracion/novedades/", views.novedades_admin, name="novedades_admin"),
     path("administracion/novedades/crear/", views.crear_novedad, name="crear_novedad"),
     path("administracion/plazos/", views.plazos_admin, name="plazos_admin"),

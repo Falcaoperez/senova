@@ -84,3 +84,11 @@ La representación parcial se selecciona únicamente en las vistas previstas y m
 El directorio valida los roles contra el catálogo que muestra, sin convertir identificadores arbitrarios a enteros de la base de datos. Cadenas de dígitos excesivas, símbolos numéricos no válidos, estados desconocidos o búsquedas demasiado largas producen un error visible y una lista vacía. La validación no cambia las reglas de las operaciones administrativas.
 
 La protección de ediciones conserva los datos en memoria de la página. No copia observaciones, contraseñas ni permisos a almacenamiento persistente del navegador o al estado del historial. Cancelar una actualización no envía el formulario editado ni guarda sus cambios.
+
+## Calendario y exportación privada
+
+El calendario y su descarga solo aceptan GET/HEAD autenticado y vuelven a aplicar las asignaciones activas del usuario conectado. Un parámetro `usuario` no selecciona otra cuenta; ser administrador no amplía el calendario personal. Retirar un grupo o archivar un plazo lo excluye de las siguientes consultas y descargas. Los filtros inválidos no amplían la búsqueda: el archivo devuelve HTTP 400 sin adjunto y la página muestra el error. Las respuestas siguen siendo privadas y sin caché.
+
+Los campos de texto iCalendar normalizan saltos de línea, eliminan controles y escapan barras, comas y puntos y coma. El plegado respeta 75 octetos sin partir caracteres UTF-8; títulos o instrucciones con saltos de línea no pueden añadir componentes, asistentes ni propiedades. El archivo no incluye adjuntos, destinatarios, invitaciones ni alarmas. Los enlaces utilizan únicamente `PUBLIC_BASE_URL` validada, sin credenciales, consulta, fragmento o caracteres de control; no se construyen con `Host` de la petición.
+
+La lectura no crea avisos, modifica entregas ni utiliza credenciales SMTP. Una copia descargada permanece fuera del control del portal: revocar el acceso impide nuevas descargas, pero no retira archivos previamente guardados o importados.
