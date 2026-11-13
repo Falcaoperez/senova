@@ -21,7 +21,9 @@ from Gesicom.utils import require_group
 
 from .acceso import destino_notificacion
 from .bandeja import cambiar_lectura, regreso_bandeja
-from .forms import NovedadForm, PlazoReporteForm, PreferenciasForm
+from .calendario import cuadricula_mensual
+from .forms import FiltrosAgendaForm, NovedadForm, PlazoReporteForm, PreferenciasForm
+from .icalendar import respuesta_calendario
 from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
 from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
 from .resumen import resumen_de_peticion
@@ -117,20 +119,59 @@ def resumen(request):
 
 
 @login_required
+@require_safe
 def mis_plazos(request):
+    form = FiltrosAgendaForm(request.GET)
+    valido = form.is_valid()
+    if valido and form.mes_automatico:
+        return redirect(reverse("notificaciones:mis_plazos") + form.consulta_url())
+    consulta = agenda_filtrada(request.user, form)
+    datos = form.cleaned_data
+    vista = datos.get("vista") or "lista"
+    mes = datos.get("mes") or ""
+    actual = timezone.localdate().strftime("%Y-%m")
+    calendario = cuadricula_mensual(consulta, form.fecha_mes()) if valido and vista == "calendario" else {}
     return render_panel(
         request,
         "notificaciones/mis_plazos.html",
         {
-            "plazos": Paginator(agenda_filtrada(request.user, request.GET), 20).get_page(request.GET.get("page")),
+            "plazos": Paginator(consulta, 20).get_page(request.GET.get("page")) if vista != "calendario" else None,
             "agenda": resumen_agenda(request.user),
             "proyectos": PlazoReporte.PROYECTOS,
             "q": request.GET.get("q", "")[:100],
             "estado": request.GET.get("estado", ""),
             "proyecto": request.GET.get("proyecto", ""),
             "plazo_id": request.GET.get("plazo", ""),
+            "filtros_form": form,
+            "mensaje_filtros": "No se muestran ni exportan plazos hasta corregir los filtros.",
+            "vista": vista,
+            "mes": request.GET.get("mes", "")[:7],
+            "mes_actual": actual,
+            "url_lista": form.consulta_url(vista="lista"),
+            "url_calendario": form.consulta_url(vista="calendario", mes=mes or actual),
+            "url_exportar": reverse("notificaciones:calendario_ics") + form.consulta_url() if valido else None,
+            **calendario,
         },
     )
+
+
+@login_required
+@require_safe
+def calendario_ics(request):
+    form = FiltrosAgendaForm(request.GET)
+    if not form.is_valid():
+        return render(
+            request,
+            "error_filtros.html",
+            {
+                "filtros_form": form,
+                "volver": reverse("notificaciones:mis_plazos") + form.consulta_url(),
+                "seccion_error": "GESICOM / MIS PLAZOS",
+                "regreso_error": reverse("notificaciones:mis_plazos"),
+            },
+            status=400,
+        )
+    return respuesta_calendario(agenda_filtrada(request.user, form), form.cleaned_data["mes"])
 
 
 @require_group("administrador")
