@@ -18,7 +18,7 @@ class PasswordResetToken(models.Model):
         max_length=255, unique=True, help_text="Hash del PIN de recuperación; nunca contiene el PIN original."
     )
     creado_en = models.DateTimeField(auto_now_add=True, db_column="created_at")
-    expira_en = models.DateTimeField(db_index=True, db_column="expires_at")
+    expira_en = models.DateTimeField(db_column="expires_at")
     utilizado = models.BooleanField(default=False, db_column="used")
     intentos = models.PositiveSmallIntegerField(default=0)
     verificado_en = models.DateTimeField(null=True, blank=True)
@@ -28,7 +28,10 @@ class PasswordResetToken(models.Model):
         verbose_name = "Solicitud de recuperación"
         verbose_name_plural = "Solicitudes de recuperación"
         ordering = ["-creado_en"]
-        indexes = [models.Index(fields=["token"]), models.Index(fields=["expira_en", "utilizado"])]
+        indexes = [
+            models.Index(fields=["expira_en", "utilizado"]),
+            models.Index(fields=["usuario", "utilizado", "-creado_en"], name="reset_usuario_estado_fecha_idx"),
+        ]
 
     def __str__(self):
         return f"Recuperación #{self.pk}"

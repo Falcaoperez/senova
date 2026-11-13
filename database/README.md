@@ -23,6 +23,8 @@ MySQL utiliza InnoDB, UTF-8 completo (`utf8mb4`), modo estricto, claves foránea
 
 Un índice único sobre el correo normalizado evita duplicados incluso con altas simultáneas; permite cuentas de mantenimiento sin correo. Una restricción impide que una evidencia esté aprobada y rechazada a la vez. Cada aviso de novedad o fase de un plazo tiene una identidad única por destinatario.
 
+La búsqueda de recuperación activa dispone de un índice por usuario, uso y fecha descendente. `cuentas.0008_indices_recuperacion` retira el índice no único duplicado del hash y el índice simple de caducidad, ya cubierto por el compuesto de caducidad/uso. Se conserva la unicidad del hash y el índice de caducidad compuesto. La migración ajusta índices, sin eliminar solicitudes ni modificar sus códigos, fechas o estados.
+
 ## Actualización de instalaciones anteriores
 
 Las migraciones conservan las tablas y sus relaciones. Si detectan correos duplicados, se detienen antes de crear el índice para que se corrijan las cuentas afectadas. Las solicitudes del mecanismo antiguo de recuperación se invalidan. La cuenta automática histórica `admin@example.com`, si aún conserva la contraseña pública original, se desactiva; no se elimina su información.

@@ -1,0 +1,13 @@
+<div class="alert alert-error recovery-error"
+     role="alert"
+     tabindex="-1"
+     data-form-error
+     {% if not error_recuperacion %}hidden{% endif %}>{{ error_recuperacion }}</div>
+<div class="recovery-check" data-recovery-uncertain hidden>
+  <p>Consulta el paso siguiente para comprobar el resultado antes de volver a enviar.</p>
+  <a class="button button-secondary button-block"
+     href="{{ comprobar }}"
+     data-recovery-check>{{ texto_comprobar|default:"Comprobar siguiente paso" }}</a>
+</div>
+<p class="password-help" data-recovery-wait aria-live="off" hidden></p>
+<p class="sr-only" data-recovery-status role="status"></p>

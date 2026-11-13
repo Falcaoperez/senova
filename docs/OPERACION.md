@@ -1,5 +1,15 @@
 # Operación
 
+## Recuperación de acceso
+
+Los tres pasos funcionan también sin JavaScript. Los errores nativos conservan el correo, pero no reflejan el PIN ni las contraseñas. Una verificación vigente permite continuar al último paso al volver a la página del PIN; la pantalla final identifica la cuenta autorizada. Solicitar otro PIN invalida el anterior, como en el flujo original.
+
+Con JavaScript hay progreso de pasos, tiempo restante y pegado de un PIN con espacios o guiones. Pegar no envía el formulario. Una petición sin confirmación termina la espera visual a los quince segundos y ofrece **Comprobar siguiente paso**; en el último paso ofrece comprobar el inicio de sesión con la nueva contraseña. No pulses de nuevo suponiendo que una operación falló: el servidor puede haberla terminado antes del corte de conexión. Si la sesión no se conserva, solicita un PIN nuevo. Reconectar o terminar un intervalo de espera no envía datos automáticamente.
+
+Las rutas `/api/olvide_password/`, `/api/verificar_pin/` y `/api/restablecer_password/` conservan JSON para los clientes anteriores. Los formularios nativos solicitan HTML mediante la cabecera de navegación. Los errores de límite o indisponibilidad ofrecen volver al paso correspondiente y no muestran detalles internos. Los mensajes de correo siguen procesándose mediante la cola existente.
+
+Esta actualización incluye `cuentas.0008_indices_recuperacion`: respalda primero y aplica las migraciones con `SENNOVA.migration_settings`, usando la cuenta de migraciones. Retira dos índices redundantes y añade el de usuario/uso/fecha; conserva hashes, solicitudes y relaciones. En bases grandes planifica la creación de índices según la ventana operativa de la instalación. Recopila estáticos y reinicia la aplicación web para cargar `recovery.js` y `recovery.css`. El trabajador mantiene su configuración y cola actuales.
+
 ## Notificaciones
 
 El alta de una novedad o plazo crea avisos en lotes y prepara la cola de correo. La petición web no espera el envío de mensajes a todos los destinatarios.
