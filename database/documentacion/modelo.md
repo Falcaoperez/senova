@@ -2,6 +2,8 @@
 
 Las migraciones de cada aplicación son la definición del esquema. No se mantiene un segundo archivo de creación de tablas: `python manage.py migrate --settings=SENNOVA.migration_settings` construye o actualiza MySQL con la cuenta dedicada, conservando los registros. El índice de correos normalizados se añade mediante migración SQL porque admite varias cuentas de mantenimiento sin dirección.
 
+Las solicitudes de recuperación mantienen el hash único del PIN y un índice de caducidad/uso. El índice `usuario, utilizado, -creado_en` acota la selección de una solicitud vigente y la invalidación de solicitudes de esa cuenta. La migración `cuentas.0008` retira dos índices redundantes; no altera los datos de las solicitudes.
+
 ```mermaid
 erDiagram
     USER ||--o{ USER_GROUP : pertenece
