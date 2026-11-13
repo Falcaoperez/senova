@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_panel|default:"base.html" %}
 {% load ui %}
 {% block title %}Usuarios · GESICOM SENA{% endblock %}
 {% block content %}
@@ -42,6 +42,7 @@
          data-live-link>Limpiar</a>
     </form>
     <div data-live-region="users">
+      {% include "ui/filtros_errores.html" %}
       <div class="table-toolbar">
         <div>
           <h2>

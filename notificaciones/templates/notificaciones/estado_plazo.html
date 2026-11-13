@@ -1,0 +1,9 @@
+{% if plazo.entregado %}
+  <span class="badge {% if plazo.a_tiempo %}badge-success{% else %}badge-pending{% endif %}">
+    {% if plazo.a_tiempo %}Entregado{% else %}Entregado fuera de plazo{% endif %}
+  </span>
+{% elif plazo.vencido %}
+  <span class="badge badge-danger">Vencido</span>
+{% else %}
+  <span class="badge badge-pending">Pendiente</span>
+{% endif %}

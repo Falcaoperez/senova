@@ -19,6 +19,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
 from .exportaciones import respuesta_csv
+from .interfaz import render_panel
 from .models import Envio
 from .reportes import contexto_reportes, filas_evidencias, serie_trimestral
 from .selectors import (
@@ -110,7 +111,7 @@ def proyecciones(request):
 
 @login_required
 def reportes(request):
-    return render(request, "reportes.html", contexto_reportes(request))
+    return render_panel(request, "reportes.html", contexto_reportes(request))
 
 
 def _error_exportacion(request):
@@ -209,7 +210,7 @@ def evidencia(request, pk=None):
 
 @login_required
 def evidencias_list(request):
-    return render(request, "evidencias_list.html", _evidencias_context(request))
+    return render_panel(request, "evidencias_list.html", _evidencias_context(request))
 
 
 def tabla_instructor(request):

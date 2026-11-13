@@ -14,13 +14,6 @@
     const url = new URL(value, location.origin);
     return url.origin === location.origin && /^https?:$/.test(url.protocol) ? url : null;
   };
-  const expiredSession = (response) => {
-    if (response.redirected && new URL(response.url).pathname === "/login/") {
-      location.assign(response.url);
-      return true;
-    }
-    return false;
-  };
   const dialog = $("#command-dialog");
   const trigger = $("#global-search");
   if (dialog && trigger && typeof dialog.showModal === "function") {
@@ -164,104 +157,6 @@
       }
     });
   }
-
-  // Progressive enhancement: the existing GET views remain the single source of table contents.
-  $$("[data-live-scope]").forEach((scope) => {
-    const form = $("[data-live-form]", scope);
-    if (!form) return;
-    let controller, timer;
-    const restoreFilters = (url) => {
-      for (const control of form.elements) {
-        if (control.name) control.value = url.searchParams.get(control.name) || control.dataset
-          .defaultValue || "";
-      }
-    };
-    const update = async (url, push = true) => {
-      if (!safeURL(url.href) || url.pathname !== location.pathname) return;
-      if ($('[data-dirty="true"]', scope) && !confirm(
-          "Tienes cambios sin guardar. ¿Quieres descartarlos y actualizar la lista?")) {
-        restoreFilters(new URL(location.href));
-        return;
-      }
-      controller?.abort();
-      const requestController = new AbortController();
-      controller = requestController;
-      scope.setAttribute("aria-busy", "true");
-      try {
-        const response = await fetch(url, {
-          credentials: "same-origin",
-          cache: "no-store",
-          signal: controller.signal
-        });
-        if (expiredSession(response)) return;
-        if (!response.ok) throw new Error("No se pudo actualizar la lista. Intenta de nuevo.");
-        const html = new DOMParser().parseFromString(await response.text(), "text/html");
-        if (requestController !== controller) return;
-        const pairs = $$("[data-live-region]", scope).map((current) => [current, $(
-          `[data-live-region="${current.dataset.liveRegion}"]`, html)]);
-        if (!pairs.length || pairs.some(([, next]) => !next)) throw new Error(
-          "Recarga la página para continuar.");
-        pairs.forEach(([current, next]) => current.replaceWith(next));
-        if (push) history.pushState({}, "", url);
-        $("[data-live-status]", scope).textContent = "Resultados actualizados.";
-        document.dispatchEvent(new CustomEvent("workspace:updated", {
-          detail: {
-            scope
-          }
-        }));
-      } catch (error) {
-        if (error.name !== "AbortError") notify(error.message);
-      } finally {
-        if (controller === requestController) scope.removeAttribute("aria-busy");
-      }
-    };
-    const submit = () => {
-      const url = new URL(form.action || location.href);
-      url.search = new URLSearchParams(new FormData(form)).toString();
-      update(url);
-    };
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      clearTimeout(timer);
-      submit();
-    });
-    form.addEventListener("input", (event) => {
-      if (!event.target.matches("[data-live-input]")) return;
-      clearTimeout(timer);
-      timer = setTimeout(submit, 400);
-    });
-    form.addEventListener("change", (event) => {
-      if (event.target.matches("select, input[type=month]")) {
-        clearTimeout(timer);
-        submit();
-      }
-    });
-    scope.addEventListener("click", (event) => {
-      const link = event.target.closest("[data-live-link]");
-      if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button)
-        return;
-      const url = safeURL(link.href);
-      if (!url || url.pathname !== location.pathname) return;
-      event.preventDefault();
-      clearTimeout(timer);
-      restoreFilters(url);
-      update(url);
-    });
-    scope.addEventListener("input", (event) => {
-      const dirtyForm = event.target.closest("[data-account-actions], [data-observation-form]");
-      if (!dirtyForm) return;
-      const dirty = dirtyForm.matches("[data-account-actions]") ?
-        $$("select[name^=role_]", dirtyForm).some((select) => select.value !== "__keep__") :
-        $$("textarea", dirtyForm).some((input) => input.value !== input.defaultValue);
-      dirtyForm.dataset.dirty = String(dirty);
-    });
-    window.addEventListener("popstate", () => {
-      clearTimeout(timer);
-      const url = new URL(location.href);
-      restoreFilters(url);
-      update(url, false);
-    });
-  });
 
   const refreshSelection = (form) => {
     const controls = $$("input[name=usuarios]:not(:disabled)", form);

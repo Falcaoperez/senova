@@ -47,17 +47,27 @@ def resumen_agenda(user):
 
 
 def agenda_filtrada(user, params):
+    from .calendario import limites_mes
+    from .forms import FiltrosAgendaForm
+
     queryset = plazos_con_entregas(user)
-    q = params.get("q", "").strip()[:100]
+    form = params if isinstance(params, FiltrosAgendaForm) else FiltrosAgendaForm(params)
+    if not form.is_valid():
+        return queryset.none()
+    datos = form.cleaned_data
+    q = datos["q"]
     if q:
         queryset = queryset.filter(Q(titulo__icontains=q) | Q(descripcion__icontains=q))
-    proyecto = params.get("proyecto", "")
+    proyecto = datos["proyecto"]
     if proyecto:
         queryset = queryset.filter(proyecto=proyecto)
-    pk = params.get("plazo", "")
-    if pk.isascii() and pk.isdigit() and len(pk) <= 18:
+    pk = datos["plazo"]
+    if pk:
         queryset = queryset.filter(pk=pk)
-    estado = params.get("estado", "")
+    if mes := form.fecha_mes():
+        inicio, fin = limites_mes(mes)
+        queryset = queryset.filter(fecha_limite__gte=inicio, fecha_limite__lt=fin)
+    estado = datos["estado"]
     if estado in {"pendiente", "vencido"}:
         queryset = queryset.filter(entregado=False)
         queryset = (
