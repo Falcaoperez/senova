@@ -12,7 +12,9 @@ from django.urls import reverse
 
 from cuentas.models import RegistroSeguridad
 
-from ..auditoria import codigo_http, etiqueta_accion
+from ..auditoria import codigo_http, etiqueta_accion, filas_auditoria, registros_filtrados
+from ..forms import FiltrosAuditoriaForm
+from ..selectors import centro_operaciones
 
 
 def utc(value):
@@ -97,6 +99,33 @@ class AuditoriaTests(TestCase):
         self.assertContains(response, "Registro interno")
         self.other.delete()
         self.assertContains(self.client.get(self.url), "Sin cuenta asociada")
+
+    def test_history_export_queries_only_actor_identity_without_extra_queries(self):
+        RegistroSeguridad.objects.bulk_create(
+            [RegistroSeguridad(actor=self.other, accion="login:302", ruta="/login/") for _ in range(250)]
+        )
+        with CaptureQueriesContext(connection) as consultas:
+            resultado = list(filas_auditoria(registros_filtrados(FiltrosAuditoriaForm({}))))
+        self.assertEqual(len(resultado), 257)
+        self.assertEqual(len(consultas), 1)
+        sql = consultas[0]["sql"].lower()
+        for campo in ["password", "email", "is_superuser", "last_login"]:
+            self.assertNotIn(connection.ops.quote_name(campo), sql)
+        self.assertTrue(any(fila[2] == self.other.username for fila in resultado[1:]))
+
+    def test_dashboard_activity_and_recent_members_do_not_load_credentials(self):
+        with CaptureQueriesContext(connection) as consultas:
+            contexto = centro_operaciones("30")
+            miembros = list(contexto["usuarios_recientes"])
+            for miembro in miembros:
+                miembro.get_full_name()
+                list(miembro.groups.all())
+        self.assertTrue(contexto["actividad_reciente"])
+        self.assertTrue(miembros)
+        for miembro in miembros:
+            self.assertTrue({"password", "email", "is_superuser"}.issubset(miembro.get_deferred_fields()))
+        for consulta in consultas:
+            self.assertNotIn(connection.ops.quote_name("password"), consulta["sql"].lower())
 
     def test_search_matches_actor_name_username_action_and_path(self):
         for q, esperado in [("Gómez", 2), ("auditoria_equipo", 2), ("verificar_pin", 1), ("/mantenimiento/", 1)]:

@@ -1,6 +1,6 @@
 # Modelo de datos de GESICOM
 
-Las migraciones de cada aplicación son la definición del esquema. No se mantiene un segundo archivo de creación de tablas: `python manage.py migrate` construye o actualiza MySQL conservando los registros. El índice de correos normalizados se añade mediante migración SQL porque admite varias cuentas de mantenimiento sin dirección.
+Las migraciones de cada aplicación son la definición del esquema. No se mantiene un segundo archivo de creación de tablas: `python manage.py migrate --settings=SENNOVA.migration_settings` construye o actualiza MySQL con la cuenta dedicada, conservando los registros. El índice de correos normalizados se añade mediante migración SQL porque admite varias cuentas de mantenimiento sin dirección.
 
 ```mermaid
 erDiagram

@@ -3,10 +3,10 @@
 El esquema se crea únicamente con las migraciones de Django. No se mantiene una segunda definición SQL de las tablas.
 
 ```bash
-python manage.py migrate
+python manage.py migrate --settings=SENNOVA.migration_settings
 ```
 
-MySQL utiliza InnoDB, UTF-8 completo (`utf8mb4`), modo estricto, claves foráneas e índices para usuario/fecha, proyecto/fecha, estado y notificaciones pendientes. La conexión de aplicación está limitada a su esquema. Las contraseñas de MySQL y Redis se generan en `.env`, fuera de Git.
+MySQL utiliza InnoDB, UTF-8 completo (`utf8mb4`), modo estricto, claves foráneas e índices para usuario/fecha, proyecto/fecha, estado y notificaciones pendientes. La cuenta de aplicación está limitada a operaciones sobre registros en su esquema, sin DDL. Migraciones y pruebas usan cuentas independientes. Las contraseñas de MySQL y Redis se generan en `.env`, fuera de Git. Consulta [preparación de perfiles, TLS y permisos](seguridad/README.md).
 
 ## Entidades
 
@@ -33,9 +33,9 @@ Las migraciones conservan las tablas y sus relaciones. Si detectan correos dupli
 sh scripts/backup_mysql.sh
 ```
 
-El respaldo consistente se guarda comprimido dentro de `.local/backups/`, con permisos privados. Las copias y credenciales nunca se añaden a Git. Las restauraciones se verifican primero en una base vacía independiente; después se compara el número de cuentas y registros. En la revisión se comprobó una restauración con las seis cuentas locales.
+El respaldo consistente se guarda comprimido dentro de `.local/backups/`, con permisos privados. El operador utiliza la cuenta administrativa por el socket del contenedor para incluir todas las tablas y disparadores, sin dar esos privilegios a Django. El archivo final solo aparece al completar la compresión. Para un contenedor local existente se admite `MYSQL_CONTAINER=nombre sh scripts/backup_mysql.sh`. Las copias y credenciales nunca se añaden a Git. Las restauraciones se verifican primero en una base vacía independiente; después se compara el número de cuentas y registros.
 
-`preparar_pruebas.sql` crea y autoriza exclusivamente la base `test_senova` para las pruebas locales con los nombres predeterminados. No es parte del arranque de producción.
+`scripts/preparar_mysql.py --aplicar --con-pruebas` prepara la cuenta de pruebas exclusiva de `test_<DB_NAME>`. Sustituye el antiguo `preparar_pruebas.sql`, que concedía DDL a la cuenta web. Las tablas continúan definidas exclusivamente mediante migraciones.
 
 ## Navegación del esquema y diagnóstico
 

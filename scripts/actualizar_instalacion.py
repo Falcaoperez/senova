@@ -11,7 +11,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def main():
     argparse.ArgumentParser(description=__doc__).parse_args()
-    for arguments in [["check"], ["migrate", "--noinput"], ["collectstatic", "--noinput"]]:
+    for arguments in [
+        ["check"],
+        ["migrate", "--noinput", "--settings=SENNOVA.migration_settings"],
+        ["collectstatic", "--noinput"],
+    ]:
         subprocess.run([sys.executable, str(ROOT / "manage.py"), *arguments], cwd=ROOT, check=True)
 
 

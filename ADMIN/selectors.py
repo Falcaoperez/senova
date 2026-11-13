@@ -12,7 +12,7 @@ from cuentas.models import CorreoSeguridad, RegistroSeguridad
 from Gesicom.models import Envio
 from notificaciones.models import CorreoPendiente, PlazoReporte
 
-from .auditoria import etiqueta_accion
+from .auditoria import IDENTIDAD_ACTOR, etiqueta_accion
 
 
 def centro_operaciones(periodo):
@@ -48,7 +48,8 @@ def centro_operaciones(periodo):
         for fila in modelo.objects.values("estado").annotate(total=Count("pk")):
             estados[fila["estado"]] = estados.get(fila["estado"], 0) + fila["total"]
     actividad = []
-    for registro in RegistroSeguridad.objects.select_related("actor")[:6]:
+    recientes = RegistroSeguridad.objects.select_related("actor").only("accion", "creado_en", *IDENTIDAD_ACTOR)[:6]
+    for registro in recientes:
         actividad.append(
             {
                 "etiqueta": etiqueta_accion(registro.accion),
@@ -67,7 +68,9 @@ def centro_operaciones(periodo):
         "proximos_plazos": proximos.count(),
         "plazos_proximos": proximos[:4],
         "evidencias_pendientes": envios.filter(aprobada=False, rechazada=False).select_related("usuario")[:5],
-        "usuarios_recientes": User.objects.order_by("-date_joined", "-pk").prefetch_related("groups")[:5],
+        "usuarios_recientes": User.objects.only("id", "username", "first_name", "last_name", "is_active")
+        .order_by("-date_joined", "-pk")
+        .prefetch_related("groups")[:5],
         "actividad_reciente": actividad,
         "proyectos": proyectos,
         "actividad_grafico": {

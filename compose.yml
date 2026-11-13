@@ -16,6 +16,8 @@ x-application-environment: &application-environment
   DB_PASSWORD: ${DB_PASSWORD:?Configura DB_PASSWORD}
   DB_HOST: database
   DB_PORT: "3306"
+  DB_SSL_MODE: "${DB_SSL_MODE:-REQUIRED}"
+  DB_SSL_CA: "${DB_SSL_CA:-}"
   REDIS_URL: redis://:${REDIS_PASSWORD:?Configura REDIS_PASSWORD}@redis:6379/0
   EMAIL_BACKEND: "${EMAIL_BACKEND:-SENNOVA.email_backend.SMTPBackend}"
   EMAIL_HOST: "${EMAIL_HOST:-smtp.gmail.com}"
@@ -40,10 +42,10 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_NAME:-senova}
-      MYSQL_USER: ${DB_USER:-gesicom_app}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?Configura DB_PASSWORD}
+      MYSQL_USER: ${DB_MIGRATION_USER:-gesicom_migraciones}
+      MYSQL_PASSWORD: ${DB_MIGRATION_PASSWORD:?Configura DB_MIGRATION_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Configura MYSQL_ROOT_PASSWORD}
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--max-connections=200"]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--max-connections=200", "--local-infile=OFF", "--require-secure-transport=ON"]
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -64,12 +66,28 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+  migrate:
+    build: .
+    image: gesicom-sena:local
+    restart: "no"
+    environment:
+      <<: *application-environment
+      DB_MIGRATION_USER: "${DB_MIGRATION_USER:-gesicom_migraciones}"
+      DB_MIGRATION_PASSWORD: ${DB_MIGRATION_PASSWORD:?Configura DB_MIGRATION_PASSWORD}
+    command: ["python", "manage.py", "migrate", "--noinput", "--settings=SENNOVA.migration_settings"]
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   app:
     build: .
     image: gesicom-sena:local
     restart: unless-stopped
     environment: *application-environment
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       database:
         condition: service_healthy
       redis:
@@ -85,6 +103,19 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+  test:
+    image: gesicom-sena:local
+    profiles: ["tools"]
+    environment:
+      <<: *application-environment
+      DB_TEST_USER: "${DB_TEST_USER:-gesicom_pruebas}"
+      DB_TEST_PASSWORD: ${DB_TEST_PASSWORD:?Configura DB_TEST_PASSWORD}
+    command: ["python", "manage.py", "test", "--settings=SENNOVA.test_settings", "--noinput"]
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   worker:
     image: gesicom-sena:local
     restart: unless-stopped

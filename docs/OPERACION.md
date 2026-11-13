@@ -44,7 +44,7 @@ Las consultas automáticas de la campana no prolongan la sesión. Cuando el serv
 
 ## Actualizar esta versión
 
-Instala las dependencias, ejecuta `python manage.py migrate --noinput` y `python manage.py collectstatic --noinput`, y reinicia aplicación y trabajador. Las migraciones añaden la cola, el registro de sesiones y la vinculación de las solicitudes a las credenciales. Los PIN anteriores a esa vinculación dejan de ser válidos: debe solicitarse uno nuevo. No se eliminan cuentas ni evidencias.
+Instala las dependencias, ejecuta `python manage.py migrate --noinput --settings=SENNOVA.migration_settings` y `python manage.py collectstatic --noinput`, y reinicia aplicación y trabajador. Antes de instalar esta separación de cuentas, sigue la [guía de permisos de MySQL](../database/seguridad/README.md): respalda, genera las credenciales que falten, verifica TLS en los procesos y prepara los perfiles dedicados. No se eliminan cuentas ni evidencias.
 
 ## Capacidad
 
@@ -84,7 +84,7 @@ La primera entrega sigue determinando el cumplimiento del plazo; las correccione
 
 El registro inicial redirige al detalle para que actualizar el navegador no reenvíe el formulario. Las correcciones funcionan sin JavaScript y reutilizan el mismo formulario. El administrador nativo participa en el control de versiones y en el historial.
 
-La migración `Gesicom.0013` añade los campos de versión y el historial. Crea un movimiento de estado histórico para las evidencias existentes en lotes de 500; conserva sus datos y adjuntos. Realiza una copia de seguridad antes de actualizar una instalación con datos y aplica `python manage.py migrate --noinput` con el procedimiento habitual de despliegue.
+La migración `Gesicom.0013` añade los campos de versión y el historial. Crea un movimiento de estado histórico para las evidencias existentes en lotes de 500; conserva sus datos y adjuntos. Realiza una copia de seguridad antes de actualizar una instalación con datos y aplica las migraciones con `SENNOVA.migration_settings`, siguiendo el procedimiento habitual de despliegue.
 
 ## Diagnóstico de SMTP
 
