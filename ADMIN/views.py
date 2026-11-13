@@ -10,13 +10,17 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.http import require_safe
 
 from cuentas.correos import encolar_aviso_cambio, invalidar_recuperaciones
 from cuentas.forms import ConfirmarPasswordForm, EditarUsuarioForm
 from cuentas.sesiones import cerrar_sesiones
+from Gesicom.exportaciones import respuesta_csv
 from Gesicom.interfaz import render_panel
+from Gesicom.utils import require_group
 
-from .forms import FiltrosUsuariosForm
+from .auditoria import filas_auditoria, presentar_registro, registros_filtrados
+from .forms import FiltrosAuditoriaForm, FiltrosUsuariosForm
 from .selectors import centro_operaciones
 from .services import cambiar_estados, cambiar_roles, registrar_cambio, validar_destino
 
@@ -32,6 +36,45 @@ def panel_control(request):
     return render_panel(
         request, "admin_personalizado/dashboard_modern.html", centro_operaciones(request.GET.get("periodo"))
     )
+
+
+@require_group("administrador")
+@require_safe
+def actividad(request):
+    form = FiltrosAuditoriaForm(request.GET)
+    pagina = Paginator(registros_filtrados(form), 25).get_page(request.GET.get("page"))
+    return render_panel(
+        request,
+        "admin_personalizado/actividad.html",
+        {
+            "filtros_form": form,
+            "pagina": pagina,
+            "registros": [presentar_registro(item) for item in pagina],
+            "url_exportar": reverse("admin_personalizado:actividad_csv") + form.consulta_url()
+            if form.is_valid()
+            else None,
+        },
+    )
+
+
+@require_group("administrador")
+@require_safe
+def actividad_csv(request):
+    form = FiltrosAuditoriaForm(request.GET)
+    if not form.is_valid():
+        return render(
+            request,
+            "error_filtros.html",
+            {
+                "filtros_form": form,
+                "volver": reverse("admin_personalizado:actividad") + form.consulta_url(),
+                "regreso_error": reverse("admin_personalizado:actividad"),
+                "regreso_texto": "Volver a actividad",
+                "seccion_error": "GESICOM / ADMINISTRACIÓN / ACTIVIDAD",
+            },
+            status=400,
+        )
+    return respuesta_csv(filas_auditoria(registros_filtrados(form)), "actividad-gesicom.csv")
 
 
 @login_required

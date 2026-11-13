@@ -92,3 +92,11 @@ El calendario y su descarga solo aceptan GET/HEAD autenticado y vuelven a aplica
 Los campos de texto iCalendar normalizan saltos de línea, eliminan controles y escapan barras, comas y puntos y coma. El plegado respeta 75 octetos sin partir caracteres UTF-8; títulos o instrucciones con saltos de línea no pueden añadir componentes, asistentes ni propiedades. El archivo no incluye adjuntos, destinatarios, invitaciones ni alarmas. Los enlaces utilizan únicamente `PUBLIC_BASE_URL` validada, sin credenciales, consulta, fragmento o caracteres de control; no se construyen con `Host` de la petición.
 
 La lectura no crea avisos, modifica entregas ni utiliza credenciales SMTP. Una copia descargada permanece fuera del control del portal: revocar el acceso impide nuevas descargas, pero no retira archivos previamente guardados o importados.
+
+## Consulta de auditoría
+
+El historial y CSV administrativo comprueban el rol actual de administrador o superusuario en cada petición. El acceso ordinario, los roles revisores y la condición de personal de Django por sí sola no permiten leerlo. Ambas rutas aceptan GET/HEAD; la lectura no modifica ni borra los eventos. El registro sigue siendo el que ya mantiene `AuditMiddleware` y las operaciones transaccionales, sin guardar cuerpos de petición, contraseñas o PIN.
+
+Los filtros se validan antes de consultar o exportar; una fecha inválida, un intervalo invertido o una búsqueda demasiado larga no amplían los resultados. La tabla escapa los nombres, acciones y rutas; las rutas de auditoría se presentan como texto, sin convertirlas en destinos navegables. La descarga utiliza una lista explícita de campos y neutraliza fórmulas de hojas de cálculo con el exportador compartido. Las respuestas son privadas y sin caché; no se generan enlaces públicos.
+
+La separación de rutas conserva los nombres y vistas utilizados por los decoradores y el middleware de límites y auditoría. Los archivos de recuperación y sus alias siguen resolviendo la misma autenticación, validación y control de sesiones. No se han movido modelos ni migraciones entre aplicaciones.

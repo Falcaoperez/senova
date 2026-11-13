@@ -222,7 +222,7 @@
     timer = setTimeout(submit, 400);
   });
   form.addEventListener("change", (event) => {
-    if (event.target.matches("select, input[type=month]")) {
+    if (event.target.matches("select, input[type=month], input[type=date]")) {
       clearTimeout(timer);
       submit();
     }

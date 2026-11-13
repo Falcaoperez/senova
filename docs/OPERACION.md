@@ -153,7 +153,7 @@ El resumen básico conserva su respuesta anterior con `pendientes`; `?detalle=1`
 
 ## Filtros y conservación de ediciones
 
-Los nueve paneles con filtros actualizan el contenido del panel sin volver a generar la cabecera de navegación ni su resumen de avisos. Conservan las mismas rutas, filtros, permisos y formularios POST. Sin JavaScript, el botón sigue abriendo la página completa. El directorio valida búsqueda, estado y rol; una opción inválida muestra el error y ningún resultado.
+Los paneles con filtros actualizan el contenido del panel sin volver a generar la cabecera de navegación ni su resumen de avisos. Conservan las mismas rutas, filtros, permisos y formularios POST. Sin JavaScript, el botón sigue abriendo la página completa. El directorio valida búsqueda, estado y rol; una opción inválida muestra el error y ningún resultado.
 
 Una observación o cambio de roles pendiente pide confirmación antes de cambiar la lista o abandonar esa sección. Mientras hay una edición pendiente, escribir en la búsqueda espera al botón de filtros, sin interrumpir cada pausa con una confirmación. Escribir en una fila durante una actualización detiene esa actualización y conserva la edición. Guardar la observación o confirmar el envío de roles permite continuar.
 
@@ -176,3 +176,19 @@ Es una copia del momento de la descarga, sin sincronización. Una entrega poster
 La cuadrícula limita a 500 los eventos visibles y lo indica al superar esa cantidad. Aplica filtros, usa la lista o descarga para consultar los demás. El archivo es personal y puede contener instrucciones del centro; compártelo solo con quien deba consultarlo. El endpoint `/notificaciones/plazos/calendario.ics` requiere iniciar sesión y no admite enlaces públicos de suscripción.
 
 Este bloque no requiere migraciones. Recopila estáticos y reinicia la aplicación web para cargar las plantillas y `calendar.css`.
+
+## Historial administrativo
+
+En **Centro de operaciones → Actividad reciente → Ver historial** se consulta la auditoría existente. Requiere el rol de administrador o superusuario; ser personal de Django por sí solo no concede este acceso. La pantalla permite buscar por nombre, cuenta, acción o ruta, y filtrar fechas completas de Colombia. Muestra 25 registros por página, ordenados por fecha y por identificador cuando las fechas coinciden.
+
+El filtro distingue solicitudes con código HTTP, respuestas 400–599 y registros internos. El código describe la respuesta de la petición, sin asegurar por sí solo que se guardó un cambio: una redirección también puede acompañar un mensaje de validación. Despliega **Ver detalles** para consultar la acción registrada, ruta e IP. Un evento sin actor puede proceder de una solicitud anónima, mantenimiento o una cuenta eliminada. La IP puede representar una red compartida o una VPN.
+
+**Descargar CSV filtrado** incluye todas las páginas de la consulta, con Unicode, fechas y desplazamiento horario de Colombia. Los campos se limitan a la actividad visible; no exporta los campos de correo, contraseña, PIN ni claves de sesión. Mantén ese archivo dentro del uso administrativo autorizado. Un filtro inválido oculta resultados y descarga; el endpoint de CSV responde con HTTP 400 para corregirlos. Leer, filtrar y exportar no cambia ni elimina eventos.
+
+La página y descarga funcionan también sin JavaScript. La navegación con filtros y fechas utiliza el controlador compartido; no hay un segundo menú de administración. El bloque no cambia tablas ni requiere migraciones: recopila estáticos y reinicia la aplicación web.
+
+## Herramientas y organización del código
+
+`python scripts/actualizar_instalacion.py` ejecuta comprobaciones, migraciones y recopilación de estáticos, deteniéndose al primer error. Resuelve el directorio del proyecto desde el archivo, incluso al invocarlo desde otra carpeta. `sync_database.py` y `sync.ps1` mantienen los accesos anteriores y remiten a esa implementación. `--help` muestra el uso sin ejecutar la actualización.
+
+Las rutas están junto a cada aplicación y las pruebas en `tests/`; los comandos de CI siguen usando `SENNOVA.test_settings`. Consulta [DESARROLLO.md](DESARROLLO.md) para ubicar archivos o ejecutar solo una funcionalidad. Las migraciones permanecen con sus aplicaciones; el esquema de MySQL no tiene una segunda definición SQL.
