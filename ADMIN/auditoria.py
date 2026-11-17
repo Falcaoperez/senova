@@ -2,12 +2,14 @@
 
 import datetime
 import re
+from zoneinfo import ZoneInfo
 
 from django.db.models import Q
 from django.db.models.functions import Right
 from django.utils import timezone
 
 from cuentas.models import RegistroSeguridad
+from Gesicom.exportaciones import iterar_ordenados
 
 CODIGO_HTTP = re.compile(r"[1-5][0-9]{2}")
 SUFIJO_HTTP = r"^:[1-5][0-9]{2}$"
@@ -107,10 +109,11 @@ def presentar_registro(registro):
 
 def filas_auditoria(consulta):
     yield ["Fecha (Colombia)", "Responsable", "Cuenta", "Actividad", "Acción registrada", "HTTP", "Ruta", "IP"]
-    for registro in consulta.iterator(chunk_size=200):
+    zona = ZoneInfo("America/Bogota")
+    for registro in iterar_ordenados(consulta, campo="-creado_en"):
         item = presentar_registro(registro)
         yield [
-            timezone.localtime(item["fecha"]).strftime("%Y-%m-%d %H:%M:%S %z"),
+            timezone.localtime(item["fecha"], zona).strftime("%Y-%m-%d %H:%M:%S %z"),
             item["actor"],
             item["cuenta"],
             item["etiqueta"],
