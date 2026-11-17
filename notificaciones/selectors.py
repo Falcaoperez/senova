@@ -14,10 +14,11 @@ User = get_user_model()
 
 
 def destinatarios(grupos):
-    queryset = User.objects.filter(is_active=True)
-    ids = [grupo.pk for grupo in grupos.all()]
-    miembros = User.groups.through.objects.filter(group_id__in=ids).values("user_id")
-    return queryset.filter(pk__in=miembros) if ids else queryset
+    # Las expresiones usan el alcance SQL del manager, incluso con un prefetch
+    # anterior: otra instancia puede haber cambiado los grupos desde entonces.
+    asignados = grupos.values("pk")
+    miembros = User.groups.through.objects.filter(user_id=OuterRef("pk"), group_id__in=asignados)
+    return User.objects.filter(is_active=True).filter(~Exists(asignados) | Exists(miembros))
 
 
 def plazos_para_usuario(user, pendientes=True):

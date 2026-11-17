@@ -187,7 +187,7 @@ class FiltrosAdministracionPlazosTests(TestCase):
                 usuario.get_full_name()
                 usuario.email
                 usuario.ultima_entrega
-        self.assertEqual(len(consultas), 2)
+        self.assertEqual(len(consultas), 1)
         self.assertTrue(all("password" in usuario.get_deferred_fields() for usuario in usuarios))
         self.assertTrue(all(connection.ops.quote_name("password") not in c["sql"] for c in consultas))
 
@@ -236,7 +236,7 @@ class EscalaExportacionSeguimientoTests(TestCase):
         consultas = [*iniciales, *restantes]
         self.assertEqual([fila[0] for fila in datos], [u.username for u in usuarios])
         self.assertEqual(len(datos), 1200)
-        self.assertEqual(len(consultas), 5)
+        self.assertEqual(len(consultas), 4)
         lecturas = [
             c["sql"]
             for c in consultas
@@ -245,4 +245,4 @@ class EscalaExportacionSeguimientoTests(TestCase):
         self.assertEqual(len(lecturas), 3)
         self.assertTrue(all("LIMIT 500" in sql and "OFFSET" not in sql for sql in lecturas))
         self.assertTrue(all(connection.ops.quote_name("password") not in c["sql"] for c in consultas))
-        print("ESCALA CSV seguimiento / 1200 destinatarios: 5 consultas, lotes SQL de 500 y sin OFFSET ni hashes.")
+        print("ESCALA CSV seguimiento / 1200 destinatarios: 4 consultas, lotes SQL de 500 y sin OFFSET ni hashes.")

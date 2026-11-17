@@ -50,6 +50,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Reportes con gráficos y descargas CSV que respetan los filtros y neutralizan fórmulas de hojas de cálculo.
 - Publicación de novedades por grupo o para todos los usuarios activos.
 - Plazos de reportes con aviso inicial, recordatorio y notificación de vencimiento.
+- Selección SQL de plazos en ventana de aviso y destinatarios pendientes, con deduplicación por versión y tipo.
 - Administración de plazos con filtros validados, opción sin proyecto específico y CSV completo del seguimiento por lotes SQL.
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
 - Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.

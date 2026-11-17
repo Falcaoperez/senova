@@ -57,6 +57,26 @@ class TrabajadoresConcurrentesTests(TransactionTestCase):
         self.assertEqual(len(mail.outbox), 20)
         self.assertEqual(len({message.to[0] for message in mail.outbox}), 20)
 
+    def test_two_synchronizers_do_not_duplicate_deadline_notifications(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from ..models import PlazoReporte
+        from ..services import sincronizar_plazos
+
+        ahora = timezone.now()
+        plazo = PlazoReporte.objects.create(
+            titulo="Aviso automático concurrente", fecha_limite=ahora + timedelta(hours=1)
+        )
+        plazo.grupos.add(Group.objects.get(name="instructor"))
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            resultados = list(executor.map(lambda _: self.ejecutar(lambda: sincronizar_plazos(ahora)), range(2)))
+        self.assertEqual(sum(resultados), 20)
+        self.assertEqual(Notificacion.objects.filter(plazo=plazo, tipo="recordatorio").count(), 20)
+        self.assertEqual(CorreoPendiente.objects.count(), 20)
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_manual_reminders_from_two_administrators_are_not_duplicated(self):
         from datetime import timedelta
 

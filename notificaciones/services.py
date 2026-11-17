@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db import connection, transaction
-from django.db.models import Q
+from django.db.models import DateTimeField, DurationField, Exists, ExpressionWrapper, F, OuterRef, Q, Value
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
@@ -105,14 +105,24 @@ def anunciar_plazo(plazo):
 
 def sincronizar_plazos(ahora=None):
     ahora = ahora or timezone.now()
+    # MySQL y SQLite representan DurationField como microsegundos. Multiplicar
+    # enteros evita que el backend de MySQL genere INTERVAL anidados.
+    anticipacion = ExpressionWrapper(F("recordatorio_horas") * Value(3_600_000_000), output_field=DurationField())
+    tope = ExpressionWrapper(Value(ahora, output_field=DateTimeField()) + anticipacion, output_field=DateTimeField())
+    plazos = (
+        PlazoReporte.objects.filter(activo=True, fecha_limite__lte=tope)
+        .only("pk", "titulo", "fecha_limite", "recordatorio_horas", "version")
+        .order_by("fecha_limite", "pk")
+    )
     total = 0
-    for plazo in PlazoReporte.objects.filter(activo=True).prefetch_related("grupos").iterator(chunk_size=100):
-        if ahora < plazo.fecha_limite - timedelta(hours=plazo.recordatorio_horas):
-            continue
+    for plazo in plazos.iterator(chunk_size=100):
         tipo = Notificacion.Tipo.VENCIMIENTO if ahora >= plazo.fecha_limite else Notificacion.Tipo.RECORDATORIO
         estado = "Venció el plazo" if tipo == Notificacion.Tipo.VENCIMIENTO else "Se acerca el plazo"
         fecha = timezone.localtime(plazo.fecha_limite).strftime("%d/%m/%Y a las %H:%M")
-        users = destinatarios(plazo.grupos).exclude(envios__plazo=plazo)
+        avisados = Notificacion.objects.filter(
+            usuario_id=OuterRef("pk"), plazo=plazo, version_plazo=plazo.version, tipo=tipo
+        )
+        users = destinatarios(plazo.grupos).exclude(envios__plazo=plazo).filter(~Exists(avisados))
         total += _crear_avisos(
             users,
             tipo=tipo,
