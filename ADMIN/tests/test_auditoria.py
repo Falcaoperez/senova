@@ -107,10 +107,12 @@ class AuditoriaTests(TestCase):
         with CaptureQueriesContext(connection) as consultas:
             resultado = list(filas_auditoria(registros_filtrados(FiltrosAuditoriaForm({}))))
         self.assertEqual(len(resultado), 257)
-        self.assertEqual(len(consultas), 1)
-        sql = consultas[0]["sql"].lower()
-        for campo in ["password", "email", "is_superuser", "last_login"]:
-            self.assertNotIn(connection.ops.quote_name(campo), sql)
+        self.assertEqual(len(consultas), 2)
+        self.assertIn("MAX(", consultas[0]["sql"])
+        self.assertIn("LIMIT 500", consultas[1]["sql"])
+        for consulta in consultas:
+            for campo in ["password", "email", "is_superuser", "last_login"]:
+                self.assertNotIn(connection.ops.quote_name(campo), consulta["sql"].lower())
         self.assertTrue(any(fila[2] == self.other.username for fila in resultado[1:]))
 
     def test_dashboard_activity_and_recent_members_do_not_load_credentials(self):
@@ -237,7 +239,7 @@ class AuditoriaTests(TestCase):
         with CaptureQueriesContext(connection) as queries:
             data = filas(self.client.get(self.export, {"q": "prueba-paginada"}))
         self.assertEqual(len(data), 121)
-        self.assertEqual(sum("FROM `cuentas_registroseguridad`" in q["sql"] for q in queries), 1)
+        self.assertEqual(sum("FROM `cuentas_registroseguridad`" in q["sql"] for q in queries), 2)
         self.assertLessEqual(len(queries), 6)
 
     def test_full_and_fragment_share_results_and_keep_private_headers(self):

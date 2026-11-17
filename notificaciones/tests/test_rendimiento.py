@@ -110,5 +110,18 @@ class EscalaMilUsuariosTests(TestCase):
             self.assertTrue(response.streaming)
             filas = sum(chunk.count(b"\n") for chunk in response.streaming_content)
         self.assertEqual(filas, 12001)
-        self.assertLessEqual(len(consultas), 10)
-        print(f"ESCALA CSV 12000 evidencias: {len(consultas)} consultas, {(perf_counter() - inicio) * 1000:.1f} ms")
+        self.assertLessEqual(len(consultas), 30)
+        lecturas = [
+            c["sql"]
+            for c in consultas
+            if "FROM " + connection.ops.quote_name(Envio._meta.db_table) in c["sql"]
+            and "MAX(" not in c["sql"]
+            and "SELECT DISTINCT" not in c["sql"]
+        ]
+        self.assertEqual(len(lecturas), 25)
+        self.assertTrue(all("LIMIT 500" in sql and "OFFSET" not in sql for sql in lecturas))
+        self.assertTrue(all(connection.ops.quote_name("password") not in sql for sql in lecturas))
+        print(
+            f"ESCALA CSV 12000 evidencias: {len(consultas)} consultas, 25 lecturas SQL de hasta 500 filas, "
+            f"{(perf_counter() - inicio) * 1000:.1f} ms"
+        )

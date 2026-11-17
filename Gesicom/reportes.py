@@ -2,15 +2,17 @@
 
 import calendar
 import datetime
+from zoneinfo import ZoneInfo
 
 from django.db.models import Count, Q
 from django.db.models.functions import ExtractQuarter, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
 
+from .exportaciones import iterar_ordenados
 from .filtros import ESTADOS, SIN_PROYECTO
 from .models import Envio
-from .selectors import _filtered_envios, _filtros, _ordenar_envios, _resumen_envios
+from .selectors import _filtered_envios, _filtros, _resumen_envios
 
 
 def limites_trimestres(form):
@@ -114,8 +116,26 @@ def contexto_reportes(request):
 
 
 def filas_evidencias(request):
-    consulta = _ordenar_envios(_filtered_envios(request), _filtros(request).cleaned_data).select_related(
-        "usuario", "plazo"
+    consulta = (
+        _filtered_envios(request)
+        .select_related("usuario", "plazo")
+        .only(
+            "pk",
+            "fecha_envio",
+            "nombre",
+            "proyecto",
+            "tipo_evidencia",
+            "link_evidencia",
+            "observaciones",
+            "aprobada",
+            "rechazada",
+            "registrado_en",
+            "limite_aplicado",
+            "usuario__id",
+            "usuario__username",
+            "plazo__id",
+            "plazo__titulo",
+        )
     )
     yield [
         "fecha_envio",
@@ -132,10 +152,14 @@ def filas_evidencias(request):
         "fuera_de_plazo",
     ]
 
-    def fecha(value):
-        return timezone.localtime(value).strftime("%Y-%m-%d %H:%M:%S") if value else ""
+    zona = ZoneInfo("America/Bogota")
 
-    for envio in consulta.iterator(chunk_size=500):
+    def fecha(value):
+        return timezone.localtime(value, zona).strftime("%Y-%m-%d %H:%M:%S") if value else ""
+
+    datos = _filtros(request).cleaned_data
+    campo = datos["order"] if datos["dir"] == "asc" else "-" + datos["order"]
+    for envio in iterar_ordenados(consulta, campo=campo):
         yield [
             envio.fecha_envio.isoformat(),
             envio.nombre,
