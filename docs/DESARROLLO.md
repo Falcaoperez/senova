@@ -45,7 +45,8 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Plazos, novedades, bandeja y calendario | `notificaciones/urls.py` y sus módulos |
 | Elegibilidad de recordatorios y audiencia actual | `notificaciones/services.py`, `notificaciones/selectors.py` y `tests/test_recordatorios_sql.py` |
 | Filtros de administración y CSV de seguimiento | `FiltrosPlazosAdminForm`, `FiltrosSeguimientoForm`, `notificaciones/selectors.py` y `notificaciones/exportaciones.py` |
-| Recorrido CSV por identificador | `Gesicom/exportaciones.py`: iterador compartido por directorio y seguimiento |
+| Recorrido CSV con SQL acotado | `Gesicom/exportaciones.py`: cursor por identificador para directorio/seguimiento y por orden validado para reportes/auditoría |
+| Campos y orden de los CSV | `Gesicom/reportes.py`, `ADMIN/auditoria.py` y los módulos `tests/test_exportaciones_sql.py` de ambas aplicaciones |
 | Validación de filtros | Formularios de la aplicación, compartidos con la descarga |
 | Auditoría administrativa | `ADMIN/auditoria.py`: consulta y presentación sin mutaciones |
 | Correcciones y entregas | `Gesicom/services.py`, con formularios y selectores |
@@ -64,6 +65,7 @@ Instala `requirements-dev.txt` en el entorno virtual. Las pruebas de MySQL usan 
 python manage.py test --settings=SENNOVA.test_settings --noinput
 python manage.py test cuentas.tests --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_auditoria --settings=SENNOVA.test_settings --noinput
+python manage.py test Gesicom.tests.test_exportaciones_sql ADMIN.tests.test_exportaciones_sql --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_filtros_admin --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_recordatorios_sql --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_directorio --settings=SENNOVA.test_settings --noinput
