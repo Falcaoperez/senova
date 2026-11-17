@@ -16,7 +16,7 @@
 | `ADMIN/forms.py` | Validación del directorio contra el catálogo de roles mostrado |
 | `Gesicom/filtros.py` | Validación y normalización de filtros compartidos, con errores visibles y descarga cerrada ante parámetros inválidos |
 | `Gesicom/reportes.py` | Series históricas, resúmenes autorizados y filas exportables |
-| `Gesicom/exportaciones.py` | Respuesta CSV común y recorrido por identificador con SQL limitado; Unicode y neutralización de fórmulas |
+| `Gesicom/exportaciones.py` | Respuesta CSV común y recorrido con cursor por identificador u orden validado, con SQL limitado; Unicode y neutralización de fórmulas |
 | `Gesicom/selectors.py` | Consultas reutilizadas por vistas, reportes y búsqueda; visibilidad por rol |
 | `Gesicom/busqueda.py` | Búsqueda autenticada, limitada por cuenta y con resultados acotados |
 | `ADMIN/` | Administración de la comunidad |
@@ -51,6 +51,8 @@ Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js.
 `Gesicom/admin.py` utiliza las mismas reglas de versiones y registro de movimientos. El formulario de corrección reutiliza `formulario.html`; no añade un segundo panel de evidencias. Los estilos de ese flujo están en `evidencias.css`. La tabla de movimientos es de solo lectura en la administración.
 
 `reports.js` destruye las instancias anteriores de Chart.js al actualizar resultados y reconstruye cuatro gráficos con el estado autorizado del servidor. Las tablas se generan en HTML y se usan sin JavaScript y al imprimir. No se mantienen consultas trimestrales distintas para pantalla y CSV.
+
+Las exportaciones de evidencias y auditoría utilizan `iterar_ordenados`: cada lectura de filas lleva `LIMIT 500` y un cursor por el campo de orden y la clave primaria en la misma dirección. Así conservan los ocho órdenes del reporte y el historial por fecha descendente, con los empates resueltos dentro de SQL y su colación. Directorio y seguimiento usan el mismo recorrido mediante `iterar_por_id`. Un máximo inicial de identificador deja fuera altas posteriores; las consultas vuelven a aplicar los filtros de alcance en cada lote. El CSV de evidencias solo carga sus campos y las identidades mínimas de propietario y plazo, sin hashes, correo ni descripciones. Las columnas de fecha indicadas como Colombia fijan `America/Bogota`.
 
 El alta de evidencias utiliza `SolicitudEnvio` como recibo interno, sin panel ni permisos adicionales. Su UUID único y el bloqueo transaccional de MySQL permiten recuperar el primer registro aceptado cuando llegan reintentos del mismo formulario. El recibo, la evidencia y el movimiento se confirman juntos; un fallo retira también el archivo nuevo que haya quedado sin referencia. Al eliminar la evidencia se conserva el recibo sin destino para que un reintento no la vuelva a crear.
 

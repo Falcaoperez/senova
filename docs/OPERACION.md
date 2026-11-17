@@ -266,3 +266,13 @@ Las cuentas activas y los grupos actuales se resuelven dentro de SQL. No tener g
 Se mantienen la comprobación de avisos existentes, las restricciones únicas y la transacción de inserción para proteger las ejecuciones concurrentes. No se modifican avisos ni entregas históricas. Los cambios que ocurran después de consultar pueden requerir una nueva comprobación al procesar la cola, como antes; la selección no mantiene bloqueado todo el conjunto durante el ciclo.
 
 La expresión de duración utiliza microsegundos, la representación de `DurationField` en los dos motores configurados, MySQL y SQLite. No hay migraciones, índices, permisos SQL ni dependencias nuevas. Reinicia **web y trabajador** al actualizar para cargar los selectores compartidos y la nueva selección temporal.
+
+## Descargas de reportes e historial con SQL acotado
+
+Los CSV de **Reportes** y **Actividad administrativa** recorren consultas de hasta 500 filas, sin `OFFSET` ni una lectura de todas las filas en el controlador MySQL. Conservan columnas, filtros, Unicode, neutralización de fórmulas, acceso por rol y cabeceras privadas. El reporte respeta sus órdenes de fecha, nombre, proyecto y tipo en ambas direcciones; el historial mantiene fecha e identificador descendentes. Las igualdades de texto y sus empates se comparan con la misma colación SQL del orden, sin ordenar el documento en Python.
+
+Al leer el primer lote se fija el máximo identificador de los resultados filtrados. Las altas posteriores con un ID superior quedan fuera, aunque su fecha o nombre las colocara en medio de la descarga. Los lotes sucesivos aplican los mismos filtros y avanzan desde el último par de valor e identificador. Las fechas de entrega, límite aplicado y auditoría se expresan explícitamente en Colombia, incluso con otra zona activa.
+
+La descarga combina lecturas sucesivas de los datos vigentes; no es una instantánea transaccional. Las modificaciones de filas existentes que cambien sus filtros u orden pueden alterar su presencia, posición o repetición entre lotes. Para una conciliación que exija un corte histórico exacto utiliza una copia de consulta estable. No se mantienen bloqueos de todo el conjunto durante la descarga. El límite acota filas transferidas por consulta; no implica que MySQL examine solo 500 filas al filtrar u ordenar ni garantiza una latencia concreta.
+
+No hay cambios de esquema, dependencias ni permisos SQL. Reinicia la aplicación web para cargar el recorrido y la selección de campos; no se modifica el procesamiento del correo.
