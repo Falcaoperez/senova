@@ -256,3 +256,13 @@ El CSV conserva sus seis columnas y exporta todas las páginas de los filtros. S
 Al comenzar fija el identificador máximo de la consulta. Las altas con identificadores superiores quedan fuera y un cambio posterior de nombre no vuelve a exportar una cuenta ya recorrida. Los cambios de estado, pertenencia, datos o entregas pueden reflejarse entre lotes: no es una instantánea transaccional global. MySQL puede mantener el búfer de cada consulta acotada. Conserva el CSV dentro del uso administrativo autorizado.
 
 Filtros, paginación y descarga funcionan con y sin JavaScript. Listado, seguimiento y CSV aceptan GET/HEAD y rechazan POST; las acciones de edición, archivo y recordatorio conservan sus rutas y controles. No hay migraciones ni dependencias nuevas: recoge estáticos y reinicia la aplicación web.
+
+## Generación eficiente de recordatorios
+
+El trabajador consulta solo plazos activos cuya ventana de recordatorio ya empezó, incluidos los vencidos. Las horas de anticipación se aplican al instante real; el inicio de la ventana y el vencimiento son inclusivos. Antes del límite corresponde un recordatorio y, desde el límite, un aviso de vencimiento. La versión del plazo y el tipo de aviso siguen identificando cada generación.
+
+Las cuentas activas y los grupos actuales se resuelven dentro de SQL. No tener grupos sigue significando todos los usuarios activos. Una precarga anterior no conserva una asignación retirada por otra instancia. Quien ya entregó o ya tiene el aviso de ese tipo y versión no entra en la lista de destinatarios nuevos. Las preferencias de correo siguen aplicándose y la generación solo crea avisos y cola, sin enviar SMTP directamente.
+
+Se mantienen la comprobación de avisos existentes, las restricciones únicas y la transacción de inserción para proteger las ejecuciones concurrentes. No se modifican avisos ni entregas históricas. Los cambios que ocurran después de consultar pueden requerir una nueva comprobación al procesar la cola, como antes; la selección no mantiene bloqueado todo el conjunto durante el ciclo.
+
+La expresión de duración utiliza microsegundos, la representación de `DurationField` en los dos motores configurados, MySQL y SQLite. No hay migraciones, índices, permisos SQL ni dependencias nuevas. Reinicia **web y trabajador** al actualizar para cargar los selectores compartidos y la nueva selección temporal.

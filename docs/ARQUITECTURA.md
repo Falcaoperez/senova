@@ -42,6 +42,8 @@ Las migraciones permanecen dentro de sus aplicaciones, como espera Django. Los m
 
 El centro de operaciones agrega los registros en MySQL y limita las listas recientes; los directorios y las evidencias del detalle de usuario tienen paginación. La búsqueda reutiliza la visibilidad de evidencias y solo consulta la bandeja del usuario conectado. Los resultados no se almacenan en una caché compartida: la autorización se aplica en cada petición.
 
+`destinatarios` combina en una consulta SQL las cuentas activas, la ausencia de grupos asignados y la pertenencia actual mediante `EXISTS`. No necesita leer primero los identificadores de grupo ni confiar en una precarga anterior. Las novedades y el seguimiento comparten esa selección. El trabajador filtra en MySQL los plazos cuya ventana de aviso ya empezó y excluye entregas y avisos del mismo tipo y versión antes de materializar destinatarios. La creación mantiene su comprobación adicional y unicidad transaccional.
+
 Los filtros usan las mismas vistas GET con o sin JavaScript. La mejora interactiva sustituye únicamente los resultados, mantiene los parámetros en la URL y permite volver con el navegador. Los cambios de cuentas siguen siendo formularios POST con CSRF, confirmación de identidad y validación del servidor. Las acciones sensibles no se ejecutan desde la búsqueda.
 
 Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js. `search.js` gestiona la búsqueda, `workspace.js` las acciones administrativas y `admin-dashboard.js` el centro de operaciones; los estilos compartidos de estas interacciones permanecen en `operations.css`.
