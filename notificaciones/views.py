@@ -22,12 +22,28 @@ from Gesicom.utils import require_group
 from .acceso import destino_notificacion
 from .bandeja import cambiar_lectura, regreso_bandeja
 from .calendario import cuadricula_mensual
-from .forms import FiltrosAgendaForm, FiltrosBandejaForm, NovedadForm, PlazoReporteForm, PreferenciasForm
+from .exportaciones import filas_seguimiento
+from .forms import (
+    FiltrosAgendaForm,
+    FiltrosBandejaForm,
+    FiltrosPlazosAdminForm,
+    FiltrosSeguimientoForm,
+    NovedadForm,
+    PlazoReporteForm,
+    PreferenciasForm,
+)
 from .icalendar import respuesta_calendario
 from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
 from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
 from .resumen import resumen_de_peticion
-from .selectors import agenda_filtrada, avisos_filtrados, resumen_agenda, resumen_seguimiento, seguimiento_filtrado
+from .selectors import (
+    agenda_filtrada,
+    avisos_filtrados,
+    plazos_administracion,
+    resumen_agenda,
+    resumen_seguimiento,
+    seguimiento_filtrado,
+)
 from .services import publicar_novedad
 
 
@@ -256,32 +272,20 @@ def crear_novedad(request):
 
 
 @require_group("administrador")
+@require_safe
 def plazos_admin(request):
-    plazos = PlazoReporte.objects.prefetch_related("grupos").order_by("-activo", "fecha_limite", "pk")
-    q = request.GET.get("q", "").strip()[:100]
-    if q:
-        plazos = plazos.filter(Q(titulo__icontains=q) | Q(descripcion__icontains=q))
-    proyecto, estado = request.GET.get("proyecto", ""), request.GET.get("estado", "")
-    if proyecto:
-        plazos = plazos.filter(proyecto=proyecto)
-    if estado == "archivado":
-        plazos = plazos.filter(activo=False)
-    elif estado in {"programado", "vencido"}:
-        plazos = plazos.filter(activo=True)
-        plazos = (
-            plazos.filter(fecha_limite__lte=timezone.now())
-            if estado == "vencido"
-            else plazos.filter(fecha_limite__gt=timezone.now())
-        )
+    form = FiltrosPlazosAdminForm(request.GET)
     return render_panel(
         request,
         "notificaciones/plazos_admin.html",
         {
-            "plazos": Paginator(plazos, 25).get_page(request.GET.get("page")),
-            "q": q,
-            "proyecto": proyecto,
-            "estado": estado,
-            "proyectos": PlazoReporte.PROYECTOS,
+            "plazos": Paginator(plazos_administracion(form), 25).get_page(request.GET.get("page")),
+            "q": request.GET.get("q", "")[:100],
+            "proyecto": request.GET.get("proyecto", ""),
+            "estado": request.GET.get("estado", ""),
+            "proyectos": form.fields["proyecto"].choices[1:],
+            "filtros_form": form,
+            "mensaje_filtros": "No se muestran plazos hasta corregir los filtros.",
         },
     )
 
@@ -319,47 +323,48 @@ def editar_plazo(request, pk=None):
 
 
 @require_group("administrador")
+@require_safe
 def seguimiento_plazo(request, pk):
     plazo = get_object_or_404(PlazoReporte.objects.prefetch_related("grupos"), pk=pk)
+    form = FiltrosSeguimientoForm(request.GET)
     return render_panel(
         request,
         "notificaciones/seguimiento_plazo.html",
         {
             "plazo": plazo,
             "seguimiento": resumen_seguimiento(plazo),
-            "destinatarios": Paginator(seguimiento_filtrado(plazo, request.GET), 25).get_page(request.GET.get("page")),
+            "destinatarios": Paginator(seguimiento_filtrado(plazo, form), 25).get_page(request.GET.get("page")),
             "q": request.GET.get("q", "")[:100],
             "estado": request.GET.get("estado", ""),
+            "filtros_form": form,
+            "url_exportar": reverse("notificaciones:seguimiento_csv", args=[pk]) + form.consulta_url()
+            if form.is_valid()
+            else None,
+            "mensaje_filtros": "No se muestran ni exportan destinatarios hasta corregir los filtros.",
         },
     )
 
 
 @require_group("administrador")
+@require_safe
 def seguimiento_csv(request, pk):
     plazo = get_object_or_404(PlazoReporte, pk=pk)
-    usuarios = seguimiento_filtrado(plazo, request.GET)
-
-    def filas():
-        yield ["Usuario", "Nombre", "Correo", "Entrega", "Última entrega (Colombia)", "Última revisión"]
-        for usuario in usuarios.iterator(chunk_size=500):
-            entrega = "Pendiente" if not usuario.entregado else "A tiempo" if usuario.a_tiempo else "Fuera de plazo"
-            revision = (
-                ""
-                if not usuario.entregado
-                else "Aprobada"
-                if usuario.ultima_aprobada
-                else "Rechazada"
-                if usuario.ultima_rechazada
-                else "En revisión"
-            )
-            fecha = (
-                timezone.localtime(usuario.ultima_entrega).strftime("%Y-%m-%d %H:%M:%S")
-                if usuario.ultima_entrega
-                else ""
-            )
-            yield [usuario.username, usuario.get_full_name(), usuario.email, entrega, fecha, revision]
-
-    return respuesta_csv(filas(), f"seguimiento-plazo-{plazo.pk}.csv")
+    form = FiltrosSeguimientoForm(request.GET)
+    if not form.is_valid():
+        regreso = reverse("notificaciones:seguimiento_plazo", args=[pk])
+        return render(
+            request,
+            "error_filtros.html",
+            {
+                "filtros_form": form,
+                "volver": regreso,
+                "regreso_error": regreso,
+                "regreso_texto": "Volver al seguimiento",
+                "seccion_error": "GESICOM / ADMINISTRACIÓN / SEGUIMIENTO",
+            },
+            status=400,
+        )
+    return respuesta_csv(filas_seguimiento(seguimiento_filtrado(plazo, form)), f"seguimiento-plazo-{plazo.pk}.csv")
 
 
 @require_group("administrador")

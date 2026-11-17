@@ -73,79 +73,80 @@
          data-live-link>Limpiar</a>
     </form>
     <div data-live-region="follow-up">
+      {% include "ui/filtros_errores.html" %}
       <div class="table-toolbar">
         <div>
           <h2>{{ destinatarios.paginator.count }} destinatarios encontrados</h2>
           <p>El estado de entrega conserva el límite aplicado al registrar la evidencia.</p>
         </div>
-        <a class="button button-secondary button-sm"
-           href="{% url 'notificaciones:seguimiento_csv' plazo.pk %}{% querystring page=None %}">
-        {% icon 'download' %} Exportar resultados CSV</a>
+        {% if url_exportar %}
+          <a class="button button-secondary button-sm"
+             href="{{ url_exportar }}"
+             download>{% icon 'download' %} Exportar resultados CSV</a>
+        {% endif %}
       </div>
-      <div class="table-wrapper"
-           role="region"
-           aria-label="Seguimiento por destinatario"
-           tabindex="0">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Destinatario</th>
-              <th>Entrega</th>
-              <th>Última entrega · Colombia</th>
-              <th>Revisión más reciente</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for persona in destinatarios %}
+      {% if destinatarios %}
+        <div class="table-wrapper"
+             role="region"
+             aria-label="Seguimiento por destinatario"
+             tabindex="0">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>
-                  <strong>{{ persona.get_full_name|default:persona.username }}</strong>
-                  <small>{{ persona.username }} · {{ persona.email|default:'Sin correo' }}</small>
+                <th>Destinatario</th>
+                <th>Entrega</th>
+                <th>Última entrega · Colombia</th>
+                <th>Revisión más reciente</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for persona in destinatarios %}
+                <tr>
+                  <td>
+                    <strong>{{ persona.get_full_name|default:persona.username }}</strong>
+                    <small>{{ persona.username }} · {{ persona.email|default:'Sin correo' }}</small>
+                  </td>
+                  <td>
+                    {% if persona.entregado %}
+                      <span class="badge {% if persona.a_tiempo %}badge-success{% else %}badge-pending{% endif %}">
+                        {% if persona.a_tiempo %}A tiempo{% else %}Fuera de plazo{% endif %}
+                      </span>
+                    {% else %}
+                      <span class="badge {% if plazo.vencido %}badge-danger{% else %}badge-pending{% endif %}">Pendiente</span>
+                      {% if persona.recordado %}
+                        <small>Recordatorio adicional preparado</small>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+                  <td>{{ persona.ultima_entrega|date:'d M Y · H:i'|default:'—' }}</td>
+                  <td>
+                    {% if persona.entregado %}
+                      <span class="badge {% if persona.ultima_aprobada %}badge-success{% elif persona.ultima_rechazada %}badge-danger{% else %}badge-pending{% endif %}">
+                        {% if persona.ultima_aprobada %}Aprobada{% elif persona.ultima_rechazada %}Rechazada{% else %}En revisión{% endif %}
+                      </span>
+              {% else %}—{% endif %}
                 </td>
                 <td>
                   {% if persona.entregado %}
-                    <span class="badge {% if persona.a_tiempo %}badge-success{% else %}badge-pending{% endif %}">
-                      {% if persona.a_tiempo %}A tiempo{% else %}Fuera de plazo{% endif %}
-                    </span>
+                    <a class="text-link"
+                       href="{% url 'evidencias_list' %}?plazo={{ plazo.pk }}&amp;usuario={{ persona.pk }}">Ver entregas {% icon 'arrow' %}
+                    </a>
                   {% else %}
-                    <span class="badge {% if plazo.vencido %}badge-danger{% else %}badge-pending{% endif %}">Pendiente</span>
-                    {% if persona.recordado %}
-                      <small>Recordatorio adicional preparado</small>
-                    {% endif %}
+                    <span class="password-help">Sin evidencias</span>
                   {% endif %}
                 </td>
-                <td>{{ persona.ultima_entrega|date:'d M Y · H:i'|default:'—' }}</td>
-                <td>
-                  {% if persona.entregado %}
-                    <span class="badge {% if persona.ultima_aprobada %}badge-success{% elif persona.ultima_rechazada %}badge-danger{% else %}badge-pending{% endif %}">
-                      {% if persona.ultima_aprobada %}Aprobada{% elif persona.ultima_rechazada %}Rechazada{% else %}En revisión{% endif %}
-                    </span>
-            {% else %}—{% endif %}
-              </td>
-              <td>
-                {% if persona.entregado %}
-                  <a class="text-link"
-                     href="{% url 'evidencias_list' %}?plazo={{ plazo.pk }}&amp;usuario={{ persona.pk }}">Ver entregas {% icon 'arrow' %}
-                  </a>
-                {% else %}
-                  <span class="password-help">Sin evidencias</span>
-                {% endif %}
-              </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="5">
-                  <div class="empty-state">
-                    <h3>No hay destinatarios con estos filtros.</h3>
-                    <p>El seguimiento incluye a los usuarios activos de los grupos asignados.</p>
-                  </div>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <h3>No hay destinatarios con estos filtros.</h3>
+          <p>El seguimiento incluye a los usuarios activos de los grupos asignados.</p>
+        </div>
+      {% endif %}
       {% include "ui/paginacion.html" with pagina=destinatarios %}
     </div>
     <p class="sr-only" role="status" data-live-status></p>

@@ -220,3 +220,49 @@ El pie de las páginas autenticadas muestra hora de 24 horas, segundos, fecha y 
 Con JavaScript utiliza la hora del dispositivo en `America/Bogota`, incluso si el navegador tiene otra zona horaria. Se actualiza localmente, funciona sin conexión y pausa su temporizador cuando la pestaña está oculta; al volver recupera la hora vigente. Sin JavaScript presenta la referencia del servidor al cargar la página. Las fechas límite y la caducidad de credenciales continúan calculándose en el servidor.
 
 Este bloque no cambia tablas ni añade dependencias. Recopila estáticos y reinicia la aplicación web para cargar la bandeja, el controlador de actualización y el reloj.
+
+## Directorio administrativo y CSV
+
+En **Usuarios**, **Descargar CSV filtrado** incluye todos los resultados de la búsqueda, estado y rol aplicados, aunque ocupen varias páginas. No crea otro panel ni cambia la selección de cuentas. Una descarga conserva las ediciones pendientes de la página; esas ediciones solo se aplican al confirmar el guardado con la contraseña actual.
+
+El archivo contiene identificador, usuario, nombre, correo, roles, estado y fecha de registro en Colombia. Se ordena por identificador ascendente; la pantalla conserva su orden de registro más reciente. Es información personal para uso administrativo autorizado. La auditoría registra la solicitud de exportación, no confirma que el navegador haya terminado de recibirla.
+
+La descarga recorre consultas de hasta 500 cuentas y sus grupos, sin `OFFSET` ni cargar todo el directorio en Django. Al comenzar fija el identificador máximo y excluye altas posteriores con identificadores mayores. Una modificación o eliminación concurrente puede reflejarse en los lotes siguientes; el archivo no es una instantánea transaccional global. El controlador de MySQL puede mantener el búfer de cada consulta acotada.
+
+Guardar roles o activar/desactivar cuentas conserva búsqueda, estado, rol y página, también ante un error de contraseña. Si la última página deja de existir al cambiar el estado, se muestra la última disponible. Los filtros inválidos ocultan resultados y descarga; el CSV responde HTTP 400. Los mismos formularios y enlaces funcionan sin JavaScript.
+
+Este bloque no requiere migraciones ni dependencias nuevas. Recopila estáticos y reinicia la aplicación web para cargar los módulos y plantillas actualizados.
+
+## Búsqueda global y conexión
+
+El control de la cabecera y `Ctrl K`/`Cmd K` abren el buscador único. Las flechas recorren los resultados, Enter abre el elegido y Escape cierra y devuelve el foco. Los accesos rápidos se filtran localmente; a partir de dos caracteres se consultan los registros autorizados. La escritura espera una pausa breve y la composición de texto termina antes de consultar.
+
+Cada consulta tiene una espera máxima de diez segundos, incluida la lectura de la respuesta. Cambiar el texto, cerrar el diálogo u ocultar la pestaña cancela la consulta pendiente. Una respuesta antigua no sustituye la nueva. Los errores ofrecen **Reintentar búsqueda** y mantienen los accesos rápidos de la consulta. Recuperar la conexión o volver a la pestaña permite reintentar, sin iniciar otra petición automáticamente.
+
+Al superar el límite por cuenta, el diálogo respeta `Retry-After` en segundos o fecha HTTP y muestra el tiempo de espera inicial. No consulta otro término durante esa espera, incluso después de cerrar y reabrir el diálogo en la misma página. Al terminar se habilita el botón, sin enviar una consulta nueva. Recargar la página no elimina el límite aplicado en el servidor.
+
+**Buscar en evidencias** conserva el texto en la consulta de ese módulo, con su propio alcance y filtros. Si JavaScript está desactivado, el navegador no admite el diálogo o el controlador no carga, la cabecera mantiene un formulario HTML de búsqueda de evidencias. Los registros de usuarios solo aparecen para administración y los avisos siempre pertenecen a la cuenta conectada.
+
+Este bloque no cambia tablas ni dependencias. Recopila estáticos y reinicia la aplicación web para cargar `search.js` y las plantillas. `workspace.js` conserva las operaciones administrativas y sus confirmaciones.
+
+## Filtros administrativos de plazos y seguimiento
+
+En **Plazos de reportes**, búsqueda, proyecto y estado se validan antes de consultar. **Sin proyecto específico** muestra los plazos que admiten cualquiera de los proyectos; **Todos los proyectos** incluye tanto esos plazos como los asignados a un proyecto. Se conservan los estados programado, vencido y archivado. Un filtro desconocido o una búsqueda inválida muestra errores y ningún resultado, sin recortarla ni ampliar la consulta.
+
+El **Seguimiento** aplica los mismos filtros de destinatario y entrega a la tabla y a su CSV. Un filtro inválido oculta los destinatarios y el enlace; la ruta de descarga devuelve HTTP 400 con una página para corregirlo. El resumen de cumplimiento y las acciones de recordatorio siguen refiriéndose al plazo completo. Los filtros no limitan los destinatarios de una acción de recordatorio.
+
+El CSV conserva sus seis columnas y exporta todas las páginas de los filtros. Se ordena por el identificador interno ascendente; la tabla conserva su orden por usuario. Recorre consultas SQL de hasta 500 cuentas, sin `OFFSET` ni cargar el resultado completo en Django, y no lee hashes de contraseña. Las fechas de entrega se expresan en Colombia, incluso si hay otra zona activada en el servidor.
+
+Al comenzar fija el identificador máximo de la consulta. Las altas con identificadores superiores quedan fuera y un cambio posterior de nombre no vuelve a exportar una cuenta ya recorrida. Los cambios de estado, pertenencia, datos o entregas pueden reflejarse entre lotes: no es una instantánea transaccional global. MySQL puede mantener el búfer de cada consulta acotada. Conserva el CSV dentro del uso administrativo autorizado.
+
+Filtros, paginación y descarga funcionan con y sin JavaScript. Listado, seguimiento y CSV aceptan GET/HEAD y rechazan POST; las acciones de edición, archivo y recordatorio conservan sus rutas y controles. No hay migraciones ni dependencias nuevas: recoge estáticos y reinicia la aplicación web.
+
+## Generación eficiente de recordatorios
+
+El trabajador consulta solo plazos activos cuya ventana de recordatorio ya empezó, incluidos los vencidos. Las horas de anticipación se aplican al instante real; el inicio de la ventana y el vencimiento son inclusivos. Antes del límite corresponde un recordatorio y, desde el límite, un aviso de vencimiento. La versión del plazo y el tipo de aviso siguen identificando cada generación.
+
+Las cuentas activas y los grupos actuales se resuelven dentro de SQL. No tener grupos sigue significando todos los usuarios activos. Una precarga anterior no conserva una asignación retirada por otra instancia. Quien ya entregó o ya tiene el aviso de ese tipo y versión no entra en la lista de destinatarios nuevos. Las preferencias de correo siguen aplicándose y la generación solo crea avisos y cola, sin enviar SMTP directamente.
+
+Se mantienen la comprobación de avisos existentes, las restricciones únicas y la transacción de inserción para proteger las ejecuciones concurrentes. No se modifican avisos ni entregas históricas. Los cambios que ocurran después de consultar pueden requerir una nueva comprobación al procesar la cola, como antes; la selección no mantiene bloqueado todo el conjunto durante el ciclo.
+
+La expresión de duración utiliza microsegundos, la representación de `DurationField` en los dos motores configurados, MySQL y SQLite. No hay migraciones, índices, permisos SQL ni dependencias nuevas. Reinicia **web y trabajador** al actualizar para cargar los selectores compartidos y la nueva selección temporal.
