@@ -4,11 +4,11 @@
     <div class="pagination-links">
       {% if pagina.has_previous %}
         <a data-live-link
-           href="{{ base_url }}{% querystring page=pagina.previous_page_number %}">Anterior</a>
+           href="{% if url_anterior %}{{ url_anterior }}{% else %}{{ base_url }}{% querystring page=pagina.previous_page_number %}{% endif %}">Anterior</a>
       {% endif %}
       {% if pagina.has_next %}
         <a data-live-link
-           href="{{ base_url }}{% querystring page=pagina.next_page_number %}">Siguiente</a>
+           href="{% if url_siguiente %}{{ url_siguiente }}{% else %}{{ base_url }}{% querystring page=pagina.next_page_number %}{% endif %}">Siguiente</a>
       {% endif %}
     </div>
   </nav>
