@@ -140,3 +140,11 @@ El endpoint valida hasta 100 caracteres y rechaza entradas inválidas antes de u
 La consulta lee campos explícitos: títulos, identificadores y datos breves de presentación. No carga descripciones de plazos, mensajes completos, observaciones, adjuntos ni hashes de las cuentas encontradas. Los resultados están limitados por tipo y los plazos tienen un orden estable por fecha e identificador. Las respuestas continúan privadas y sin caché.
 
 El cliente valida la estructura completa, el máximo de resultados y los destinos del mismo origen antes de sustituir la lista. Rechaza URLs con credenciales o protocolos ajenos a HTTP(S), elimina duplicados e inserta títulos y detalles como texto. Una respuesta inválida completa se descarta; no se presenta una parte como confirmada. Ante HTTP 401, utiliza el ingreso configurado en la plantilla, sin seguir destinos recibidos en el JSON. Los enlaces continúan sujetos a la autorización de sus vistas de destino.
+
+## Filtros y exportación administrativa de plazos
+
+El listado valida proyecto, estado y búsqueda; el seguimiento y su CSV comparten `FiltrosSeguimientoForm`. Un estado desconocido, un carácter nulo o una búsqueda mayor de 100 caracteres no se ignoran ni se recortan para ejecutar una consulta distinta. La descarga inválida devuelve HTTP 400 sin archivo, y los resultados interactivos muestran el error sin ampliar el alcance.
+
+La autorización continúa exigiendo administrador o superusuario en cada petición. Personal de Django y permisos nativos de consulta por sí solos no conceden acceso. Los destinatarios siguen siendo cuentas activas de los grupos actuales del plazo, sin incluir otras cuentas por conocer sus identificadores. La tabla y el CSV leen campos explícitos, sin hashes ni indicadores de privilegios. El enlace de exportación solo copia búsqueda y estado validados; descarta paginación, destinos y parámetros ajenos.
+
+El iterador compartido con el directorio limita las lecturas SQL a 500 registros por lote, ordenados por clave primaria, y fija un corte de altas. Se mantienen parametrización ORM, UTF-8, neutralización de fórmulas y cabeceras sin caché. Esta consulta por lotes no bloquea el conjunto para obtener una instantánea global. La extracción del iterador conserva los controles y campos del CSV del directorio.

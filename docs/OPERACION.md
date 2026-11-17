@@ -244,3 +244,15 @@ Al superar el límite por cuenta, el diálogo respeta `Retry-After` en segundos 
 **Buscar en evidencias** conserva el texto en la consulta de ese módulo, con su propio alcance y filtros. Si JavaScript está desactivado, el navegador no admite el diálogo o el controlador no carga, la cabecera mantiene un formulario HTML de búsqueda de evidencias. Los registros de usuarios solo aparecen para administración y los avisos siempre pertenecen a la cuenta conectada.
 
 Este bloque no cambia tablas ni dependencias. Recopila estáticos y reinicia la aplicación web para cargar `search.js` y las plantillas. `workspace.js` conserva las operaciones administrativas y sus confirmaciones.
+
+## Filtros administrativos de plazos y seguimiento
+
+En **Plazos de reportes**, búsqueda, proyecto y estado se validan antes de consultar. **Sin proyecto específico** muestra los plazos que admiten cualquiera de los proyectos; **Todos los proyectos** incluye tanto esos plazos como los asignados a un proyecto. Se conservan los estados programado, vencido y archivado. Un filtro desconocido o una búsqueda inválida muestra errores y ningún resultado, sin recortarla ni ampliar la consulta.
+
+El **Seguimiento** aplica los mismos filtros de destinatario y entrega a la tabla y a su CSV. Un filtro inválido oculta los destinatarios y el enlace; la ruta de descarga devuelve HTTP 400 con una página para corregirlo. El resumen de cumplimiento y las acciones de recordatorio siguen refiriéndose al plazo completo. Los filtros no limitan los destinatarios de una acción de recordatorio.
+
+El CSV conserva sus seis columnas y exporta todas las páginas de los filtros. Se ordena por el identificador interno ascendente; la tabla conserva su orden por usuario. Recorre consultas SQL de hasta 500 cuentas, sin `OFFSET` ni cargar el resultado completo en Django, y no lee hashes de contraseña. Las fechas de entrega se expresan en Colombia, incluso si hay otra zona activada en el servidor.
+
+Al comenzar fija el identificador máximo de la consulta. Las altas con identificadores superiores quedan fuera y un cambio posterior de nombre no vuelve a exportar una cuenta ya recorrida. Los cambios de estado, pertenencia, datos o entregas pueden reflejarse entre lotes: no es una instantánea transaccional global. MySQL puede mantener el búfer de cada consulta acotada. Conserva el CSV dentro del uso administrativo autorizado.
+
+Filtros, paginación y descarga funcionan con y sin JavaScript. Listado, seguimiento y CSV aceptan GET/HEAD y rechazan POST; las acciones de edición, archivo y recordatorio conservan sus rutas y controles. No hay migraciones ni dependencias nuevas: recoge estáticos y reinicia la aplicación web.

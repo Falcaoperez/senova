@@ -153,13 +153,18 @@ def resumen_seguimiento(plazo):
 
 
 def seguimiento_filtrado(plazo, params):
+    from .forms import FiltrosSeguimientoForm
+
+    form = params if isinstance(params, FiltrosSeguimientoForm) else FiltrosSeguimientoForm(params)
+    if not form.is_valid():
+        return User.objects.none()
     queryset = seguimiento_destinatarios(plazo)
-    q = params.get("q", "").strip()[:100]
+    q = form.cleaned_data["q"]
     if q:
         queryset = queryset.filter(
             Q(username__icontains=q) | Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q)
         )
-    estado = params.get("estado", "")
+    estado = form.cleaned_data["estado"]
     if estado == "pendiente":
         queryset = queryset.filter(entregado=False)
     elif estado == "entregado":
@@ -168,4 +173,29 @@ def seguimiento_filtrado(plazo, params):
         queryset = queryset.filter(entregado=True, a_tiempo=False)
     elif estado == "a_tiempo":
         queryset = queryset.filter(a_tiempo=True)
-    return queryset
+    return queryset.only("pk", "username", "first_name", "last_name", "email")
+
+
+def plazos_administracion(params):
+    from .forms import FiltrosPlazosAdminForm
+
+    form = params if isinstance(params, FiltrosPlazosAdminForm) else FiltrosPlazosAdminForm(params)
+    if not form.is_valid():
+        return PlazoReporte.objects.none()
+    plazos = PlazoReporte.objects.only(
+        "pk", "titulo", "proyecto", "fecha_limite", "activo", "recordatorio_horas"
+    ).prefetch_related("grupos")
+    if q := form.cleaned_data["q"]:
+        plazos = plazos.filter(Q(titulo__icontains=q) | Q(descripcion__icontains=q))
+    if proyecto := form.cleaned_data["proyecto"]:
+        plazos = plazos.filter(proyecto="" if proyecto == "sin_proyecto" else proyecto)
+    estado = form.cleaned_data["estado"]
+    if estado == "archivado":
+        plazos = plazos.filter(activo=False)
+    elif estado in {"programado", "vencido"}:
+        plazos = plazos.filter(activo=True)
+        ahora = timezone.now()
+        plazos = (
+            plazos.filter(fecha_limite__lte=ahora) if estado == "vencido" else plazos.filter(fecha_limite__gt=ahora)
+        )
+    return plazos.order_by("-activo", "fecha_limite", "pk")
