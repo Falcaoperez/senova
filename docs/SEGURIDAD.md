@@ -124,3 +124,33 @@ Los filtros de la bandeja se validan también en las acciones masivas filtradas.
 La lectura interactiva conserva POST y CSRF, y admite JSON únicamente con la cabecera prevista. Sus respuestas no contienen datos de otros avisos ni direcciones de retorno arbitrarias; mantienen el control de caché privado. Los mensajes se insertan como texto. El cliente valida las rutas del mismo origen, bloquea envíos simultáneos y no reintenta automáticamente una escritura cuando se pierde su respuesta. Los formularios nativos conservan la validación y el retorno restringido a la bandeja.
 
 El reloj es informativo: no altera fechas de MySQL, plazos, límites, sesiones ni PIN. Su actualización local no transmite datos, consulta servicios externos o mantiene viva la sesión por inactividad.
+
+## Exportación del directorio
+
+`/administrador/usuarios.csv` requiere el rol actual de administrador o superusuario. La condición de personal y el permiso nativo `view_user` no sustituyen ese rol. GET descarga y registra `admin:exportar_directorio` con actor, ruta e IP; no guarda la búsqueda ni el contenido del archivo. HEAD solo devuelve los metadatos y POST se rechaza.
+
+La consulta y el CSV comparten filtros validados y parametrizados por el ORM. Una entrada inválida no amplía los resultados. La lista y descarga leen campos explícitos de las cuentas, sin cargar sus hashes de contraseña; el CSV tampoco contiene indicadores de privilegios, PIN ni claves de sesión. Reutiliza la neutralización de fórmulas, UTF-8 y las cabeceras sin caché del exportador compartido. El archivo incluye correos y debe permanecer dentro del uso administrativo autorizado.
+
+La dirección de regreso del formulario se construye con una ruta interna fija y una lista de parámetros validados. No acepta destinos externos ni conserva parámetros ajenos a los filtros y la página. Las operaciones mantienen contraseña actual, CSRF, autorización en el servicio, bloqueo de cuentas, auditoría y revocación de sesiones al desactivar. La precarga conjunta de grupos elimina consultas repetidas al comparar roles sin cambios, conservando la actualización transaccional y los límites existentes.
+
+## Respuestas de búsqueda global
+
+El endpoint valida hasta 100 caracteres y rechaza entradas inválidas antes de usar la cuota o consultar registros; no recorta una búsqueda excesiva para ejecutar otra distinta. Términos de menos de dos caracteres no consumen cuota ni consultan registros. Se conservan el límite compartido por cuenta, el rechazo temporal cuando falla la caché y las consultas parametrizadas por el ORM. La pertenencia actual a los roles gobierna cada petición; ser personal de Django no concede acceso a la búsqueda de usuarios.
+
+La consulta lee campos explícitos: títulos, identificadores y datos breves de presentación. No carga descripciones de plazos, mensajes completos, observaciones, adjuntos ni hashes de las cuentas encontradas. Los resultados están limitados por tipo y los plazos tienen un orden estable por fecha e identificador. Las respuestas continúan privadas y sin caché.
+
+El cliente valida la estructura completa, el máximo de resultados y los destinos del mismo origen antes de sustituir la lista. Rechaza URLs con credenciales o protocolos ajenos a HTTP(S), elimina duplicados e inserta títulos y detalles como texto. Una respuesta inválida completa se descarta; no se presenta una parte como confirmada. Ante HTTP 401, utiliza el ingreso configurado en la plantilla, sin seguir destinos recibidos en el JSON. Los enlaces continúan sujetos a la autorización de sus vistas de destino.
+
+## Filtros y exportación administrativa de plazos
+
+El listado valida proyecto, estado y búsqueda; el seguimiento y su CSV comparten `FiltrosSeguimientoForm`. Un estado desconocido, un carácter nulo o una búsqueda mayor de 100 caracteres no se ignoran ni se recortan para ejecutar una consulta distinta. La descarga inválida devuelve HTTP 400 sin archivo, y los resultados interactivos muestran el error sin ampliar el alcance.
+
+La autorización continúa exigiendo administrador o superusuario en cada petición. Personal de Django y permisos nativos de consulta por sí solos no conceden acceso. Los destinatarios siguen siendo cuentas activas de los grupos actuales del plazo, sin incluir otras cuentas por conocer sus identificadores. La tabla y el CSV leen campos explícitos, sin hashes ni indicadores de privilegios. El enlace de exportación solo copia búsqueda y estado validados; descarta paginación, destinos y parámetros ajenos.
+
+El iterador compartido con el directorio limita las lecturas SQL a 500 registros por lote, ordenados por clave primaria, y fija un corte de altas. Se mantienen parametrización ORM, UTF-8, neutralización de fórmulas y cabeceras sin caché. Esta consulta por lotes no bloquea el conjunto para obtener una instantánea global. La extracción del iterador conserva los controles y campos del CSV del directorio.
+
+## Audiencias y avisos pendientes resueltos en SQL
+
+La selección de destinatarios mantiene en una misma sentencia la condición de cuenta activa y la asignación de grupos. Las subconsultas consultan el alcance de la relación actual, incluso si la instancia tenía grupos precargados. Retirar una asignación o añadirla después de una precarga vacía no amplía la audiencia por usar datos antiguos en memoria. Los grupos públicos y las pertenencias coincidentes conservan su semántica sin duplicar cuentas.
+
+Los avisos automáticos excluyen entregas registradas y notificaciones existentes para el mismo plazo, versión y tipo antes de reunir identificadores. La creación conserva su comprobación y sus restricciones únicas; el filtro inicial no sustituye esa protección ante concurrencia. Los límites de ventana se calculan con expresiones ORM parametrizadas. La consulta de plazos solo lee identificador, título, límite, anticipación y versión, sin descripciones ni datos de creación ajenos a esta etapa.

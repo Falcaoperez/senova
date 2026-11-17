@@ -2,9 +2,26 @@
 
 import csv
 
+from django.db.models import Max
 from django.http import StreamingHttpResponse
 
 from .utils import safe_csv_cell
+
+
+def iterar_por_id(consulta):
+    """Recorre una consulta sin paginar por OFFSET ni traer todo el resultado."""
+    tope = consulta.aggregate(ultimo=Max("pk"))["ultimo"]
+    if tope is None:
+        return
+    ultimo = 0
+    while ultimo < tope:
+        lote = list(consulta.filter(pk__gt=ultimo, pk__lte=tope).order_by("pk")[:500])
+        if not lote:
+            return
+        yield from lote
+        ultimo = lote[-1].pk
+        if len(lote) < 500:
+            return
 
 
 class _SalidaCSV:

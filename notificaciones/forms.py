@@ -3,9 +3,53 @@ import re
 
 from django import forms
 from django.db import connection
+from django.http import QueryDict
 from django.utils import timezone
 
 from .models import Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
+
+
+class _FiltrosPlazosForm(forms.Form):
+    q = forms.CharField(label="Búsqueda", required=False, max_length=100)
+
+    def consulta_url(self):
+        if not self.is_valid():
+            return ""
+        params = QueryDict(mutable=True)
+        for nombre in self.fields:
+            if valor := self.cleaned_data.get(nombre):
+                params[nombre] = valor
+        return "?" + params.urlencode() if params else ""
+
+
+class FiltrosPlazosAdminForm(_FiltrosPlazosForm):
+    proyecto = forms.ChoiceField(
+        label="Proyecto",
+        required=False,
+        choices=[("", "Todos los proyectos"), ("sin_proyecto", "Sin proyecto específico"), *PlazoReporte.PROYECTOS],
+        error_messages={"invalid_choice": "Selecciona un proyecto válido."},
+    )
+    estado = forms.ChoiceField(
+        label="Estado",
+        required=False,
+        choices=[("", "Todos"), ("programado", "Programado"), ("vencido", "Vencido"), ("archivado", "Archivado")],
+        error_messages={"invalid_choice": "Selecciona un estado válido."},
+    )
+
+
+class FiltrosSeguimientoForm(_FiltrosPlazosForm):
+    estado = forms.ChoiceField(
+        label="Entrega",
+        required=False,
+        choices=[
+            ("", "Todas"),
+            ("pendiente", "Pendiente"),
+            ("entregado", "Entregado"),
+            ("a_tiempo", "A tiempo"),
+            ("tardia", "Fuera de plazo"),
+        ],
+        error_messages={"invalid_choice": "Selecciona un estado de entrega válido."},
+    )
 
 
 class FiltrosBandejaForm(forms.Form):
@@ -117,8 +161,6 @@ class FiltrosAgendaForm(forms.Form):
         return datetime.date.fromisoformat(value + "-01") if value else None
 
     def consulta_url(self, **cambios):
-        from django.http import QueryDict
-
         datos = self.cleaned_data if self.is_valid() else self.data
         params = QueryDict(mutable=True)
         for nombre in self.fields:

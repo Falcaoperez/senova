@@ -45,10 +45,13 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Confirmación de contraseña actual para modificar usuario, correo o contraseña; aviso de los cambios al correo anterior y al nuevo.
 - Centro de seguridad con sesiones por dispositivo, cierre individual o de otras sesiones y caducidad por inactividad.
 - Evidencias mediante archivo de hasta 10 MB o enlace; búsqueda, filtros, estados y paginación.
+- Búsqueda global por rol, con teclado, cancelación, espera limitada y reintento manual; alternativa HTML disponible si falla el controlador.
 - Archivos protegidos: solo el propietario y los roles revisores pueden consultarlos.
 - Reportes con gráficos y descargas CSV que respetan los filtros y neutralizan fórmulas de hojas de cálculo.
 - Publicación de novedades por grupo o para todos los usuarios activos.
 - Plazos de reportes con aviso inicial, recordatorio y notificación de vencimiento.
+- Selección SQL de plazos en ventana de aviso y destinatarios pendientes, con deduplicación por versión y tipo.
+- Administración de plazos con filtros validados, opción sin proyecto específico y CSV completo del seguimiento por lotes SQL.
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
 - Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.
 - Bandeja personal, lectura de avisos y preferencias de correo.
@@ -56,6 +59,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Reloj con hora y fecha de Colombia en el pie de la aplicación, adaptable a móvil.
 - Cola de correo con lotes, bloqueo entre trabajadores y reintentos con espera.
 - Administración de usuarios, roles y permisos; edición de datos, estado, roles y contraseña.
+- Directorio con CSV de todos los resultados filtrados y conservación de filtros y página al guardar.
 - Historial administrativo con búsqueda, fechas de Colombia, detalles y CSV filtrado de todos los resultados.
 - Consulta administrativa de permisos mínimos, TLS e integridad de MySQL, sin modificar la base.
 

@@ -40,7 +40,12 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Formularios de recuperación HTML/JSON | `cuentas/presentacion.py`, `cuentas/views.py` y parciales de `cuentas/templates/cuentas/` |
 | Interacción y estados de recuperación | `Gesicom/static/js/recovery.js` y `css/recovery.css` |
 | Comunidad, permisos y actividad | `ADMIN/urls.py` y sus módulos |
+| Búsqueda global y accesos rápidos | `Gesicom/busqueda.py`, `BusquedaGlobalForm`, `static/js/search.js` y el diálogo en `base.html` |
+| Consulta de usuarios y CSV por lotes | `ADMIN/directorio.py`, con `FiltrosUsuariosForm` y operaciones en `ADMIN/services.py` |
 | Plazos, novedades, bandeja y calendario | `notificaciones/urls.py` y sus módulos |
+| Elegibilidad de recordatorios y audiencia actual | `notificaciones/services.py`, `notificaciones/selectors.py` y `tests/test_recordatorios_sql.py` |
+| Filtros de administración y CSV de seguimiento | `FiltrosPlazosAdminForm`, `FiltrosSeguimientoForm`, `notificaciones/selectors.py` y `notificaciones/exportaciones.py` |
+| Recorrido CSV por identificador | `Gesicom/exportaciones.py`: iterador compartido por directorio y seguimiento |
 | Validación de filtros | Formularios de la aplicación, compartidos con la descarga |
 | Auditoría administrativa | `ADMIN/auditoria.py`: consulta y presentación sin mutaciones |
 | Correcciones y entregas | `Gesicom/services.py`, con formularios y selectores |
@@ -59,6 +64,9 @@ Instala `requirements-dev.txt` en el entorno virtual. Las pruebas de MySQL usan 
 python manage.py test --settings=SENNOVA.test_settings --noinput
 python manage.py test cuentas.tests --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_auditoria --settings=SENNOVA.test_settings --noinput
+python manage.py test notificaciones.tests.test_filtros_admin --settings=SENNOVA.test_settings --noinput
+python manage.py test notificaciones.tests.test_recordatorios_sql --settings=SENNOVA.test_settings --noinput
+python manage.py test ADMIN.tests.test_directorio --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_calendario --settings=SENNOVA.test_settings --noinput
 ruff check .
 python manage.py makemigrations --check --dry-run
