@@ -16,7 +16,7 @@
 | `ADMIN/forms.py` | Validación del directorio contra el catálogo de roles mostrado |
 | `Gesicom/filtros.py` | Validación y normalización de filtros compartidos, con errores visibles y descarga cerrada ante parámetros inválidos |
 | `Gesicom/reportes.py` | Series históricas, resúmenes autorizados y filas exportables |
-| `Gesicom/exportaciones.py` | Respuesta CSV común con Unicode, neutralización de fórmulas y transmisión del documento |
+| `Gesicom/exportaciones.py` | Respuesta CSV común y recorrido por identificador con SQL limitado; Unicode y neutralización de fórmulas |
 | `Gesicom/selectors.py` | Consultas reutilizadas por vistas, reportes y búsqueda; visibilidad por rol |
 | `Gesicom/busqueda.py` | Búsqueda autenticada, limitada por cuenta y con resultados acotados |
 | `ADMIN/` | Administración de la comunidad |
@@ -28,6 +28,7 @@
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
+| `notificaciones/exportaciones.py` | Filas del seguimiento con campos visibles y fecha explícita de Colombia |
 | `notificaciones/resumen.py` | Conteo y cuatro avisos recientes compartidos durante una petición, sin caché entre cuentas |
 | `notificaciones/calendario.py` | Límites mensuales de Colombia y distribución acotada de plazos en 42 días |
 | `notificaciones/icalendar.py` | Descarga privada iCalendar, escape de texto y plegado UTF-8 sin dependencias adicionales |

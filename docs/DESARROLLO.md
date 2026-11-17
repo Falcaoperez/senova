@@ -43,6 +43,8 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Búsqueda global y accesos rápidos | `Gesicom/busqueda.py`, `BusquedaGlobalForm`, `static/js/search.js` y el diálogo en `base.html` |
 | Consulta de usuarios y CSV por lotes | `ADMIN/directorio.py`, con `FiltrosUsuariosForm` y operaciones en `ADMIN/services.py` |
 | Plazos, novedades, bandeja y calendario | `notificaciones/urls.py` y sus módulos |
+| Filtros de administración y CSV de seguimiento | `FiltrosPlazosAdminForm`, `FiltrosSeguimientoForm`, `notificaciones/selectors.py` y `notificaciones/exportaciones.py` |
+| Recorrido CSV por identificador | `Gesicom/exportaciones.py`: iterador compartido por directorio y seguimiento |
 | Validación de filtros | Formularios de la aplicación, compartidos con la descarga |
 | Auditoría administrativa | `ADMIN/auditoria.py`: consulta y presentación sin mutaciones |
 | Correcciones y entregas | `Gesicom/services.py`, con formularios y selectores |
@@ -61,6 +63,7 @@ Instala `requirements-dev.txt` en el entorno virtual. Las pruebas de MySQL usan 
 python manage.py test --settings=SENNOVA.test_settings --noinput
 python manage.py test cuentas.tests --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_auditoria --settings=SENNOVA.test_settings --noinput
+python manage.py test notificaciones.tests.test_filtros_admin --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_directorio --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_calendario --settings=SENNOVA.test_settings --noinput
 ruff check .

@@ -3,10 +3,11 @@
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import Group, User
-from django.db.models import Max, Prefetch, Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-LOTE_EXPORTACION = 500
+from Gesicom.exportaciones import iterar_por_id
+
 CAMPOS_DIRECTORIO = ("id", "username", "first_name", "last_name", "email", "is_active", "date_joined")
 
 
@@ -53,29 +54,14 @@ def filas_directorio(consulta):
         "Estado",
         "Registro (Colombia)",
     ]
-    tope = consulta.aggregate(ultimo=Max("pk"))["ultimo"]
-    if tope is None:
-        return
-    ultimo = 0
     zona = ZoneInfo("America/Bogota")
-    while ultimo < tope:
-        lote = list(
-            _con_roles(consulta.filter(pk__gt=ultimo, pk__lte=tope).order_by("pk").only(*CAMPOS_DIRECTORIO))[
-                :LOTE_EXPORTACION
-            ]
-        )
-        if not lote:
-            return
-        for usuario in lote:
-            yield [
-                usuario.pk,
-                usuario.username,
-                usuario.get_full_name(),
-                usuario.email,
-                " | ".join(grupo.name for grupo in usuario.groups.all()),
-                "Activo" if usuario.is_active else "Inactivo",
-                timezone.localtime(usuario.date_joined, zona).strftime("%Y-%m-%d %H:%M:%S %z"),
-            ]
-        ultimo = lote[-1].pk
-        if len(lote) < LOTE_EXPORTACION:
-            return
+    for usuario in iterar_por_id(_con_roles(consulta.only(*CAMPOS_DIRECTORIO))):
+        yield [
+            usuario.pk,
+            usuario.username,
+            usuario.get_full_name(),
+            usuario.email,
+            " | ".join(grupo.name for grupo in usuario.groups.all()),
+            "Activo" if usuario.is_active else "Inactivo",
+            timezone.localtime(usuario.date_joined, zona).strftime("%Y-%m-%d %H:%M:%S %z"),
+        ]
