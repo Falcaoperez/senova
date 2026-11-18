@@ -26,6 +26,16 @@ Los PIN no se envían dentro de la petición web. La respuesta de recuperación 
 
 La cola ofrece entrega al menos una vez: un corte justo después de la aceptación del proveedor y antes de registrar el resultado puede producir una repetición. Los avisos internos por novedad/fase de plazo sí se deduplican con restricciones de la base de datos.
 
+## Consulta de novedades y avance de lectura
+
+**Novedades** permite buscar por título/contenido y filtrar por audiencia general o grupos específicos, junto con correo en cola, con error, aceptado, cancelado o sin preparar. **En cola** incluye pendiente y procesando. **Sin correos preparados** selecciona publicaciones sin registros de correo, incluidas las que aún no tienen avisos. Una búsqueda de más de 100 caracteres, un carácter nulo o una opción desconocida muestra errores y ningún resultado; no se recorta para ejecutar otra búsqueda. Consulta GET/HEAD, filtros y paginación funcionan también sin JavaScript.
+
+Cada tarjeta muestra los avisos generados y leídos, un porcentaje de lectura y el desglose de correo. Filtrar por error selecciona la publicación completa y conserva sus demás conteos. Los grupos corresponden a la configuración actual de la novedad; los conteos corresponden a avisos ya generados. Un cambio posterior en grupos o pertenencias no reescribe esos avisos. Los correos aceptados por el transporte no confirman entrega en el buzón. Los horarios de publicación se fijan en Colombia.
+
+La cabecera de correo incluye todos los avisos de novedades, plazos y revisiones, y su reintento sigue siendo global para los errores. Los filtros solo afectan al listado de publicaciones. La cola de seguridad de PIN conserva su operación independiente. Las actualizaciones interactivas reemplazan ambas regiones, cola general y listado, sin reconstruir el documento ni el reloj.
+
+La consulta de conteo de publicaciones no agrupa sus notificaciones. La página recupera 20 publicaciones, precarga sus grupos y agrega las métricas solo para esos identificadores. Esto limita las métricas solicitadas y evita consultas por tarjeta; no garantiza latencia ni que MySQL examine solo 20 filas. No requiere migraciones, permisos SQL ni dependencias nuevos. Recopila estáticos y reinicia web para cargar la consulta y los estilos.
+
 ## Plazos y entregas
 
 Las fechas se muestran en `America/Bogota`. El usuario puede asociar una evidencia a un plazo de su grupo y proyecto. Se conserva la fecha límite aplicable al registro y se identifica una entrega tardía. Entregar el reporte detiene los avisos pendientes de ese plazo; la aprobación se gestiona por separado.

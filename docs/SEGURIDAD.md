@@ -39,6 +39,12 @@ El centro de seguridad limita las operaciones al propietario, pide reautenticaci
 
 La preparación de la lista consulta solo identificador, agente, IP, creación y último uso; calcula la marca de sesión actual en SQL y no carga las claves ni el contenido de las sesiones en cada tarjeta. La autenticación mantiene sus comprobaciones habituales. Los filtros de presentación nunca amplían el propietario, una opción inválida devuelve una lista vacía y la paginación usa rutas internas con parámetros validados. Señalar inactividad no sustituye ni adelanta la comprobación del middleware. La pantalla admite GET/HEAD; los cierres mantienen sus rutas, POST, CSRF y contraseña actual.
 
+## Consulta administrativa de novedades
+
+La consulta exige administrador o superusuario antes de procesar los filtros. Personal de Django u otros roles no reciben el listado ni sus métricas. Los filtros se validan y sus valores se parametrizan con el ORM; una entrada inválida no se ignora ni se recorta. La paginación conserva únicamente búsqueda, audiencia, correo y número de página validado. Se mantienen las respuestas privadas y la misma autorización en documentos completos y fragmentos.
+
+Al preparar las tarjetas se seleccionan solo los datos de presentación del autor, sin hash, correo, privilegios ni último ingreso. Las métricas leen los avisos y estados de correo de las 20 publicaciones de la página, sin mensajes, direcciones de destinatarios ni detalles de error SMTP. La lectura no publica, reintenta ni envía correo. Publicación y reintento conservan sus rutas POST y CSRF; el filtrado no limita el alcance global del reintento. Los textos siguen escapados y los enlaces adicionales conservan su validación de HTTP/HTTPS.
+
 ## Datos y archivos
 
 Las vistas comprueban el propietario o el rol revisor. Los archivos se sirven mediante respuestas autenticadas, con `nosniff` y caché privada desactivada; las URLs históricas de medios también requieren autorización. No hay un directorio público de archivos subidos.
