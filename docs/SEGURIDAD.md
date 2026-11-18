@@ -47,6 +47,10 @@ Al preparar las tarjetas se seleccionan solo los datos de presentación del auto
 
 ## Datos y archivos
 
+El formulario personalizado de novedades usa un UUID firmado de 24 horas, ligado al autor y con un dominio diferente del de evidencias. La firma no sustituye autenticación, rol administrativo ni CSRF. El servicio vuelve a consultar el estado activo y la autorización al recuperar o aceptar una publicación. La unicidad SQL del UUID y el bloqueo del recibo coordinan los reintentos; recibo, publicación, grupos y avisos/cola se confirman juntos o se revierten. Una repetición no actualiza la publicación original. Un recibo sin publicación impide recrearla después de su eliminación.
+
+`SolicitudNovedad` almacena solo UUID, propietario, referencia opcional y fecha: no guarda el formulario, la firma ni credenciales; no incorpora permisos predeterminados ni panel propio. La migración se aplica con la cuenta dedicada y mantiene los permisos limitados de la cuenta web. Los clientes sin identificación y el alta nativa de Django conservan su comportamiento anterior. Esta deduplicación de publicaciones identificadas no cambia las garantías de entrega SMTP.
+
 Las vistas comprueban el propietario o el rol revisor. Los archivos se sirven mediante respuestas autenticadas, con `nosniff` y caché privada desactivada; las URLs históricas de medios también requieren autorización. No hay un directorio público de archivos subidos.
 
 Las plantillas escapan contenido, los gráficos usan JSON seguro y los CSV neutralizan celdas que podrían ejecutarse como fórmulas. Se aplica una política CSP con scripts, conexiones, fuentes y marcos limitados al propio origen.

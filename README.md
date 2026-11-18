@@ -49,6 +49,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Archivos protegidos: solo el propietario y los roles revisores pueden consultarlos.
 - Reportes con gráficos y descargas CSV por lotes SQL que conservan los filtros y el orden, y neutralizan fórmulas de hojas de cálculo.
 - Publicación de novedades por grupo o para todos los usuarios activos, con filtros de audiencia/correo y avance de lectura.
+- Formularios identificados de novedades: un reintento recupera la publicación aceptada sin duplicar avisos ni reemplazar su contenido.
 - Plazos de reportes con aviso inicial, recordatorio y notificación de vencimiento.
 - Selección SQL de plazos en ventana de aviso y destinatarios pendientes, con deduplicación por versión y tipo.
 - Administración de plazos con filtros validados, opción sin proyecto específico y CSV completo del seguimiento por lotes SQL.

@@ -15,6 +15,7 @@ MySQL utiliza InnoDB, UTF-8 completo (`utf8mb4`), modo estricto, claves foránea
 - `Gesicom_solicitudenvio`: recibos internos para recuperar el resultado de un reintento del mismo formulario.
 - `notificaciones_plazoreporte`: destinatarios, proyecto, fecha límite, recordatorio y versión.
 - `notificaciones_novedad`: publicaciones y grupos destinatarios.
+- `notificaciones_solicitudnovedad`: recibos del formulario identificado de publicación, conservados aunque se elimine su resultado.
 - `notificaciones_notificacion`: bandeja individual y fecha de lectura.
 - `notificaciones_correopendiente`: estado, arrendamiento y reintentos de correo.
 - `notificaciones_preferenciasnotificacion`: preferencias personales.
@@ -51,3 +52,5 @@ El SQL de diagnóstico y la documentación pueden versionarse. Los respaldos rea
 `Gesicom_movimientoevidencia` conserva los movimientos de creación, corrección, revisión y observaciones. La versión única por evidencia evita registrar dos cambios con la misma identidad. La primera entrega y el límite aplicado permanecen en `Gesicom_envio`; la fecha de corrección se consulta en el historial.
 
 La migración `Gesicom.0015_solicitudes_adjuntos` añade recibos con UUID único y un índice de nombres de archivo. No rellena recibos históricos ni modifica las evidencias existentes. Los recibos sin evidencia se conservan como constancia de un formulario ya procesado; no deben purgarse automáticamente junto con sus adjuntos.
+
+`notificaciones.0003_solicitudes_novedades` añade la tabla de recibos de publicación, sin alterar novedades ni avisos anteriores. Aplícala con la cuenta de migraciones antes de reiniciar la aplicación. No requiere ampliar los permisos de la cuenta web: los perfiles siguen limitados a su esquema. La transacción confirma juntos recibo, publicación, grupos y avisos preparados; la unicidad del UUID evita que el mismo formulario identificado cree dos publicaciones.

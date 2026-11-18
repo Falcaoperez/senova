@@ -9,6 +9,7 @@ from .services import publicar_novedad
 @admin.register(Novedad)
 class NovedadAdmin(admin.ModelAdmin):
     form = NovedadForm
+    fields = NovedadForm.Meta.fields
 
     def save_model(self, request, obj, form, change):
         if not change:

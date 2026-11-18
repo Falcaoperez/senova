@@ -201,6 +201,24 @@ class FiltrosAgendaForm(forms.Form):
 
 
 class NovedadForm(forms.ModelForm):
+    solicitud = forms.CharField(required=False, max_length=512, widget=forms.HiddenInput)
+
+    def __init__(self, *args, usuario=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        if usuario is not None and not self.instance.pk:
+            from .publicacion import crear_solicitud_novedad
+
+            self.initial["solicitud"] = crear_solicitud_novedad(usuario)
+        else:
+            self.fields.pop("solicitud")
+
+    def clean_solicitud(self):
+        from .publicacion import verificar_solicitud_novedad
+
+        valor = self.cleaned_data.get("solicitud")
+        return verificar_solicitud_novedad(valor, self.usuario) if valor else None
+
     class Meta:
         model = Novedad
         fields = ["titulo", "contenido", "enlace", "grupos"]
