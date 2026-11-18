@@ -44,6 +44,12 @@ Las cuentas personales de Gmail tienen cuotas de envío. Dimensiona el volumen d
 
 `/mi-cuenta/seguridad/` muestra las sesiones del usuario y permite cerrarlas mediante POST, CSRF y contraseña actual. La eliminación alcanza la caché y MySQL. El inicio de sesión registra la sesión antes de la primera navegación. `SESSION_IDLE_TIMEOUT` controla la caducidad por inactividad, con 1.800 segundos por defecto; la actividad visible se actualiza como máximo una vez por minuto para limitar escrituras.
 
+En **Todas mis sesiones**, la actual aparece primero. Los filtros **La sesión actual** y **Otras sesiones** distinguen los accesos de la cuenta, con 20 filas por página y orden estable por actividad e identificador. **Actualizar lista** conserva el filtro y la página. Una opción desconocida muestra un error y ningún acceso; los enlaces no copian parámetros ajenos. La consulta solo admite GET/HEAD y los filtros funcionan sin JavaScript.
+
+**Requiere nuevo ingreso** señala un registro cuyo último uso superó el límite de inactividad. Coincide con la condición del middleware, incluida su frontera estricta; no representa una conexión en línea ni ejecuta una revocación al consultar. Las sesiones ya caducadas en MySQL no se listan. Si `SESSION_IDLE_TIMEOUT=0`, no se presenta el estado de inactividad. La fecha y hora de las tarjetas corresponden a Colombia.
+
+**Cerrar las otras sesiones** cubre todos los demás accesos de la cuenta, independientemente del filtro. La vista conserva los formularios POST con confirmación de contraseña. No necesita cambios de esquema: recopila estáticos y reinicia web para cargar la consulta y `security.css`.
+
 Al cambiar la contraseña desde el perfil se conserva la sesión actual y se cierran las demás. Una recuperación cierra todas las sesiones autenticadas y solicita ingresar de nuevo. Los cambios sensibles invalidan las solicitudes de recuperación y generan avisos al correo anterior y al actual.
 
 Ejecuta `python manage.py clearsessions` periódicamente para retirar sesiones caducadas de MySQL; sus registros asociados se eliminan en cascada.

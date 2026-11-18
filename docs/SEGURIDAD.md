@@ -37,6 +37,8 @@ Los trabajadores reclaman los lotes con bloqueo y arrendamiento de MySQL. Antes 
 
 El centro de seguridad limita las operaciones al propietario, pide reautenticación y elimina las sesiones de MySQL y la caché. No publica claves de sesión. Las sesiones caducan por inactividad; el cambio o la recuperación de contraseña revoca las demás o todas, respectivamente. Las respuestas privadas y de recuperación usan `Cache-Control: private, no-store`.
 
+La preparación de la lista consulta solo identificador, agente, IP, creación y último uso; calcula la marca de sesión actual en SQL y no carga las claves ni el contenido de las sesiones en cada tarjeta. La autenticación mantiene sus comprobaciones habituales. Los filtros de presentación nunca amplían el propietario, una opción inválida devuelve una lista vacía y la paginación usa rutas internas con parámetros validados. Señalar inactividad no sustituye ni adelanta la comprobación del middleware. La pantalla admite GET/HEAD; los cierres mantienen sus rutas, POST, CSRF y contraseña actual.
+
 ## Datos y archivos
 
 Las vistas comprueban el propietario o el rol revisor. Los archivos se sirven mediante respuestas autenticadas, con `nosniff` y caché privada desactivada; las URLs históricas de medios también requieren autorización. No hay un directorio público de archivos subidos.

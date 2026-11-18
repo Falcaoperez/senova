@@ -4,6 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
+from django.http import QueryDict
 
 User = get_user_model()
 
@@ -22,6 +23,25 @@ class ConfirmarPasswordForm(forms.Form):
         if not self.usuario.check_password(value):
             raise forms.ValidationError("La contraseña actual no es correcta.")
         return value
+
+
+class FiltrosSesionesForm(forms.Form):
+    estado = forms.ChoiceField(
+        label="Mostrar sesiones",
+        required=False,
+        choices=[("", "Todas mis sesiones"), ("actual", "La sesión actual"), ("otras", "Otras sesiones")],
+        error_messages={"invalid_choice": "Selecciona una opción válida para consultar tus sesiones."},
+    )
+
+    def consulta_url(self, *, pagina=1):
+        if not self.is_valid():
+            return ""
+        params = QueryDict(mutable=True)
+        if estado := self.cleaned_data["estado"]:
+            params["estado"] = estado
+        if pagina > 1:
+            params["page"] = pagina
+        return "?" + params.urlencode() if params else ""
 
 
 def validar_correo_unico(email, user_id=None):
