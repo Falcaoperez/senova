@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction
 from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.debug import sensitive_post_parameters
-from django.views.decorators.http import require_POST, require_safe
+from django.views.decorators.http import require_http_methods, require_POST, require_safe
 
 from cuentas.forms import ConfirmarPasswordForm
 from Gesicom.exportaciones import respuesta_csv
@@ -37,6 +36,7 @@ from .icalendar import respuesta_calendario
 from .models import CorreoPendiente, Notificacion, PlazoReporte, PreferenciasNotificacion
 from .novedades import pagina_novedades
 from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
+from .publicacion import publicar_o_recuperar, recuperar_publicacion
 from .resumen import resumen_de_peticion
 from .selectors import (
     agenda_filtrada,
@@ -46,7 +46,6 @@ from .selectors import (
     resumen_seguimiento,
     seguimiento_filtrado,
 )
-from .services import publicar_novedad
 
 
 @login_required
@@ -249,19 +248,38 @@ def novedades_admin(request):
 
 
 @require_group("administrador")
+@require_http_methods(["GET", "HEAD", "POST"])
 def crear_novedad(request):
-    form = NovedadForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            novedad = form.save(commit=False)
-            novedad.creada_por = request.user
-            novedad.save()
-            form.save_m2m()
-            total = publicar_novedad(novedad)
-        messages.success(
-            request, f"Novedad publicada para {total} usuarios. Los correos se procesarán en segundo plano."
-        )
-        return redirect("notificaciones:novedades_admin")
+    form = NovedadForm(request.POST if request.method == "POST" else None, usuario=request.user)
+    reutilizado = (
+        "Este formulario ya había sido enviado. Conservamos la publicación original sin generar avisos nuevos."
+    )
+    if request.method == "POST":
+        valido = form.is_valid()
+        if codigo := form.cleaned_data.get("solicitud"):
+            try:
+                previo = recuperar_publicacion(request.user, codigo)
+            except ValidationError as error:
+                form.add_error(None, error)
+                valido = False
+            else:
+                if previo:
+                    messages.info(request, reutilizado)
+                    return redirect("notificaciones:novedades_admin")
+        if valido:
+            try:
+                resultado = publicar_o_recuperar(request.user, form.cleaned_data)
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                if resultado.reutilizado:
+                    messages.info(request, reutilizado)
+                else:
+                    messages.success(
+                        request,
+                        f"Novedad publicada para {resultado.nuevos_avisos} usuarios. Los correos se procesarán en segundo plano.",
+                    )
+                return redirect("notificaciones:novedades_admin")
     return render(
         request,
         "notificaciones/formulario_admin.html",
@@ -271,6 +289,8 @@ def crear_novedad(request):
             "description": "Publica una novedad y notifícala a la comunidad.",
             "submit_label": "Publicar novedad",
             "volver": reverse("notificaciones:novedades_admin"),
+            "ayuda_publicacion": "Si la conexión se interrumpe, puedes reenviar este mismo formulario: se recuperará la publicación ya aceptada.",
+            "nuevo_formulario": reverse("notificaciones:crear_novedad") if form.errors else None,
         },
     )
 

@@ -218,15 +218,21 @@
   });
   const errorSummary = $("[data-error-summary]");
   errorSummary?.focus();
-  $$("[data-submit]").forEach((form) =>
+  const identifiedSubmitButtons = new WeakMap();
+  $$("[data-submit]").forEach((form) => {
+    const button = $("button[type=submit]", form);
+    if (button && $("input[name=solicitud]", form)?.value)
+      identifiedSubmitButtons.set(button, {
+        disabled: button.disabled,
+        children: [...button.childNodes].map((node) => node.cloneNode(true)),
+      });
     form.addEventListener("submit", () => {
-      const button = $("button[type=submit]", form);
       if (button) {
         button.disabled = true;
         button.textContent = "Guardando…";
       }
-    }),
-  );
+    });
+  });
   document.addEventListener("submit", async (event) => {
     const form = event.target.closest("[data-observation-form]");
     if (!form) return;
@@ -358,10 +364,17 @@
     }
   });
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted)
-      $$("[data-submit] button:disabled").forEach((button) => {
-        button.disabled = false;
-        location.reload();
-      });
+    if (!event.persisted) return;
+    let reload = false;
+    $$("[data-submit] button:disabled").forEach((button) => {
+      const original = identifiedSubmitButtons.get(button);
+      button.disabled = original?.disabled ?? false;
+      if (original)
+        button.replaceChildren(
+          ...original.children.map((node) => node.cloneNode(true)),
+        );
+      else reload = true;
+    });
+    if (reload) location.reload();
   });
 })();

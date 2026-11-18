@@ -21,6 +21,8 @@ erDiagram
     GROUP }o--o{ PLAZO_REPORTE : destinatarios
     USER o|--o{ PLAZO_REPORTE : programa
     USER o|--o{ NOVEDAD : publica
+    USER ||--o{ SOLICITUD_NOVEDAD : identifica
+    NOVEDAD o|--o| SOLICITUD_NOVEDAD : resultado
     GROUP }o--o{ NOVEDAD : destinatarios
     USER ||--o{ NOTIFICACION : recibe
     NOVEDAD o|--o{ NOTIFICACION : origina
@@ -45,6 +47,7 @@ erDiagram
 | Historial de evidencia | `Gesicom_movimientoevidencia` | Actor opcional; unicidad por evidencia/versión; orden cronológico por versión |
 | Agenda | `notificaciones_plazoreporte` y tabla intermedia de grupos | Índice de activo/fecha; revisión de edición y versión de avisos; cada envío conserva el límite aplicado |
 | Publicaciones | `notificaciones_novedad` y grupos | Autor opcional; destinatarios por rol o toda la comunidad |
+| Recibos de publicación | `notificaciones_solicitudnovedad` | UUID primario; propietario obligatorio; relación única opcional con la novedad; conserva el recibo al eliminar la publicación |
 | Bandeja | `notificaciones_notificacion` | Índice por usuario/lectura/fecha; unicidad por destinatario y publicación o fase del plazo |
 | Entrega | `notificaciones_correopendiente` | Un correo por aviso; índice de estado/próximo intento, arrendamiento de trabajo y cancelación de avisos obsoletos |
 | Preferencias | `notificaciones_preferenciasnotificacion` | Una configuración por usuario |
@@ -62,3 +65,5 @@ Cada evidencia tiene una versión creciente y una fecha de última actualizació
 El recordatorio adicional usa el tipo `seguimiento` y la unicidad existente de usuario/plazo/versión/tipo. No requiere una tabla duplicada. El cumplimiento se calcula con subconsultas `EXISTS` e índices; los listados de personas se paginan y no cargan la totalidad de evidencias.
 
 La migración `Gesicom.0015_solicitudes_adjuntos` añade el índice de archivo y los recibos de alta sin alterar datos existentes. El recibo se crea únicamente al aceptar un formulario identificado, en la misma transacción que su evidencia y movimiento. No guarda el formulario, la firma, archivos ni credenciales. No tiene permisos predeterminados ni panel propio. Al eliminar la cuenta desaparecen sus recibos; al eliminar solo una evidencia se conserva el UUID para impedir que un reintento la recree. Los archivos se retiran después del commit y únicamente cuando no quedan referencias a su nombre.
+
+`notificaciones.0003_solicitudes_novedades` crea los recibos del formulario personalizado de publicación. Se insertan junto con la novedad, sus grupos y avisos/correos preparados, sin rellenar datos históricos. La clave primaria UUID y el bloqueo del recibo recuperan el primer resultado aceptado del formulario. La referencia única admite `NULL` y utiliza `SET_NULL` al eliminar una novedad; el propietario utiliza `CASCADE`. No se guardan firmas, campos del formulario ni credenciales, y no se crean permisos predeterminados ni un panel administrativo. No se deben purgar los recibos sin destino mientras puedan recibirse reintentos de esos formularios.
