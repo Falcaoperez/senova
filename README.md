@@ -43,7 +43,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Envío del PIN mediante cola, con cifrado temporal y eliminación del contenido al terminar el envío.
 - Invalidación automática del PIN si cambian el correo o la contraseña de la cuenta.
 - Confirmación de contraseña actual para modificar usuario, correo o contraseña; aviso de los cambios al correo anterior y al nuevo.
-- Centro de seguridad con sesiones por dispositivo, cierre individual o de otras sesiones y caducidad por inactividad.
+- Centro de seguridad con la sesión actual primero, filtros de accesos, indicación de inactividad y cierre individual o de otras sesiones.
 - Evidencias mediante archivo de hasta 10 MB o enlace; búsqueda, filtros, estados y paginación.
 - Búsqueda global por rol, con teclado, cancelación, espera limitada y reintento manual; alternativa HTML disponible si falla el controlador.
 - Archivos protegidos: solo el propietario y los roles revisores pueden consultarlos.
