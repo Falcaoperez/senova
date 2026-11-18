@@ -29,6 +29,7 @@
 | `cuentas/seguridad.py` | Lista personal de sesiones, filtros y metadatos de presentación; las operaciones conservan reautenticación |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
+| `notificaciones/novedades.py` | Filtros administrativos y métricas agrupadas de las novedades de la página visible |
 | `notificaciones/exportaciones.py` | Filas del seguimiento con campos visibles y fecha explícita de Colombia |
 | `notificaciones/resumen.py` | Conteo y cuatro avisos recientes compartidos durante una petición, sin caché entre cuentas |
 | `notificaciones/calendario.py` | Límites mensuales de Colombia y distribución acotada de plazos en 42 días |
@@ -44,6 +45,8 @@ Las migraciones permanecen dentro de sus aplicaciones, como espera Django. Los m
 El centro de operaciones agrega los registros en MySQL y limita las listas recientes; los directorios y las evidencias del detalle de usuario tienen paginación. La búsqueda reutiliza la visibilidad de evidencias y solo consulta la bandeja del usuario conectado. Los resultados no se almacenan en una caché compartida: la autorización se aplica en cada petición.
 
 `destinatarios` combina en una consulta SQL las cuentas activas, la ausencia de grupos asignados y la pertenencia actual mediante `EXISTS`. No necesita leer primero los identificadores de grupo ni confiar en una precarga anterior. Las novedades y el seguimiento comparten esa selección. El trabajador filtra en MySQL los plazos cuya ventana de aviso ya empezó y excluye entregas y avisos del mismo tipo y versión antes de materializar destinatarios. La creación mantiene su comprobación adicional y unicidad transaccional.
+
+El listado administrativo de novedades utiliza `FiltrosNovedadesForm`. La audiencia y los estados de correo se filtran con `Exists`, sin unir grupos a los conteos. Primero se cuentan y seleccionan 20 publicaciones con identidad mínima del autor y grupos precargados; después se agrupan las notificaciones y su correo uno a uno únicamente para esos identificadores. Así no se agrupan todos los avisos para calcular la paginación ni se recortan los totales de una novedad al filtrar por un estado. La interfaz reutiliza el controlador de navegación existente para actualizar conjuntamente la cola general y la lista en dos regiones, con los filtros fuera de las regiones sustituidas.
 
 Los filtros usan las mismas vistas GET con o sin JavaScript. La mejora interactiva sustituye únicamente los resultados, mantiene los parámetros en la URL y permite volver con el navegador. Los cambios de cuentas siguen siendo formularios POST con CSRF, confirmación de identidad y validación del servidor. Las acciones sensibles no se ejecutan desde la búsqueda.
 

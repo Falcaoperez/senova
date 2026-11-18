@@ -26,6 +26,7 @@ from .exportaciones import filas_seguimiento
 from .forms import (
     FiltrosAgendaForm,
     FiltrosBandejaForm,
+    FiltrosNovedadesForm,
     FiltrosPlazosAdminForm,
     FiltrosSeguimientoForm,
     NovedadForm,
@@ -33,7 +34,8 @@ from .forms import (
     PreferenciasForm,
 )
 from .icalendar import respuesta_calendario
-from .models import CorreoPendiente, Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
+from .models import CorreoPendiente, Notificacion, PlazoReporte, PreferenciasNotificacion
+from .novedades import pagina_novedades
 from .plazos import ConflictoPlazo, archivar_plazo, guardar_plazo, recordar_pendientes
 from .resumen import resumen_de_peticion
 from .selectors import (
@@ -216,15 +218,14 @@ def calendario_ics(request):
 
 
 @require_group("administrador")
+@require_safe
 def novedades_admin(request):
-    novedades = Novedad.objects.select_related("creada_por").annotate(
-        destinatarios_total=Count("notificacion", distinct=True),
-        leidas_total=Count("notificacion", distinct=True, filter=Q(notificacion__leida_en__isnull=False)),
-        enviados_total=Count("notificacion", distinct=True, filter=Q(notificacion__correo__estado="enviado")),
-    )
-    q = request.GET.get("q", "").strip()[:100]
-    if q:
-        novedades = novedades.filter(Q(titulo__icontains=q) | Q(contenido__icontains=q))
+    form = FiltrosNovedadesForm(request.GET)
+    pagina = pagina_novedades(form, request.GET.get("page"))
+
+    def enlace(numero):
+        return reverse("notificaciones:novedades_admin") + form.consulta_url(pagina=numero)
+
     cola = CorreoPendiente.objects.aggregate(
         pendientes=Count("pk", filter=Q(estado__in=["pendiente", "procesando"])),
         errores=Count("pk", filter=Q(estado="error")),
@@ -234,12 +235,15 @@ def novedades_admin(request):
         request,
         "notificaciones/novedades_admin.html",
         {
-            "novedades": Paginator(novedades.order_by("-publicada_en", "-pk"), 20).get_page(request.GET.get("page")),
+            "novedades": pagina,
             "correos_pendientes": cola["pendientes"],
             "correos_error": cola["errores"],
             "correos_cancelados": cola["cancelados"],
             "trabajador_activo": cache.get("notificaciones:trabajador"),
-            "q": q,
+            "filtros_form": form,
+            "mensaje_filtros": "No se muestran novedades hasta corregir los filtros.",
+            "url_anterior": enlace(pagina.previous_page_number()) if pagina.has_previous() else None,
+            "url_siguiente": enlace(pagina.next_page_number()) if pagina.has_next() else None,
         },
     )
 

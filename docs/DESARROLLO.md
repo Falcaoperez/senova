@@ -44,6 +44,7 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Búsqueda global y accesos rápidos | `Gesicom/busqueda.py`, `BusquedaGlobalForm`, `static/js/search.js` y el diálogo en `base.html` |
 | Consulta de usuarios y CSV por lotes | `ADMIN/directorio.py`, con `FiltrosUsuariosForm` y operaciones en `ADMIN/services.py` |
 | Plazos, novedades, bandeja y calendario | `notificaciones/urls.py` y sus módulos |
+| Filtros y métricas administrativas de novedades | `FiltrosNovedadesForm`, `notificaciones/novedades.py`, `templates/notificaciones/novedades_admin.html` y `tests/test_novedades_admin.py` |
 | Elegibilidad de recordatorios y audiencia actual | `notificaciones/services.py`, `notificaciones/selectors.py` y `tests/test_recordatorios_sql.py` |
 | Filtros de administración y CSV de seguimiento | `FiltrosPlazosAdminForm`, `FiltrosSeguimientoForm`, `notificaciones/selectors.py` y `notificaciones/exportaciones.py` |
 | Recorrido CSV con SQL acotado | `Gesicom/exportaciones.py`: cursor por identificador para directorio/seguimiento y por orden validado para reportes/auditoría |
@@ -70,6 +71,7 @@ python manage.py test ADMIN.tests.test_auditoria --settings=SENNOVA.test_setting
 python manage.py test Gesicom.tests.test_exportaciones_sql ADMIN.tests.test_exportaciones_sql --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_filtros_admin --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_recordatorios_sql --settings=SENNOVA.test_settings --noinput
+python manage.py test notificaciones.tests.test_novedades_admin --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_directorio --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_calendario --settings=SENNOVA.test_settings --noinput
 ruff check .
