@@ -26,6 +26,7 @@
 | `ADMIN/services.py` | Cambios de estado y roles, protección de cuentas y auditoría |
 | `ADMIN/auditoria.py` | Consultas filtradas, etiquetas y filas CSV del historial administrativo |
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
+| `cuentas/seguridad.py` | Lista personal de sesiones, filtros y metadatos de presentación; las operaciones conservan reautenticación |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
 | `notificaciones/exportaciones.py` | Filas del seguimiento con campos visibles y fecha explícita de Colombia |
@@ -69,3 +70,5 @@ La lista, el calendario y la descarga de **Mis plazos** comparten `FiltrosAgenda
 `FiltrosBandejaForm` valida búsqueda, tipo, lectura, identificador y fechas antes de consultar o marcar resultados. `inbox.js` envía los formularios de lectura con CSRF y solicita una actualización al controlador de navegación compartido. `workspace:refresh` conserva la consulta aplicada y espera si hay una búsqueda o actualización en curso. `notifications:changed` solicita el contador vigente mediante el controlador existente de la campana. Las acciones nativas conservan su redirección cuando no se solicita el protocolo JSON.
 
 `clock.js` y `clock.css` presentan un único reloj en el pie del documento completo. Los fragmentos no lo reconstruyen. El cliente reutiliza dos formateadores `Intl.DateTimeFormat` en `America/Bogota`, actualiza los segundos y pausa el temporizador al ocultar la página. El componente obtiene una sola referencia temporal del servidor para su estado inicial; el reloj no consulta la base de datos ni un servicio de hora.
+
+El centro de seguridad usa `FiltrosSesionesForm` para distinguir todas las sesiones, la actual y las otras. Una expresión SQL ordena primero la actual y después actividad e identificador descendentes; la lista lee solo los metadatos de 20 filas por página. No carga el contenido ni la clave de cada sesión al preparar las tarjetas. El estado de inactividad reutiliza el límite estricto del middleware y no elimina registros durante la lectura. La plantilla fija Colombia para los horarios. `security.css` concentra su presentación y retira las reglas antiguas de `sena.css`. Los filtros y formularios usan navegación nativa y funcionan sin JavaScript. La paginación compartida admite enlaces anteriores/siguientes explícitos para conservar únicamente los parámetros validados de esta vista.
