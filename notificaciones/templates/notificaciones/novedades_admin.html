@@ -1,5 +1,5 @@
 {% extends base_panel|default:"base.html" %}
-{% load ui %}
+{% load tz ui %}
 {% block title %}Novedades · GESICOM SENA{% endblock %}
 {% block content %}
   <div class="page-heading">
@@ -11,73 +11,106 @@
     <a class="button button-primary"
        href="{% url 'notificaciones:crear_novedad' %}">{% icon 'plus' %} Publicar novedad</a>
   </div>
-  <div class="communication-status panel">
-    <span>
-      <strong>{{ correos_pendientes }}</strong> correos en cola</span>
-    <span>
-      <strong>{{ correos_error }}</strong> requieren revisión</span>
-    <span>
-      <strong>{{ correos_cancelados }}</strong> cancelados por cambios o preferencias</span>
-    <span class="badge {% if trabajador_activo %}badge-success{% else %}badge-pending{% endif %}">
-      {% if trabajador_activo %}Procesador activo{% else %}Sin actividad reciente{% endif %}
-    </span>
-    {% if correos_error %}
-      <form method="post" action="{% url 'notificaciones:reintentar_correos' %}">
-        {% csrf_token %}
-        <button class="button button-secondary button-sm" type="submit">Reintentar envíos</button>
-      </form>
-    {% endif %}
-  </div>
-  <section class="panel" data-live-scope>
-    <form class="filters" method="get" data-live-form>
-      <div class="field search-field">
-        <label for="news-q">Buscar novedad</label>
-        <input id="news-q"
-               name="q"
-               value="{{ q }}"
-               maxlength="100"
-               data-live-input
-               placeholder="Título o contenido…">
-      </div>
-      <button class="button button-dark" type="submit">{% icon 'search' %} Buscar</button>
-      <a class="text-link"
-         href="{% url 'notificaciones:novedades_admin' %}"
-         data-live-link>Limpiar</a>
-    </form>
-    <div data-live-region="news">
-      <div class="table-toolbar">
-        <h2>{{ novedades.paginator.count }} novedades encontradas</h2>
-      </div>
-      {% for novedad in novedades %}
-        <article class="notice-item">
-          <span class="notice-icon">{% icon 'bell' %}</span>
-          <div class="notice-content">
-            <h3>{{ novedad.titulo }}</h3>
-            <small>{{ novedad.publicada_en|date:'d M Y · H:i' }} · {% if novedad.creada_por %}{{ novedad.creada_por.get_full_name|default:novedad.creada_por.username }}{% else %}Cuenta no disponible{% endif %}
-            </small>
-            <p>{{ novedad.contenido|linebreaksbr }}</p>
-            <div class="communication-reach">
-              <span>{{ novedad.destinatarios_total }} avisos</span>
-              <span>{{ novedad.leidas_total }} leídos</span>
-              <span>{{ novedad.enviados_total }} aceptados por correo</span>
-            </div>
-            {% if novedad.enlace_publico %}
-              <a class="text-link"
-                 href="{{ novedad.enlace_publico }}"
-                 target="_blank"
-                 rel="noopener noreferrer">Consultar enlace {% icon 'external' %}</a>
-            {% endif %}
-          </div>
-        </article>
-      {% empty %}
-        <div class="empty-state">
-          <span class="empty-symbol">{% icon 'bell' %}</span>
-          <h3>No hay novedades con estos filtros.</h3>
-          <p>Publica una novedad o ajusta la búsqueda.</p>
+  <div data-live-scope class="news-workspace">
+    <div data-live-region="news-mail">
+      <section class="communication-status panel news-mail"
+               aria-labelledby="news-mail-title">
+        <div class="news-mail-heading">
+          <h2 id="news-mail-title">Cola de avisos por correo</h2>
+          <span class="badge {% if trabajador_activo %}badge-success{% else %}badge-pending{% endif %}">
+            {% if trabajador_activo %}Procesador activo{% else %}Sin actividad reciente{% endif %}
+          </span>
         </div>
-      {% endfor %}
-      {% include "ui/paginacion.html" with pagina=novedades %}
+        <div class="news-mail-counts">
+          <span><strong>{{ correos_pendientes }}</strong> en cola</span>
+          <span><strong>{{ correos_error }}</strong> requiere{{ correos_error|pluralize:"n" }} revisión</span>
+          <span><strong>{{ correos_cancelados }}</strong> cancelado{{ correos_cancelados|pluralize }}</span>
+        </div>
+        {% if correos_error %}
+          <form method="post"
+                action="{% url 'notificaciones:reintentar_correos' %}"
+                data-submit>
+            {% csrf_token %}
+            <button class="button button-secondary button-sm" type="submit">Reintentar envíos</button>
+          </form>
+        {% endif %}
+        <p class="news-mail-note">Incluye novedades, plazos y revisiones. El reintento cubre todos los avisos con error; los filtros siguientes solo cambian el listado de novedades.</p>
+      </section>
     </div>
+    <section class="panel">
+      <form class="filters"
+            method="get"
+            action="{% url 'notificaciones:novedades_admin' %}"
+            data-live-form>
+        <div class="field search-field">{{ filtros_form.q.label_tag }}{{ filtros_form.q }}</div>
+        <div class="field">{{ filtros_form.audiencia.label_tag }}{{ filtros_form.audiencia }}</div>
+        <div class="field">{{ filtros_form.correo.label_tag }}{{ filtros_form.correo }}</div>
+        <button class="button button-dark" type="submit">{% icon 'search' %} Filtrar novedades</button>
+        <a class="text-link"
+           href="{% url 'notificaciones:novedades_admin' %}"
+           data-live-link>Limpiar</a>
+      </form>
+      <div data-live-region="news" class="news-list">
+        {% include "ui/filtros_errores.html" %}
+        <div class="table-toolbar">
+          <h2>{{ novedades.paginator.count }} novedad{{ novedades.paginator.count|pluralize:"es" }} encontrada{{ novedades.paginator.count|pluralize }}</h2>
+        </div>
+        {% if not filtros_form.errors %}
+          <p class="news-list-note">La audiencia muestra la configuración actual. Los conteos corresponden a los avisos ya generados.</p>
+          {% timezone "America/Bogota" %}
+            {% for novedad in novedades %}
+              <article class="notice-item" data-news-id="{{ novedad.pk }}">
+                <span class="notice-icon">{% icon 'bell' %}</span>
+                <div class="notice-content">
+                  <h3>{{ novedad.titulo }}</h3>
+                  <small>
+                    <time datetime="{{ novedad.publicada_en|date:'c' }}">{{ novedad.publicada_en|date:'d M Y · H:i' }} · Colombia</time>
+                    · {% if novedad.creada_por %}{{ novedad.creada_por.get_full_name|default:novedad.creada_por.username }}{% else %}Cuenta no disponible{% endif %}
+                  </small>
+                  {% with grupos=novedad.grupos.all %}
+                    <p class="news-audience">
+                      {% icon 'users' %}
+                      {% if grupos %}Grupos específicos: {{ grupos|join:", " }}{% else %}Toda la comunidad activa{% endif %}
+                    </p>
+                  {% endwith %}
+                  <p>{{ novedad.contenido|linebreaksbr }}</p>
+                  <div class="news-reading">
+                    <div class="news-reading-label">
+                      <span id="news-reading-{{ novedad.pk }}">{{ novedad.leidas_total }} de {{ novedad.destinatarios_total }} aviso{{ novedad.destinatarios_total|pluralize }} leído{{ novedad.destinatarios_total|pluralize }}</span>
+                      <strong>{{ novedad.lectura_porcentaje }} %</strong>
+                    </div>
+                    <progress value="{{ novedad.lectura_porcentaje }}"
+                              max="100"
+                              aria-labelledby="news-reading-{{ novedad.pk }}">{{ novedad.lectura_porcentaje }} %</progress>
+                  </div>
+                  <div class="news-delivery" aria-label="Estado de los avisos por correo">
+                    {% if novedad.enviados_total %}<span class="badge badge-success">{{ novedad.enviados_total }} aceptado{{ novedad.enviados_total|pluralize }} por correo</span>{% endif %}
+                    {% if novedad.pendientes_total %}<span class="badge badge-pending">{{ novedad.pendientes_total }} en cola</span>{% endif %}
+                    {% if novedad.errores_total %}<span class="badge badge-danger">{{ novedad.errores_total }} con error</span>{% endif %}
+                    {% if novedad.cancelados_total %}<span class="badge badge-muted">{{ novedad.cancelados_total }} cancelado{{ novedad.cancelados_total|pluralize }}</span>{% endif %}
+                    {% if novedad.sin_correo_total %}<span class="badge badge-muted">{{ novedad.sin_correo_total }} sin correo preparado</span>{% endif %}
+                    {% if not novedad.destinatarios_total %}<span class="news-list-note">Sin avisos generados.</span>{% endif %}
+                  </div>
+                  {% if novedad.enlace_publico %}
+                    <a class="text-link"
+                       href="{{ novedad.enlace_publico }}"
+                       target="_blank"
+                       rel="noopener noreferrer">Consultar enlace {% icon 'external' %}</a>
+                  {% endif %}
+                </div>
+              </article>
+            {% empty %}
+              <div class="empty-state">
+                <span class="empty-symbol">{% icon 'bell' %}</span>
+                <h3>No hay novedades con estos filtros.</h3>
+                <p>Publica una novedad o ajusta la búsqueda.</p>
+              </div>
+            {% endfor %}
+          {% endtimezone %}
+          {% include "ui/paginacion.html" with pagina=novedades %}
+        {% endif %}
+      </div>
+    </section>
     <p class="sr-only" role="status" data-live-status></p>
-  </section>
+  </div>
 {% endblock %}

@@ -7,6 +7,11 @@
     <form method="post" data-submit>
       {% csrf_token %}
       {{ form.non_field_errors }}{% for field in form.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}
+      {% if ayuda_publicacion %}<p class="password-help">{{ ayuda_publicacion }}</p>{% endif %}
+      {% if nuevo_formulario %}
+        <p class="password-help"><a class="text-link"
+                                    href="{{ nuevo_formulario }}">Abrir un formulario nuevo</a>. Conserva tus cambios antes de continuar.</p>
+      {% endif %}
       {% if conflicto %}
         <p class="action-notice">
           <a class="text-link" href="{{ request.path }}">Abrir la versión actual del plazo</a>

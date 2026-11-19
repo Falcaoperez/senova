@@ -2,6 +2,29 @@
 (() => {
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  document.addEventListener("session:expired", () => {
+    let login;
+    try {
+      login = new URL(
+        $("[data-login-url]")?.dataset.loginUrl || "/login/",
+        location.origin,
+      );
+      if (
+        login.origin !== location.origin ||
+        !/^https?:$/.test(login.protocol) ||
+        login.username ||
+        login.password
+      )
+        throw new Error();
+    } catch {
+      login = new URL("/login/", location.origin);
+    }
+    login.searchParams.set(
+      "next",
+      location.pathname + location.search + location.hash,
+    );
+    location.assign(login.href);
+  });
   const toast = (message, error = false) => {
     const region = $("#toast-region");
     if (!region) return;
@@ -218,15 +241,21 @@
   });
   const errorSummary = $("[data-error-summary]");
   errorSummary?.focus();
-  $$("[data-submit]").forEach((form) =>
+  const identifiedSubmitButtons = new WeakMap();
+  $$("[data-submit]").forEach((form) => {
+    const button = $("button[type=submit]", form);
+    if (button && $("input[name=solicitud]", form)?.value)
+      identifiedSubmitButtons.set(button, {
+        disabled: button.disabled,
+        children: [...button.childNodes].map((node) => node.cloneNode(true)),
+      });
     form.addEventListener("submit", () => {
-      const button = $("button[type=submit]", form);
       if (button) {
         button.disabled = true;
         button.textContent = "Guardando…";
       }
-    }),
-  );
+    });
+  });
   document.addEventListener("submit", async (event) => {
     const form = event.target.closest("[data-observation-form]");
     if (!form) return;
@@ -250,12 +279,9 @@
           "No se pudo procesar la respuesta. Recarga la página e intenta de nuevo.",
         );
       });
-      if (response.status === 401 && result.login_url) {
-        const login = new URL(result.login_url, location.origin);
-        if (login.origin === location.origin) {
-          location.assign(login);
-          return;
-        }
+      if (response.status === 401) {
+        document.dispatchEvent(new Event("session:expired"));
+        return;
       }
       if (!response.ok || result.error)
         throw new Error(result.error || "No se pudo guardar el cambio.");
@@ -358,10 +384,17 @@
     }
   });
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted)
-      $$("[data-submit] button:disabled").forEach((button) => {
-        button.disabled = false;
-        location.reload();
-      });
+    if (!event.persisted) return;
+    let reload = false;
+    $$("[data-submit] button:disabled").forEach((button) => {
+      const original = identifiedSubmitButtons.get(button);
+      button.disabled = original?.disabled ?? false;
+      if (original)
+        button.replaceChildren(
+          ...original.children.map((node) => node.cloneNode(true)),
+        );
+      else reload = true;
+    });
+    if (reload) location.reload();
   });
 })();

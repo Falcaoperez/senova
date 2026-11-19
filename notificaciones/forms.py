@@ -9,20 +9,50 @@ from django.utils import timezone
 from .models import Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
 
 
-class _FiltrosPlazosForm(forms.Form):
+class _FiltrosComunicacionesForm(forms.Form):
     q = forms.CharField(label="Búsqueda", required=False, max_length=100)
 
-    def consulta_url(self):
+    def consulta_url(self, *, pagina=None):
         if not self.is_valid():
             return ""
         params = QueryDict(mutable=True)
         for nombre in self.fields:
             if valor := self.cleaned_data.get(nombre):
                 params[nombre] = valor
+        if pagina and pagina > 1:
+            params["page"] = pagina
         return "?" + params.urlencode() if params else ""
 
 
-class FiltrosPlazosAdminForm(_FiltrosPlazosForm):
+class FiltrosNovedadesForm(_FiltrosComunicacionesForm):
+    q = forms.CharField(
+        label="Buscar novedad",
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(attrs={"id": "news-q", "data-live-input": True, "placeholder": "Título o contenido…"}),
+    )
+    audiencia = forms.ChoiceField(
+        label="Audiencia",
+        required=False,
+        choices=[("", "Todas las audiencias"), ("general", "Toda la comunidad"), ("grupos", "Grupos específicos")],
+        error_messages={"invalid_choice": "Selecciona una audiencia válida."},
+    )
+    correo = forms.ChoiceField(
+        label="Correo",
+        required=False,
+        choices=[
+            ("", "Todos los envíos"),
+            ("pendientes", "En cola"),
+            ("error", "Con errores"),
+            ("enviado", "Aceptados por correo"),
+            ("cancelado", "Cancelados"),
+            ("sin_correo", "Sin correos preparados"),
+        ],
+        error_messages={"invalid_choice": "Selecciona un estado de correo válido."},
+    )
+
+
+class FiltrosPlazosAdminForm(_FiltrosComunicacionesForm):
     proyecto = forms.ChoiceField(
         label="Proyecto",
         required=False,
@@ -37,7 +67,7 @@ class FiltrosPlazosAdminForm(_FiltrosPlazosForm):
     )
 
 
-class FiltrosSeguimientoForm(_FiltrosPlazosForm):
+class FiltrosSeguimientoForm(_FiltrosComunicacionesForm):
     estado = forms.ChoiceField(
         label="Entrega",
         required=False,
@@ -171,6 +201,24 @@ class FiltrosAgendaForm(forms.Form):
 
 
 class NovedadForm(forms.ModelForm):
+    solicitud = forms.CharField(required=False, max_length=512, widget=forms.HiddenInput)
+
+    def __init__(self, *args, usuario=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        if usuario is not None and not self.instance.pk:
+            from .publicacion import crear_solicitud_novedad
+
+            self.initial["solicitud"] = crear_solicitud_novedad(usuario)
+        else:
+            self.fields.pop("solicitud")
+
+    def clean_solicitud(self):
+        from .publicacion import verificar_solicitud_novedad
+
+        valor = self.cleaned_data.get("solicitud")
+        return verificar_solicitud_novedad(valor, self.usuario) if valor else None
+
     class Meta:
         model = Novedad
         fields = ["titulo", "contenido", "enlace", "grupos"]

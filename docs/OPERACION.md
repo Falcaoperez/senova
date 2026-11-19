@@ -26,6 +26,22 @@ Los PIN no se envían dentro de la petición web. La respuesta de recuperación 
 
 La cola ofrece entrega al menos una vez: un corte justo después de la aceptación del proveedor y antes de registrar el resultado puede producir una repetición. Los avisos internos por novedad/fase de plazo sí se deduplican con restricciones de la base de datos.
 
+## Consulta de novedades y avance de lectura
+
+El formulario **Publicar novedad** incluye una identificación firmada, vinculada al autor y válida durante 24 horas. Reenviar ese mismo formulario recupera la publicación aceptada sin cambiar su contenido, grupos, avisos ni correos preparados, incluso si los campos del reintento están incompletos. La validación fallida no consume la identificación. Para publicar otra novedad abre un formulario nuevo. Si el formulario venció o la publicación fue eliminada, conserva tus cambios y usa el enlace para abrir otro formulario; un reintento no recrea la publicación eliminada.
+
+La protección funciona sin JavaScript. Al restaurar una página identificada desde la memoria del navegador, el botón vuelve a estar disponible y se conservan sus campos e identificación. Los recibos son internos y no añaden opciones a la administración. No los purgues al eliminar una novedad. Los clientes antiguos que omiten la identificación y el alta nativa de Django conservan su comportamiento anterior y no tienen esta recuperación por formulario. La protección evita duplicar la preparación de avisos; el transporte SMTP mantiene la entrega al menos una vez descrita arriba.
+
+**Novedades** permite buscar por título/contenido y filtrar por audiencia general o grupos específicos, junto con correo en cola, con error, aceptado, cancelado o sin preparar. **En cola** incluye pendiente y procesando. **Sin correos preparados** selecciona publicaciones sin registros de correo, incluidas las que aún no tienen avisos. Una búsqueda de más de 100 caracteres, un carácter nulo o una opción desconocida muestra errores y ningún resultado; no se recorta para ejecutar otra búsqueda. Consulta GET/HEAD, filtros y paginación funcionan también sin JavaScript.
+
+Cada tarjeta muestra los avisos generados y leídos, un porcentaje de lectura y el desglose de correo. Filtrar por error selecciona la publicación completa y conserva sus demás conteos. Los grupos corresponden a la configuración actual de la novedad; los conteos corresponden a avisos ya generados. Un cambio posterior en grupos o pertenencias no reescribe esos avisos. Los correos aceptados por el transporte no confirman entrega en el buzón. Los horarios de publicación se fijan en Colombia.
+
+La cabecera de correo incluye todos los avisos de novedades, plazos y revisiones, y su reintento sigue siendo global para los errores. Los filtros solo afectan al listado de publicaciones. La cola de seguridad de PIN conserva su operación independiente. Las actualizaciones interactivas reemplazan ambas regiones, cola general y listado, sin reconstruir el documento ni el reloj.
+
+La consulta de conteo de publicaciones no agrupa sus notificaciones. La página recupera 20 publicaciones, precarga sus grupos y agrega las métricas solo para esos identificadores. Esto limita las métricas solicitadas y evita consultas por tarjeta; no garantiza latencia ni que MySQL examine solo 20 filas. Los filtros y métricas no requieren migraciones, permisos SQL ni dependencias nuevos. Recopila estáticos y reinicia web para cargar la consulta y los estilos.
+
+La protección de reintentos sí incorpora `notificaciones.0003_solicitudes_novedades`: respalda la base y aplica `python manage.py migrate --noinput --settings=SENNOVA.migration_settings` con la cuenta dedicada antes de reiniciar web y trabajador. Después recopila estáticos. La migración añade únicamente la tabla de recibos, sin rellenar publicaciones históricas ni modificar sus avisos. Los perfiles SQL vigentes cubren la nueva tabla dentro de su esquema; no se conceden permisos DDL al proceso web ni se añaden dependencias.
+
 ## Plazos y entregas
 
 Las fechas se muestran en `America/Bogota`. El usuario puede asociar una evidencia a un plazo de su grupo y proyecto. Se conserva la fecha límite aplicable al registro y se identifica una entrega tardía. Entregar el reporte detiene los avisos pendientes de ese plazo; la aprobación se gestiona por separado.
@@ -41,6 +57,12 @@ Si se utiliza OAuth2, la renovación del token corresponde al servicio de identi
 Las cuentas personales de Gmail tienen cuotas de envío. Dimensiona el volumen de avisos antes de usarlo con todos los usuarios; la cola no aumenta los límites del proveedor. Las direcciones `example.invalid` de las cuentas de revisión solo sirven con la captura local.
 
 ## Sesiones y cambios de cuenta
+
+Al abrir una página protegida, el acceso conserva su destino local mediante `next`. Después de autenticarte vuelves a esa consulta, con filtros y página; si la contraseña es incorrecta, el formulario mantiene usuario y destino pero no muestra la contraseña enviada. Sin destino válido se conserva el panel habitual del rol. La página de acceso señala el retorno con un aviso informativo y funciona sin JavaScript.
+
+La caducidad por inactividad o versión antigua conserva la dirección consultada en las peticiones HTML GET/HEAD. Cuando la detectan la campana, la búsqueda, una acción de bandeja o las observaciones, la interfaz conserva la ruta, los filtros aplicados y el fragmento de la página actual. El regreso usa GET: no guarda campos pendientes, no recupera contraseñas ni reenvía una operación anterior. Si una vista exige otro rol, su comprobación de permisos sigue rechazando el acceso. Los contratos JSON de caducidad mantienen su respuesta 401.
+
+Solo se aceptan caminos locales conocidos, con un máximo de 2.048 caracteres. Se descartan direcciones absolutas, otros sitios, caracteres de control, barras inversas, segmentos de punto y vueltas a la entrada/salida. No se muestra un destino rechazado en el formulario. Esta mejora no necesita migraciones ni cambios de permisos SQL o dependencias: recopila estáticos y reinicia web para cargar la navegación y el formulario.
 
 `/mi-cuenta/seguridad/` muestra las sesiones del usuario y permite cerrarlas mediante POST, CSRF y contraseña actual. La eliminación alcanza la caché y MySQL. El inicio de sesión registra la sesión antes de la primera navegación. `SESSION_IDLE_TIMEOUT` controla la caducidad por inactividad, con 1.800 segundos por defecto; la actividad visible se actualiza como máximo una vez por minuto para limitar escrituras.
 

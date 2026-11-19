@@ -1,5 +1,6 @@
 from datetime import timedelta
 from unittest.mock import patch
+from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -51,7 +52,7 @@ class SesionesYPerfilTests(TestCase):
         del session[CLAVE_VERSION]
         session.save()
         response = self.client.get(reverse("centro_seguridad"))
-        self.assertRedirects(response, reverse("login"))
+        self.assertRedirects(response, reverse("login") + "?" + urlencode({"next": reverse("centro_seguridad")}))
         self.assertEqual(self.client.get(reverse("editar_perfil")).status_code, 302)
 
     def test_security_page_contains_only_own_sessions_without_session_keys(self):
@@ -177,7 +178,7 @@ class SesionesYPerfilTests(TestCase):
             ultimo_uso=timezone.now() - timedelta(minutes=31)
         )
         response = self.client.get(reverse("centro_seguridad"))
-        self.assertRedirects(response, reverse("login"))
+        self.assertRedirects(response, reverse("login") + "?" + urlencode({"next": reverse("centro_seguridad")}))
         self.assertEqual(self.client.get(reverse("editar_perfil")).status_code, 302)
 
     @override_settings(SESSION_IDLE_TIMEOUT=1800)
