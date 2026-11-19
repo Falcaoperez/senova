@@ -1,11 +1,18 @@
 """Los grupos nativos comparten la política de permisos de GESICOM."""
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
+from django.db import router, transaction
+from django.db.models import QuerySet
+from django.db.models.deletion import ProtectedError
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
+
+from notificaciones.grupos import MENSAJE_GRUPO_ASIGNADO, grupos_con_comunicaciones
 
 from .permisos import ROLES_SISTEMA, GrupoNativoForm, grupo_protegido, guardar_grupo_nativo
 
@@ -45,6 +52,30 @@ class GrupoSeguroAdmin(GroupAdmin):
         if any(not self.has_delete_permission(request, obj) for obj in queryset):
             raise PermissionDenied
         super().delete_queryset(request, queryset)
+
+    def get_deleted_objects(self, objs, request):
+        eliminados, conteos, permisos, protegidos = super().get_deleted_objects(objs, request)
+        candidatos = objs if isinstance(objs, QuerySet) else Group.objects.filter(pk__in=[obj.pk for obj in objs])
+        if grupos_con_comunicaciones(candidatos).exists():
+            protegidos = [*protegidos, MENSAJE_GRUPO_ASIGNADO]
+        return eliminados, conteos, permisos, protegidos
+
+    def _borrado_protegido(self, request):
+        self.message_user(request, MENSAJE_GRUPO_ASIGNADO, level=messages.ERROR)
+        return HttpResponseRedirect(reverse("admin:auth_group_changelist"))
+
+    def delete_view(self, request, object_id, extra_context=None):
+        try:
+            return super().delete_view(request, object_id, extra_context)
+        except ProtectedError:
+            return self._borrado_protegido(request)
+
+    def response_action(self, request, queryset):
+        try:
+            with transaction.atomic(using=router.db_for_write(self.model)):
+                return super().response_action(request, queryset)
+        except ProtectedError:
+            return self._borrado_protegido(request)
 
     @method_decorator(sensitive_post_parameters("contrasena_actual"))
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):

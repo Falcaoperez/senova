@@ -325,6 +325,8 @@ def editar_plazo(request, pk=None):
         except ConflictoPlazo as error:
             form.add_error(None, error)
             conflicto = True
+        except ValidationError as error:
+            form.add_error(None, error)
         else:
             messages.success(
                 request, f"Plazo guardado. Se prepararon {total} avisos." if cambio else "El plazo no tiene cambios."

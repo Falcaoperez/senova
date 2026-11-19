@@ -9,6 +9,7 @@ from django.db.models import Q
 
 from Gesicom.solicitudes import crear_solicitud, verificar_solicitud
 
+from .grupos import bloquear_grupos
 from .models import Novedad, SolicitudNovedad
 from .services import publicar_novedad
 
@@ -77,13 +78,14 @@ def publicar_o_recuperar(actor, datos):
                 raise PermissionDenied
             if not creado:
                 return _resultado_previo(recibo, actor)
+        grupos = bloquear_grupos(datos.get("grupos", []))
         novedad = Novedad.objects.create(
             titulo=datos["titulo"],
             contenido=datos["contenido"],
             enlace=datos.get("enlace", ""),
             creada_por=actor,
         )
-        novedad.grupos.set(datos.get("grupos", []))
+        novedad.grupos.set(grupos)
         total = publicar_novedad(novedad)
         if recibo:
             recibo.novedad = novedad

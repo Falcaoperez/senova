@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from cuentas.models import RegistroSeguridad
 
+from .grupos import bloquear_grupos
 from .models import CorreoPendiente, Notificacion, PlazoReporte
 from .selectors import destinatarios
 from .services import _crear_avisos, anunciar_plazo
@@ -53,6 +54,7 @@ def _cancelar_anteriores(plazo):
 @transaction.atomic
 def guardar_plazo(actor, datos, *, pk=None, nativo=False):
     _autorizar(actor, nativo=nativo, crear=pk is None)
+    grupos = {grupo.pk for grupo in bloquear_grupos(datos.get("grupos", []))}
     plazo = (
         PlazoReporte.objects.select_for_update().filter(pk=pk).first()
         if pk is not None
@@ -62,7 +64,6 @@ def guardar_plazo(actor, datos, *, pk=None, nativo=False):
         raise Http404
     if pk is not None:
         comprobar_revision(plazo, datos.get("revision_actual"))
-    grupos = {grupo.pk for grupo in datos.get("grupos", [])}
     actuales = set(plazo.grupos.values_list("pk", flat=True)) if pk is not None else set()
     cambios = pk is None or grupos != actuales or any(getattr(plazo, field) != datos[field] for field in CAMPOS)
     if not cambios:
