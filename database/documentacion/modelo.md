@@ -2,6 +2,8 @@
 
 Las migraciones de cada aplicación son la definición del esquema. No se mantiene un segundo archivo de creación de tablas: `python manage.py migrate --settings=SENNOVA.migration_settings` construye o actualiza MySQL con la cuenta dedicada, conservando los registros. El índice de correos normalizados se añade mediante migración SQL porque admite varias cuentas de mantenimiento sin dirección.
 
+Las relaciones de grupos con novedades y plazos conservan sus tablas intermedias y claves foráneas. Su ausencia significa toda la comunidad. Para evitar que la cascada de Django cambie ese alcance, `notificaciones/signals.py` impide borrar un grupo mientras conserve cualquiera de esas asociaciones. Los servicios y formularios nativos bloquean las filas de los grupos elegidos antes de guardarlas; una selección retirada se rechaza en vez de omitirse. Esta regla utiliza el esquema existente, sin disparadores, migraciones ni permisos adicionales.
+
 Las solicitudes de recuperación mantienen el hash único del PIN y un índice de caducidad/uso. El índice `usuario, utilizado, -creado_en` acota la selección de una solicitud vigente y la invalidación de solicitudes de esa cuenta. La migración `cuentas.0008` retira dos índices redundantes; no altera los datos de las solicitudes.
 
 ```mermaid

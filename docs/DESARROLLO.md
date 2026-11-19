@@ -47,6 +47,7 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Plazos, novedades, bandeja y calendario | `notificaciones/urls.py` y sus módulos |
 | Filtros y métricas administrativas de novedades | `FiltrosNovedadesForm`, `notificaciones/novedades.py`, `templates/notificaciones/novedades_admin.html` y `tests/test_novedades_admin.py` |
 | Reintentos de publicación | `notificaciones/publicacion.py`, `SolicitudNovedad`, `NovedadForm` y `tests/test_publicacion_segura.py`; firmas compartidas en `Gesicom/solicitudes.py` |
+| Protección de grupos y audiencias | `notificaciones/grupos.py`, `signals.py`, `ADMIN/admin.py`, `notificaciones/tests/test_grupos.py` y `ADMIN/tests/test_grupos_audiencias.py` |
 | Elegibilidad de recordatorios y audiencia actual | `notificaciones/services.py`, `notificaciones/selectors.py` y `tests/test_recordatorios_sql.py` |
 | Filtros de administración y CSV de seguimiento | `FiltrosPlazosAdminForm`, `FiltrosSeguimientoForm`, `notificaciones/selectors.py` y `notificaciones/exportaciones.py` |
 | Recorridos de exportación con SQL acotado | `Gesicom/exportaciones.py`: cursor por identificador para directorio/seguimiento, por orden validado para reportes/auditoría y por fecha límite para iCalendar |
@@ -77,6 +78,7 @@ python manage.py test notificaciones.tests.test_filtros_admin --settings=SENNOVA
 python manage.py test notificaciones.tests.test_recordatorios_sql --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_novedades_admin --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_publicacion_segura Gesicom.tests.test_solicitudes --settings=SENNOVA.test_settings --noinput
+python manage.py test notificaciones.tests.test_grupos ADMIN.tests.test_grupos_audiencias --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_directorio --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_calendario --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_calendario notificaciones.tests.test_calendario_sql Gesicom.tests.test_exportaciones_sql ADMIN.tests.test_exportaciones_sql --settings=SENNOVA.test_settings --noinput

@@ -161,6 +161,14 @@ El CSV de evidencias conserva primero las seis columnas históricas y añade est
 
 ## Permisos de grupos
 
+Los grupos con novedades o plazos asignados no pueden eliminarse, incluso con superusuario. Esto incluye plazos archivados y comunicaciones dirigidas a varios grupos. Antes de borrar un grupo, edita esas comunicaciones y elige explícitamente los grupos que deben conservar el acceso; después vuelve a la confirmación de borrado. Quitar todos los grupos significa dirigir la comunicación a toda la comunidad: conserva al menos uno si debe seguir restringida. Los seis roles del sistema y la protección del personal mantienen sus reglas anteriores; un grupo adicional libre puede borrarse normalmente.
+
+La confirmación muestra un motivo general, sin revelar títulos de comunicaciones a operadores de grupos. Un borrado masivo que incluya un grupo asignado conserva todo el lote. Si alguien asigna una comunicación después de abrir la confirmación, el servidor vuelve a comprobarlo y muestra un aviso sin registrar una eliminación que no ocurrió. Si un grupo desaparece al guardar una novedad o plazo, el formulario muestra un error y permite corregir la selección, sin crear una publicación o avisos parciales.
+
+Los POST de borrado individual y de acciones del listado nativo admiten 20 intentos por cuenta y por tipo de operación cada diez minutos. Al agotarse devuelven HTTP 429; si falla el contador compartido, HTTP 503 sin ejecutar la operación. Conservan CSRF, permisos y auditoría de ruta/estado, sin cuerpos del formulario.
+
+Esta protección se registra al iniciar Django: al actualizar reinicia todos los procesos web y trabajadores. No necesita una migración ni cambios de privilegios de MySQL.
+
 El panel conserva los seis permisos históricos, con etiquetas que describen su función real. “Sin asignar” retira la concesión del grupo; no deniega permisos que una persona obtenga de otros grupos o de asignaciones individuales. El acceso a Django admin también requiere una cuenta de personal autorizada. Los permisos nativos no sustituyen los roles que gobiernan los paneles de GESICOM.
 
 Guardar requiere contraseña actual y una revisión calculada sobre el grupo y sus permisos completos. La actualización bloquea el grupo, vuelve a comprobar la autorización y valida todo el formulario antes de escribir. Una pestaña antigua se rechaza; guardar sin cambios no genera otro movimiento de auditoría. Los permisos ajenos al catálogo se conservan al usar el panel de GESICOM. Se aceptan los nombres de campo históricos y el valor anterior de retirada para mantener compatibilidad.
