@@ -2,6 +2,29 @@
 (() => {
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  document.addEventListener("session:expired", () => {
+    let login;
+    try {
+      login = new URL(
+        $("[data-login-url]")?.dataset.loginUrl || "/login/",
+        location.origin,
+      );
+      if (
+        login.origin !== location.origin ||
+        !/^https?:$/.test(login.protocol) ||
+        login.username ||
+        login.password
+      )
+        throw new Error();
+    } catch {
+      login = new URL("/login/", location.origin);
+    }
+    login.searchParams.set(
+      "next",
+      location.pathname + location.search + location.hash,
+    );
+    location.assign(login.href);
+  });
   const toast = (message, error = false) => {
     const region = $("#toast-region");
     if (!region) return;
@@ -256,12 +279,9 @@
           "No se pudo procesar la respuesta. Recarga la página e intenta de nuevo.",
         );
       });
-      if (response.status === 401 && result.login_url) {
-        const login = new URL(result.login_url, location.origin);
-        if (login.origin === location.origin) {
-          location.assign(login);
-          return;
-        }
+      if (response.status === 401) {
+        document.dispatchEvent(new Event("session:expired"));
+        return;
       }
       if (!response.ok || result.error)
         throw new Error(result.error || "No se pudo guardar el cambio.");

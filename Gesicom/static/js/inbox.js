@@ -98,7 +98,7 @@
         destination.origin === location.origin &&
         destination.pathname === "/login/"
       ) {
-        location.assign(response.url);
+        document.dispatchEvent(new Event("session:expired"));
         return;
       }
       const result = await response.json();

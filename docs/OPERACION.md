@@ -58,6 +58,12 @@ Las cuentas personales de Gmail tienen cuotas de envío. Dimensiona el volumen d
 
 ## Sesiones y cambios de cuenta
 
+Al abrir una página protegida, el acceso conserva su destino local mediante `next`. Después de autenticarte vuelves a esa consulta, con filtros y página; si la contraseña es incorrecta, el formulario mantiene usuario y destino pero no muestra la contraseña enviada. Sin destino válido se conserva el panel habitual del rol. La página de acceso señala el retorno con un aviso informativo y funciona sin JavaScript.
+
+La caducidad por inactividad o versión antigua conserva la dirección consultada en las peticiones HTML GET/HEAD. Cuando la detectan la campana, la búsqueda, una acción de bandeja o las observaciones, la interfaz conserva la ruta, los filtros aplicados y el fragmento de la página actual. El regreso usa GET: no guarda campos pendientes, no recupera contraseñas ni reenvía una operación anterior. Si una vista exige otro rol, su comprobación de permisos sigue rechazando el acceso. Los contratos JSON de caducidad mantienen su respuesta 401.
+
+Solo se aceptan caminos locales conocidos, con un máximo de 2.048 caracteres. Se descartan direcciones absolutas, otros sitios, caracteres de control, barras inversas, segmentos de punto y vueltas a la entrada/salida. No se muestra un destino rechazado en el formulario. Esta mejora no necesita migraciones ni cambios de permisos SQL o dependencias: recopila estáticos y reinicia web para cargar la navegación y el formulario.
+
 `/mi-cuenta/seguridad/` muestra las sesiones del usuario y permite cerrarlas mediante POST, CSRF y contraseña actual. La eliminación alcanza la caché y MySQL. El inicio de sesión registra la sesión antes de la primera navegación. `SESSION_IDLE_TIMEOUT` controla la caducidad por inactividad, con 1.800 segundos por defecto; la actividad visible se actualiza como máximo una vez por minuto para limitar escrituras.
 
 En **Todas mis sesiones**, la actual aparece primero. Los filtros **La sesión actual** y **Otras sesiones** distinguen los accesos de la cuenta, con 20 filas por página y orden estable por actividad e identificador. **Actualizar lista** conserva el filtro y la página. Una opción desconocida muestra un error y ningún acceso; los enlaces no copian parámetros ajenos. La consulta solo admite GET/HEAD y los filtros funcionan sin JavaScript.

@@ -12,6 +12,7 @@ from django.utils import timezone
 from SENNOVA.middleware import client_ip
 
 from .models import SesionUsuario
+from .navegacion import ingreso_para_lectura
 from .sesiones import CLAVE_VERSION, VERSION_SEGURIDAD
 
 
@@ -45,7 +46,7 @@ class SesionesMiddleware:
             if request.session.get(CLAVE_VERSION) != VERSION_SEGURIDAD:
                 logout(request)
                 messages.info(request, "La seguridad de las sesiones se actualizó. Ingresa de nuevo para continuar.")
-                return acceso_caducado() if respuesta_json else redirect("login")
+                return acceso_caducado() if respuesta_json else redirect(ingreso_para_lectura(request))
             ahora = timezone.now()
             try:
                 sesion, _ = SesionUsuario.objects.get_or_create(
@@ -61,7 +62,7 @@ class SesionesMiddleware:
                 ):
                     logout(request)
                     messages.info(request, "Tu sesión terminó por inactividad. Ingresa de nuevo para continuar.")
-                    return acceso_caducado() if respuesta_json else redirect("login")
+                    return acceso_caducado() if respuesta_json else redirect(ingreso_para_lectura(request))
                 if not resumen and ahora - sesion.ultimo_uso >= timedelta(seconds=60):
                     SesionUsuario.objects.filter(pk=sesion.pk).update(ultimo_uso=ahora, direccion_ip=client_ip(request))
             except DatabaseError:

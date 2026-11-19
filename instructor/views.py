@@ -4,8 +4,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import Group, User
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods, require_POST
+
+from cuentas.navegacion import destino_de_acceso
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +24,9 @@ RUTAS_ROLES = {
 
 @require_http_methods(["GET", "POST"])
 @sensitive_post_parameters()
+@never_cache
 def login_view(request):
+    destino = destino_de_acceso(request.POST.get("next", request.GET.get("next", "")))
     rol = request.GET.get("role") or request.POST.get("role") or ""
     if rol not in RUTAS_ROLES:
         rol = ""
@@ -50,6 +55,9 @@ def login_view(request):
                 request.session.set_expiry(60 * 60 * 24 * 14)
             else:
                 request.session.set_expiry(0)
+
+            if destino:
+                return redirect(destino)
 
             grupos_usuario = set(usuario.groups.values_list("name", flat=True))
 
@@ -83,10 +91,11 @@ def login_view(request):
                 "error": "Usuario o contraseña incorrectos",
                 "role": rol,
                 "username": entrada_usuario,
+                "next": destino,
             },
         )
 
-    context = {"role": rol}
+    context = {"role": rol, "next": destino}
     if mensaje_exito:
         context["success"] = mensaje_exito
     return render(request, "login.html", context)

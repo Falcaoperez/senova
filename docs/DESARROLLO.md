@@ -36,6 +36,7 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | --- | --- |
 | Evidencias, páginas, perfil y reportes | `Gesicom/urls.py` y módulos de esa aplicación |
 | Inicio de sesión, registro y salida | `instructor/urls.py` y sus vistas |
+| Regreso después del acceso | `cuentas/navegacion.py`, `instructor/views.py`, `instructor/tests/test_retorno_login.py` y el evento `session:expired` en `Gesicom/static/js/sena.js` |
 | Recuperación de contraseña y sesiones | `cuentas/urls.py` y sus módulos |
 | Centro de seguridad y filtros de sesiones | `cuentas/seguridad.py`, `FiltrosSesionesForm`, `cuentas/templates/cuentas/seguridad.html` y `Gesicom/static/css/security.css` |
 | Formularios de recuperación HTML/JSON | `cuentas/presentacion.py`, `cuentas/views.py` y parciales de `cuentas/templates/cuentas/` |
@@ -67,6 +68,7 @@ Instala `requirements-dev.txt` en el entorno virtual. Las pruebas de MySQL usan 
 ```bash
 python manage.py test --settings=SENNOVA.test_settings --noinput
 python manage.py test cuentas.tests --settings=SENNOVA.test_settings --noinput
+python manage.py test instructor.tests cuentas.tests.test_seguridad cuentas.tests.test_limites --settings=SENNOVA.test_settings --noinput
 python manage.py test cuentas.tests.test_sesiones_panel cuentas.tests.test_seguridad --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_auditoria --settings=SENNOVA.test_settings --noinput
 python manage.py test Gesicom.tests.test_exportaciones_sql ADMIN.tests.test_exportaciones_sql --settings=SENNOVA.test_settings --noinput
