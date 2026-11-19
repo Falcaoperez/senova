@@ -70,10 +70,10 @@ class GrupoSeguroAdmin(GroupAdmin):
         except ProtectedError:
             return self._borrado_protegido(request)
 
-    def response_action(self, request, queryset):
+    def response_action(self, request, queryset, **kwargs):
         try:
             with transaction.atomic(using=router.db_for_write(self.model)):
-                return super().response_action(request, queryset)
+                return super().response_action(request, queryset, **kwargs)
         except ProtectedError:
             return self._borrado_protegido(request)
 

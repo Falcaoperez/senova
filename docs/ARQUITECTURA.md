@@ -26,6 +26,7 @@
 | `ADMIN/services.py` | Cambios de estado y roles, protección de cuentas y auditoría |
 | `ADMIN/auditoria.py` | Consultas filtradas, etiquetas y filas CSV del historial administrativo |
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
+| `cuentas/correos.py` y `notificaciones/services.py` | Reservas de correo, estado actual por mensaje y guardado condicionado a la reclamación vigente |
 | `cuentas/navegacion.py` | Validación del destino local de acceso y retorno de consultas al caducar la sesión |
 | `cuentas/seguridad.py` | Lista personal de sesiones, filtros y metadatos de presentación; las operaciones conservan reautenticación |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
@@ -39,6 +40,7 @@
 | `notificaciones/icalendar.py` | Descarga privada iCalendar con SQL acotado, escape de texto y plegado UTF-8 sin dependencias adicionales |
 | `database/` | Documentación del esquema, diagnóstico SQL y preparación de la base de pruebas |
 | `scripts/` | Operación, copias de seguridad y medición de carga |
+| `scripts/configurar_entorno.py` y `.vscode/` | Entorno virtual local, dependencias y tareas de desarrollo; conserva la configuración privada existente |
 | `docs/` | Operación, seguridad, arquitectura y verificaciones |
 
 Cada aplicación mantiene sus propias rutas en `urls.py`. `SENNOVA/urls.py` compone estos archivos y conserva los nombres públicos anteriores, junto con los accesos de compatibilidad de `core/`. Las pruebas se agrupan en seis carpetas `tests/`, por aplicación y por funcionalidad; la configuración `SENNOVA.test_settings` conserva su ruta. La [guía de desarrollo](DESARROLLO.md) incluye el mapa de archivos y los comandos por módulo.
@@ -74,6 +76,10 @@ El alta de evidencias utiliza `SolicitudEnvio` como recibo interno, sin panel ni
 La publicación desde el formulario personalizado utiliza `SolicitudNovedad`. El recibo con UUID único, la novedad, sus grupos y los avisos/correos preparados se confirman en una misma transacción. Las peticiones concurrentes de un formulario se coordinan mediante el bloqueo de su recibo, sin bloquear globalmente las cuentas administradoras. El reintento devuelve el primer resultado y no aplica los nuevos campos. La eliminación de la novedad conserva el recibo sin destino para impedir su recreación. La consulta de recuperación verifica de nuevo que el autor esté activo y autorizado.
 
 `Gesicom/solicitudes.py` conserva el protocolo de evidencias y permite indicar un dominio de firma distinto para novedades: las identificaciones se ligan a la cuenta y vencen a las 24 horas. `sena.js` restaura el botón y su icono al recibir `pageshow` persistente en estos formularios identificados, conservando los campos y el identificador. Los clientes antiguos que no envían identificación y el alta nativa de Django mantienen su comportamiento previo; esta recuperación se aplica al formulario personalizado identificado. La cola SMTP conserva su entrega al menos una vez.
+
+Los dos procesadores de correo conservan los identificadores y el vencimiento asignado al reclamar su lote bajo bloqueo de MySQL. Antes de preparar cada mensaje consultan por clave primaria, estado en proceso, ese mismo vencimiento y reserva todavía vigente. El procesador de seguridad vuelve a leer también la solicitud y la cuenta; no materializa los cuerpos y credenciales de todo el lote al empezar. Cada resultado se guarda mediante una actualización condicionada a la misma reclamación, sin sobrescribir un trabajador posterior. SMTP permanece fuera de las transacciones.
+
+En seguridad, la invalidación de una solicitud por cifrado inválido o agotamiento de intentos solo se confirma si se guardó el resultado de esa reclamación. La transacción corta bloquea primero la solicitud y después actualiza su correo, como los cambios de credenciales, para conservar ese orden de bloqueo. Una cancelación durante SMTP conserva la recuperación invalidada. Los avisos ordinarios mantienen el registro de una aceptación SMTP aunque el aviso se haya cancelado durante ese envío; un fallo no reactiva la cancelación.
 
 Los archivos compartidos se buscan por nombre indexado y se retiran después del commit solo si ninguna evidencia los referencia. La consulta de disponibilidad no modifica registros históricos. Las vistas de texto leen como máximo 64 KB del origen, más un byte para detectar truncamiento; la descarga conserva el archivo completo.
 

@@ -16,8 +16,12 @@ concurrency:
 
 jobs:
   validar:
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.15"]
     runs-on: ubuntu-latest
-    container: python:3.12-bookworm
+    container: python:${{ matrix.python }}-bookworm
     timeout-minutes: 15
     services:
       mysql:
@@ -57,7 +61,9 @@ jobs:
       - name: Bibliotecas de MySQL
         run: apt-get update && apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config default-mysql-client
       - name: Dependencias
-        run: python -m pip install -r requirements-dev.txt
+        run: |
+          python --version
+          python -m pip install -r requirements-dev.txt
       - name: Cuentas de ejecución, migraciones y pruebas
         env:
           MYSQL_PWD: ci-root-password
