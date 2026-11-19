@@ -1,6 +1,6 @@
 # Verificación de la revisión
 
-Fecha: 11 de noviembre de 2026. Las mediciones corresponden al entorno local de revisión.
+Las revisiones se registran por fecha y las mediciones corresponden al entorno local de revisión. Los apartados iniciales documentan el 11 de noviembre de 2026; los cambios posteriores tienen sus propios apartados fechados.
 
 ## Pruebas y dependencias
 
@@ -311,3 +311,15 @@ Se retiraron dos publicaciones temporales (una durante la prueba de eliminación
 - Ruff, formato, plantilla, migraciones pendientes, producción, estáticos, sintaxis de los cuatro módulos JavaScript, cuatro controles estrictos de MySQL y auditoría de dependencias correctos. No se añadieron tablas, permisos SQL, dependencias ni paneles. La web se recargó y el trabajador conserva captura local de correo.
 
 Se retiraron una cuenta, una evidencia y un aviso ficticios, los avisos automáticos asociados y nueve sesiones de revisión, incluida la sesión que caducó durante la prueba. Se conservaron las cuentas y datos anteriores, con la auditoría ordinaria de las acciones. No se enviaron correos reales ni se reintentó la cola general.
+
+## Descarga de calendario con SQL acotado — 19 de noviembre de 2026
+
+- Antes del cambio, 1.200 plazos se recuperaban con una sola consulta sin límite de filas; una retirada de grupo después del primer evento seguía entregando los otros 1.199 registros ya consultados. Las pruebas reprodujeron la consulta sin límite y la ausencia de una nueva comprobación del grupo para el resto de la descarga.
+- 507 pruebas completas con MySQL 8.4/Python 3.12, incluidos ocho casos nuevos. Las 42 pruebas específicas de calendario, iCalendar y exportaciones CSV pasaron también con SQLite en memoria. Se actualizó la expectativa anterior de una consulta única para comprobar ahora el agregado de corte y la lectura limitada del lote; los conteos SQL usan el entrecomillado del motor.
+- Con 1.200 plazos, tres fechas con empates y grupos privados, el generador de eventos utilizó cuatro consultas: máximo inicial y tres lecturas de hasta 500 filas, sin OFFSET. Conservó el orden por fecha/identificador y 1.200 UID distintos. Esta medición excluye autenticación y middleware; limita las filas devueltas por lectura, no las examinadas internamente por MySQL, y no demuestra latencia o capacidad HTTP.
+- Los casos nuevos comprobaron descarga HTTP filtrada de 600 eventos, archivo vacío, último lote exacto de 1.000 eventos, exclusión de altas posteriores, eliminación/archivo antes del siguiente lote y retirada de grupo incluso con pertenencias precargadas. Tras esa retirada se enviaron solo los 500 registros del lote ya leído. Las fechas, revisión, última modificación y los cuatro estados de entrega se conservaron sin consultas por evento. Las lecturas seleccionan únicamente los campos del evento y sus anotaciones; no cargan credenciales, observaciones o archivos de evidencia.
+- Un archivo de referencia de dos plazos ficticios con texto UTF-8, saltos, comas y punto y coma conservó exactamente sus bytes antes y después del cambio, utilizando la misma base pública y referencia temporal. La exportación mantiene escape, plegado de 75 octetos, UTC, UID estable, nombre y cabeceras de adjunto privado.
+- 31 comprobaciones funcionales de Chromium: calendario a 320, 390, 768 y 1.440 píxeles; descargas reales con y sin JavaScript; paginación sin recorte; exclusión de plazo ajeno y archivado; cierre de enero de Colombia a las 04:59 UTC del 1 de febrero; filtro inválido sin adjunto; y acceso anónimo sin eventos. Los seis roles conservaron su calendario a 390 y 1.440 píxeles y no pudieron exportar el calendario ajeno con un parámetro de usuario. Sin desbordamientos, errores JavaScript, infracciones CSP ni peticiones externas en esos recorridos.
+- Ruff, formato, migraciones pendientes, configuración de producción, estáticos, cuatro controles estrictos de MySQL y auditoría de dependencias correctos. No hay tablas, índices, permisos, dependencias, paneles ni controladores JavaScript nuevos. El exportador reutiliza el recorrido SQL existente; no ofrece una instantánea transaccional de ediciones ni revocación de datos ya leídos. La web se recargó y el trabajador conserva Mailpit.
+
+Se retiraron una cuenta, dos grupos, cuatro plazos y siete sesiones de revisión, junto con los avisos automáticos asociados a la cuenta ficticia. Los 1.200 plazos de las pruebas SQL se crearon únicamente en la base de pruebas independiente. Se conservaron las cuentas y los datos previos; no se publicaron novedades ni se reintentó la cola general.

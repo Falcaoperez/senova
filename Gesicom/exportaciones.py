@@ -1,4 +1,4 @@
-"""Respuestas CSV reutilizables, con Unicode y sin acumulación del documento."""
+"""Recorridos SQL acotados y respuestas CSV sin acumular el documento."""
 
 import csv
 

@@ -35,7 +35,7 @@
 | `notificaciones/exportaciones.py` | Filas del seguimiento con campos visibles y fecha explícita de Colombia |
 | `notificaciones/resumen.py` | Conteo y cuatro avisos recientes compartidos durante una petición, sin caché entre cuentas |
 | `notificaciones/calendario.py` | Límites mensuales de Colombia y distribución acotada de plazos en 42 días |
-| `notificaciones/icalendar.py` | Descarga privada iCalendar, escape de texto y plegado UTF-8 sin dependencias adicionales |
+| `notificaciones/icalendar.py` | Descarga privada iCalendar con SQL acotado, escape de texto y plegado UTF-8 sin dependencias adicionales |
 | `database/` | Documentación del esquema, diagnóstico SQL y preparación de la base de pruebas |
 | `scripts/` | Operación, copias de seguridad y medición de carga |
 | `docs/` | Operación, seguridad, arquitectura y verificaciones |
@@ -79,6 +79,8 @@ Los archivos compartidos se buscan por nombre indexado y se retiran después del
 El estado del historial contiene solo un identificador del documento y un índice, sin datos de formularios. Una navegación cancelada o fallida vuelve a la entrada aplicada sin borrar Adelante. Las nuevas ediciones cancelan las actualizaciones en curso; los eventos de cambio generados al retirar un campo enfocado no se confunden con otra edición del usuario. Los fragmentos se comprueban antes de sustituir regiones y cada consulta tiene un tiempo máximo de espera.
 
 La lista, el calendario y la descarga de **Mis plazos** comparten `FiltrosAgendaForm` y `agenda_filtrada`: validan búsqueda, proyecto, estado, identificador y mes antes de consultar. La pertenencia actual a los grupos y las entregas de la cuenta se resuelven con subconsultas `Exists`, sin una consulta por evento. La cuadrícula admite hasta 500 plazos por mes y avisa si hay más; la lista paginada y la descarga conservan todos los resultados autorizados. El calendario reutiliza el panel y el controlador de navegación existentes, sin tablas ni rutas de administración duplicadas.
+
+La descarga iCalendar reutiliza `iterar_ordenados` por `fecha_limite` e identificador ascendente, con un corte inicial de clave primaria y lecturas de hasta 500 filas. En MySQL, `iterator(chunk_size=...)` por sí solo no limita las filas de la consulta ni impide que el controlador las almacene completas; el recorrido compartido aplica `LIMIT 500` en SQL. Solo se seleccionan identidad, título, descripción, proyecto, fechas y revisión, junto con las anotaciones de entrega. Los filtros, el estado activo y la pertenencia a grupos se consultan de nuevo en cada lote. No se congela una instantánea de ediciones: un lote ya leído puede terminar de enviarse y las fechas modificadas durante el recorrido pueden afectar a los lotes siguientes.
 
 `FiltrosBandejaForm` valida búsqueda, tipo, lectura, identificador y fechas antes de consultar o marcar resultados. `inbox.js` envía los formularios de lectura con CSRF y solicita una actualización al controlador de navegación compartido. `workspace:refresh` conserva la consulta aplicada y espera si hay una búsqueda o actualización en curso. `notifications:changed` solicita el contador vigente mediante el controlador existente de la campana. Las acciones nativas conservan su redirección cuando no se solicita el protocolo JSON.
 
