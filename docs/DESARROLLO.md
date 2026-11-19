@@ -49,12 +49,13 @@ docs/                           arquitectura, desarrollo, operación y verificac
 | Reintentos de publicación | `notificaciones/publicacion.py`, `SolicitudNovedad`, `NovedadForm` y `tests/test_publicacion_segura.py`; firmas compartidas en `Gesicom/solicitudes.py` |
 | Elegibilidad de recordatorios y audiencia actual | `notificaciones/services.py`, `notificaciones/selectors.py` y `tests/test_recordatorios_sql.py` |
 | Filtros de administración y CSV de seguimiento | `FiltrosPlazosAdminForm`, `FiltrosSeguimientoForm`, `notificaciones/selectors.py` y `notificaciones/exportaciones.py` |
-| Recorrido CSV con SQL acotado | `Gesicom/exportaciones.py`: cursor por identificador para directorio/seguimiento y por orden validado para reportes/auditoría |
+| Recorridos de exportación con SQL acotado | `Gesicom/exportaciones.py`: cursor por identificador para directorio/seguimiento, por orden validado para reportes/auditoría y por fecha límite para iCalendar |
 | Campos y orden de los CSV | `Gesicom/reportes.py`, `ADMIN/auditoria.py` y los módulos `tests/test_exportaciones_sql.py` de ambas aplicaciones |
 | Validación de filtros | Formularios de la aplicación, compartidos con la descarga |
 | Auditoría administrativa | `ADMIN/auditoria.py`: consulta y presentación sin mutaciones |
 | Correcciones y entregas | `Gesicom/services.py`, con formularios y selectores |
 | Horarios mensuales e iCalendar | `notificaciones/calendario.py` y `notificaciones/icalendar.py` |
+| Lotes SQL del calendario | `notificaciones/tests/test_calendario_sql.py`: orden, alcance actual, campos mínimos y descarga completa |
 | Lectura interactiva de avisos | `Gesicom/static/js/inbox.js`, con filtros y servicios de `notificaciones/` |
 | Hora de Colombia en el pie | `Gesicom/templates/ui/reloj_colombia.html`, `static/js/clock.js` y `static/css/clock.css` dentro de `Gesicom/` |
 | Cambios del esquema | `migrations/` de la aplicación propietaria del modelo |
@@ -78,6 +79,7 @@ python manage.py test notificaciones.tests.test_novedades_admin --settings=SENNO
 python manage.py test notificaciones.tests.test_publicacion_segura Gesicom.tests.test_solicitudes --settings=SENNOVA.test_settings --noinput
 python manage.py test ADMIN.tests.test_directorio --settings=SENNOVA.test_settings --noinput
 python manage.py test notificaciones.tests.test_calendario --settings=SENNOVA.test_settings --noinput
+python manage.py test notificaciones.tests.test_calendario notificaciones.tests.test_calendario_sql Gesicom.tests.test_exportaciones_sql ADMIN.tests.test_exportaciones_sql --settings=SENNOVA.test_settings --noinput
 ruff check .
 python manage.py makemigrations --check --dry-run
 ```

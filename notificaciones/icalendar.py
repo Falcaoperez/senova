@@ -9,6 +9,8 @@ from django.http import StreamingHttpResponse
 from django.urls import reverse
 from django.utils import timezone
 
+from Gesicom.exportaciones import iterar_ordenados
+
 
 def escapar_texto(value):
     value = str(value or "").replace("\r\n", "\n").replace("\r", "\n")
@@ -60,7 +62,10 @@ def lineas_calendario(queryset, base, ahora):
         "METHOD:PUBLISH",
         "X-WR-CALNAME:Mis plazos · GESICOM",
     ]
-    for plazo in queryset.order_by("fecha_limite", "pk").iterator(chunk_size=200):
+    plazos = queryset.only(
+        "pk", "titulo", "descripcion", "proyecto", "fecha_limite", "actualizado_en", "creado_en", "revision"
+    )
+    for plazo in iterar_ordenados(plazos, campo="fecha_limite"):
         estado = (
             "Entregado"
             if plazo.entregado and plazo.a_tiempo
