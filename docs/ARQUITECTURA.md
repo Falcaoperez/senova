@@ -26,6 +26,7 @@
 | `ADMIN/services.py` | Cambios de estado y roles, protección de cuentas y auditoría |
 | `ADMIN/auditoria.py` | Consultas filtradas, etiquetas y filas CSV del historial administrativo |
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
+| `cuentas/navegacion.py` | Validación del destino local de acceso y retorno de consultas al caducar la sesión |
 | `cuentas/seguridad.py` | Lista personal de sesiones, filtros y metadatos de presentación; las operaciones conservan reautenticación |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
@@ -52,6 +53,10 @@ El listado administrativo de novedades utiliza `FiltrosNovedadesForm`. La audien
 Los filtros usan las mismas vistas GET con o sin JavaScript. La mejora interactiva sustituye únicamente los resultados, mantiene los parámetros en la URL y permite volver con el navegador. Los cambios de cuentas siguen siendo formularios POST con CSRF, confirmación de identidad y validación del servidor. Las acciones sensibles no se ejecutan desde la búsqueda.
 
 Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js. `search.js` gestiona la búsqueda, `workspace.js` las acciones administrativas y `admin-dashboard.js` el centro de operaciones; los estilos compartidos de estas interacciones permanecen en `operations.css`.
+
+El inicio de sesión valida `next` mediante `cuentas/navegacion.py` y lo conserva en el formulario incluso ante credenciales incorrectas. Solo acepta rutas locales conocidas de hasta 2.048 caracteres; comprueba también el camino decodificado y excluye acceso/salida y segmentos ambiguos. El middleware conserva la consulta en las redirecciones HTML de GET/HEAD por inactividad o versión antigua de sesión. La navegación de retorno no sustituye los permisos de la vista de destino.
+
+La campana, la búsqueda, las acciones de bandeja y las observaciones emiten `session:expired` al detectar la caducidad. Un único manejador en `sena.js` utiliza la entrada local configurada en el documento y añade la ruta, consulta y fragmento actuales; no toma el destino de un JSON remoto. No guarda campos ni repite operaciones POST. El formulario funciona sin JavaScript y usa los estilos informativos existentes, sin otro panel ni controlador independiente. El acceso añade `no-store` también para visitantes anónimos.
 
 `Gesicom/admin.py` utiliza las mismas reglas de versiones y registro de movimientos. El formulario de corrección reutiliza `formulario.html`; no añade un segundo panel de evidencias. Los estilos de ese flujo están en `evidencias.css`. La tabla de movimientos es de solo lectura en la administración.
 

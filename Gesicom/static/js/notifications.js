@@ -105,15 +105,8 @@
         signal: ownController.signal,
       });
       if (response.status === 401) {
-        const data = await response.json();
-        const login = new URL(data.login_url || "/login/", location.origin);
         stopped = true;
-        if (
-          login.origin === location.origin &&
-          /^https?:$/.test(login.protocol)
-        )
-          location.assign(login.href);
-        else location.assign("/login/");
+        document.dispatchEvent(new Event("session:expired"));
         return;
       }
       if (!response.ok) {

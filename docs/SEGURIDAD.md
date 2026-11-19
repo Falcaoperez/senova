@@ -28,6 +28,8 @@ Los PIN y contraseñas se borran de los campos al abandonar la página o ante un
 - Las solicitudes se vinculan mediante HMAC al identificador, hash de contraseña y correo de la cuenta. Un cambio realizado incluso desde el administrador nativo invalida el PIN y la autorización verificada anterior.
 - Los correos de seguridad se encolan en la misma transacción que la solicitud o el cambio de credenciales. No se contacta SMTP desde la recuperación web, cuya respuesta no revela si existe la cuenta ni si el proveedor falla.
 - El cierre de sesión y la revocación requieren POST y CSRF. Los cambios sensibles exigen contraseña actual y confirmación de la contraseña nueva.
+- `next` se valida en cada GET/POST de acceso: solo caminos locales conocidos de hasta 2.048 caracteres, sin controles, barras inversas, segmentos de punto o destinos de entrada/salida. El camino decodificado también se comprueba. Se conserva escapado en el formulario y no concede permisos sobre la vista de destino.
+- Las páginas de acceso incluyen `no-store` y `no-cache` incluso sin sesión. Se mantienen CSRF, límites, rotación de sesión, bloqueo de cuentas inactivas y las opciones de duración del acceso. La interfaz utiliza un único evento de caducidad y la entrada local configurada; ignora direcciones de acceso contenidas en JSON y nunca reenvía el cuerpo de un POST.
 
 ## Cola de seguridad y sesiones
 

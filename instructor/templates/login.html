@@ -5,6 +5,10 @@
   <p class="eyebrow">BIENVENIDO A TU ESPACIO</p>
   <h2>Inicia sesión</h2>
   <p class="page-description">Continúa construyendo conocimiento con nosotros.</p>
+  {% if next %}
+    <p class="alert"
+       role="status">{% icon 'arrow' %}<span>Al ingresar volverás a la página que estabas consultando.</span></p>
+  {% endif %}
   {% if error %}
     <div class="alert alert-error" role="alert">{% icon 'info' %}{{ error }}</div>
   {% endif %}
@@ -14,6 +18,7 @@
   <form method="post" data-submit>
     {% csrf_token %}
     <input type="hidden" name="role" value="{{ role|default:'' }}">
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     <div class="field">
       <label for="username">Usuario o correo electrónico</label>
       <input id="username"

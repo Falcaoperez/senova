@@ -35,6 +35,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 ## Funcionalidades
 
 - Inicio de sesión por usuario o correo y panel según el rol.
+- Regreso a la página consultada después de ingresar, con filtros conservados y validación de destinos locales.
 - Registro y edición de perfil con validación de correo y contraseña.
 - Recuperación en tres pasos: solicitud, PIN de **6 dígitos**, y nueva contraseña después de verificarlo.
 - Recuperación disponible con y sin JavaScript, con progreso por pasos, caducidad visible y conservación del avance verificado.
