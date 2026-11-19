@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GESICOM: Django",
+      "type": "debugpy",
+      "request": "launch",
+      "pythonArgs": ["-X", "frozen_modules=off"],
+      "program": "${workspaceFolder}/manage.py",
+      "args": ["runserver", "127.0.0.1:8000", "--noreload"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
+        "DJANGO_DEBUG": "True"
+      },
+      "django": true,
+      "justMyCode": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "GESICOM: correos en consola local",
+      "type": "debugpy",
+      "request": "launch",
+      "pythonArgs": ["-X", "frozen_modules=off"],
+      "program": "${workspaceFolder}/manage.py",
+      "args": ["procesar_notificaciones", "--continuo", "--intervalo", "30", "--lote", "50"],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
+        "DJANGO_DEBUG": "True",
+        "EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend"
+      },
+      "justMyCode": true,
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "GESICOM: aplicación y correos locales",
+      "configurations": ["GESICOM: Django", "GESICOM: correos en consola local"],
+      "stopAll": true
+    }
+  ]
+}

@@ -1,6 +1,22 @@
 # GESICOM · SENA / SENNOVA
 
-Gestión de evidencias, reportes, novedades y plazos con Django 5.2 LTS, MySQL 8.4 y Redis. Las evidencias pendientes o rechazadas admiten correcciones con historial y control de versiones. La interfaz utiliza Work Sans, el logosímbolo del SENA y una estructura compartida para todos los roles.
+Gestión de evidencias, reportes, novedades y plazos con Django 6.1, MySQL 8.4 y Redis. Las evidencias pendientes o rechazadas admiten correcciones con historial y control de versiones. La interfaz utiliza Work Sans, el logosímbolo del SENA y una estructura compartida para todos los roles.
+
+## Ejecutar en Visual Studio Code
+
+Abre la carpeta que contiene `manage.py`, instala las extensiones recomendadas y prepara `.venv` con tu Python 3.15. También se admiten Python 3.12, 3.13 y 3.14:
+
+```powershell
+# Windows
+py -3.15 scripts/configurar_entorno.py --inicio-rapido
+```
+
+```bash
+# Linux/macOS
+python3.15 scripts/configurar_entorno.py --inicio-rapido
+```
+
+Selecciona `.venv` en **Python: Select Interpreter**, elige **GESICOM: aplicación y correos locales** y pulsa **F5**. En una instalación nueva se prepara SQLite, correo en consola y cuentas privadas en `.local/desarrollo/credenciales_revision.json`. Si `.env` ya existe, se conserva y se utilizan sus servicios; no se modifica esa base. La [guía de VS Code](docs/VSCODE.md) incluye requisitos del cliente MySQL, tareas y solución de errores de importación o PowerShell.
 
 ## Inicio local con Docker
 
@@ -61,7 +77,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Bandeja personal, lectura de avisos y preferencias de correo.
 - Filtros por fechas de Colombia y cambios de lectura individuales o masivos sin recargar la bandeja.
 - Reloj con hora y fecha de Colombia en el pie de la aplicación, adaptable a móvil.
-- Cola de correo con lotes, bloqueo entre trabajadores y reintentos con espera.
+- Cola de correo con lotes, reservas vigentes por trabajador, comprobación actual de cada mensaje y reintentos con espera.
 - Administración de usuarios, roles y permisos; edición de datos, estado, roles y contraseña.
 - Directorio con CSV de todos los resultados filtrados y conservación de filtros y página al guardar.
 - Historial administrativo con búsqueda, fechas de Colombia, detalles y CSV filtrado de todos los resultados.
@@ -126,12 +142,11 @@ Cada aplicación mantiene sus rutas en `urls.py` y sus pruebas en `tests/`. `SEN
 
 ## Desarrollo sin contenedor de aplicación
 
-Requiere Python 3.12, MySQL 8.4, Redis y las bibliotecas de desarrollo del cliente MySQL para instalar `mysqlclient`.
+Requiere Python 3.12 a 3.15, MySQL 8.4, Redis y las bibliotecas de desarrollo del cliente MySQL para instalar `mysqlclient`.
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+python3.15 scripts/configurar_entorno.py
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python scripts/configurar_local.py
 python manage.py migrate --settings=SENNOVA.migration_settings
 python manage.py collectstatic --noinput
@@ -166,6 +181,6 @@ Lee [docs/OPERACION.md](docs/OPERACION.md), [docs/SEGURIDAD.md](docs/SEGURIDAD.m
 
 El trabajo continúa en el fork `santiagoCoy2025/senova`. Cada bloque usa una rama nueva y un pull request a `develop`. Después de pasar las comprobaciones e integrar el PR, se elimina la rama de trabajo; `develop` y `main` se conservan. Las instrucciones están en [AGENTS.md](AGENTS.md).
 
-GitHub Actions ejecuta las comprobaciones con Python 3.12, MySQL y Redis: código, migraciones, pruebas, configuración de producción, estáticos y auditoría de dependencias. Las acciones externas se fijan por SHA. Los valores de autenticación que aparecen en el workflow pertenecen exclusivamente a servicios desechables del trabajo de CI.
+GitHub Actions ejecuta las comprobaciones con Python 3.12 y 3.15, cada uno con sus servicios MySQL y Redis: código, migraciones, pruebas, configuración de producción, estáticos y auditoría de dependencias. Las acciones externas se fijan por SHA. Los valores de autenticación que aparecen en el workflow pertenecen exclusivamente a servicios desechables del trabajo de CI.
 
 La referencia visual es el [Manual de Identidad Visual SENA 2024](https://www.sena.edu.co/es-co/Documents/MANUAL_IDENTIDAD_VISUAL_SENA_2024.pdf). Work Sans se distribuye localmente con su licencia SIL Open Font License y el logo conserva los trazados y el color del recurso oficial.

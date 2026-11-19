@@ -41,6 +41,12 @@ El centro de seguridad limita las operaciones al propietario, pide reautenticaci
 
 La preparación de la lista consulta solo identificador, agente, IP, creación y último uso; calcula la marca de sesión actual en SQL y no carga las claves ni el contenido de las sesiones en cada tarjeta. La autenticación mantiene sus comprobaciones habituales. Los filtros de presentación nunca amplían el propietario, una opción inválida devuelve una lista vacía y la paginación usa rutas internas con parámetros validados. Señalar inactividad no sustituye ni adelanta la comprobación del middleware. La pantalla admite GET/HEAD; los cierres mantienen sus rutas, POST, CSRF y contraseña actual.
 
+## Reservas de correo y cancelaciones
+
+Las colas de seguridad y avisos vinculan cada procesamiento al vencimiento que el trabajador asignó al reclamar sus filas. Antes de preparar un mensaje verifican por clave primaria que siga en proceso, conserve esa reserva y no haya vencido. El guardado exige la misma reclamación, evitando que un proceso retrasado sobrescriba el estado de otro. El procesador de seguridad vuelve a leer cuenta y solicitud por mensaje para detectar cancelación, verificación, uso y cambios de credenciales posteriores al comienzo del lote.
+
+Los fallos de descifrado o el último intento solo invalidan la solicitud si la actualización condicionada del correo corresponde todavía al trabajador. Ambas escrituras son transaccionales; el bloqueo de solicitud precede al de correo, como en los cambios de cuenta. SMTP se ejecuta fuera de esa transacción. Una cancelación posterior a la comprobación no puede revocar un envío ya iniciado o aceptado; la recuperación cancelada sigue inválida y las garantías de entrega al menos una vez se conservan. No cambian cifrado, caducidad del PIN, preferencias ni permisos SQL.
+
 ## Consulta administrativa de novedades
 
 La consulta exige administrador o superusuario antes de procesar los filtros. Personal de Django u otros roles no reciben el listado ni sus métricas. Los filtros se validan y sus valores se parametrizan con el ORM; una entrada inválida no se ignora ni se recorta. La paginación conserva únicamente búsqueda, audiencia, correo y número de página validado. Se mantienen las respuestas privadas y la misma autorización en documentos completos y fragmentos.
@@ -58,6 +64,8 @@ Las vistas comprueban el propietario o el rol revisor. Los archivos se sirven me
 Las plantillas escapan contenido, los gráficos usan JSON seguro y los CSV neutralizan celdas que podrían ejecutarse como fórmulas. Se aplica una política CSP con scripts, conexiones, fuentes y marcos limitados al propio origen.
 
 ## Configuración y operación
+
+El instalador de desarrollo verifica que `.venv` sea un entorno aislado de Python 3.12 a 3.15 y corresponda al intérprete que lo ejecuta antes de instalar; pip exige un entorno virtual. El inicio rápido crea `.env` de forma exclusiva con permisos privados y clave aleatoria solo si no existe. En ese caso las migraciones y las cuentas de revisión se limitan explícitamente a SQLite local, con caché y correo en consola, incluso ante variables de conexión heredadas. Un `.env` existente se conserva sin migrar ni crear cuentas en su base. La configuración de depuración del trabajador usa correo en consola; el entorno operativo del proyecto mantiene Mailpit. No se publican entornos virtuales, datos ni credenciales.
 
 Las claves, credenciales y cuentas de revisión viven en `.env` y `.local/`, excluidos tanto de Git como de la imagen. La aplicación no crea administradores con contraseñas fijas. El contenedor se ejecuta como usuario sin privilegios.
 

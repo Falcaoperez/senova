@@ -17,7 +17,7 @@ La primera integración incorpora el rediseño ya preparado y estas mejoras de s
 
 - El remitente elegido es `santiagoocoy2025@gmail.com`, por Gmail con STARTTLS. Las contraseñas de aplicación y tokens se configuran de forma privada.
 - Nunca añadas `.env`, `.local/`, bases de datos, archivos de usuarios, logs ni credenciales al historial.
-- Usa Python 3.12 y MySQL para verificar migraciones y concurrencia.
+- Verifica migraciones y concurrencia con MySQL en Python 3.12 y Python 3.15.
 - Para cambios de autenticación, permisos o persistencia: `python manage.py test --settings=SENNOVA.test_settings --noinput`, `python manage.py makemigrations --check --dry-run` y `ruff check .`.
 - Comprueba `DJANGO_DEBUG=False python manage.py check --deploy` y los recursos estáticos cuando corresponda.
 - El entorno local captura correo con Mailpit. No confundas esa captura con entrega real de Gmail.
