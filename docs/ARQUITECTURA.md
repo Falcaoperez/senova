@@ -40,6 +40,7 @@
 | `notificaciones/icalendar.py` | Descarga privada iCalendar con SQL acotado, escape de texto y plegado UTF-8 sin dependencias adicionales |
 | `database/` | Documentación del esquema, diagnóstico SQL y preparación de la base de pruebas |
 | `scripts/` | Operación, copias de seguridad y medición de carga |
+| `scripts/configurar_entorno.py` y `.vscode/` | Entorno virtual local, dependencias y tareas de desarrollo; conserva la configuración privada existente |
 | `docs/` | Operación, seguridad, arquitectura y verificaciones |
 
 Cada aplicación mantiene sus propias rutas en `urls.py`. `SENNOVA/urls.py` compone estos archivos y conserva los nombres públicos anteriores, junto con los accesos de compatibilidad de `core/`. Las pruebas se agrupan en seis carpetas `tests/`, por aplicación y por funcionalidad; la configuración `SENNOVA.test_settings` conserva su ruta. La [guía de desarrollo](DESARROLLO.md) incluye el mapa de archivos y los comandos por módulo.

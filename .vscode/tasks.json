@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": {
+      "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
+      "DJANGO_DEBUG": "True"
+    }
+  },
+  "tasks": [
+    {
+      "label": "GESICOM: preparar .venv",
+      "type": "process",
+      "command": "python3.12",
+      "args": ["scripts/configurar_entorno.py", "--inicio-rapido"],
+      "windows": {
+        "command": "py",
+        "args": ["-3.12", "scripts/configurar_entorno.py", "--inicio-rapido"]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GESICOM: comprobar Django",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["manage.py", "check"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "GESICOM: aplicar migraciones",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["manage.py", "migrate", "--settings=SENNOVA.migration_settings"],
+      "problemMatcher": []
+    },
+    {
+      "label": "GESICOM: recopilar estáticos",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["manage.py", "collectstatic", "--noinput"],
+      "problemMatcher": []
+    },
+    {
+      "label": "GESICOM: pruebas de Django",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["manage.py", "test", "--settings=SENNOVA.test_settings", "--noinput"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "GESICOM: revisar código",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["-m", "ruff", "check", "."],
+      "problemMatcher": []
+    }
+  ]
+}

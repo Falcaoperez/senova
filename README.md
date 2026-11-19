@@ -2,6 +2,22 @@
 
 Gestión de evidencias, reportes, novedades y plazos con Django 5.2 LTS, MySQL 8.4 y Redis. Las evidencias pendientes o rechazadas admiten correcciones con historial y control de versiones. La interfaz utiliza Work Sans, el logosímbolo del SENA y una estructura compartida para todos los roles.
 
+## Ejecutar en Visual Studio Code
+
+Abre la carpeta que contiene `manage.py`, instala las extensiones recomendadas y prepara `.venv` con Python 3.12:
+
+```powershell
+# Windows
+py -3.12 scripts/configurar_entorno.py --inicio-rapido
+```
+
+```bash
+# Linux/macOS
+python3.12 scripts/configurar_entorno.py --inicio-rapido
+```
+
+Selecciona `.venv` en **Python: Select Interpreter**, elige **GESICOM: aplicación y correos locales** y pulsa **F5**. En una instalación nueva se prepara SQLite, correo en consola y cuentas privadas en `.local/desarrollo/credenciales_revision.json`. Si `.env` ya existe, se conserva y se utilizan sus servicios; no se modifica esa base. La [guía de VS Code](docs/VSCODE.md) incluye requisitos del cliente MySQL, tareas y solución de errores de importación o PowerShell.
+
 ## Inicio local con Docker
 
 Clona la rama de trabajo integrada y entra en el proyecto:
@@ -129,9 +145,8 @@ Cada aplicación mantiene sus rutas en `urls.py` y sus pruebas en `tests/`. `SEN
 Requiere Python 3.12, MySQL 8.4, Redis y las bibliotecas de desarrollo del cliente MySQL para instalar `mysqlclient`.
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+python3.12 scripts/configurar_entorno.py
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python scripts/configurar_local.py
 python manage.py migrate --settings=SENNOVA.migration_settings
 python manage.py collectstatic --noinput
