@@ -6,8 +6,20 @@ from .plazos import guardar_plazo
 from .services import publicar_novedad
 
 
+class _AudienciaAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        base = super().get_form(request, obj, **kwargs)
+
+        class FormularioConAudiencia(base):
+            def __init__(self, *args, **form_kwargs):
+                form_kwargs["bloquear_grupos"] = True
+                super().__init__(*args, **form_kwargs)
+
+        return FormularioConAudiencia
+
+
 @admin.register(Novedad)
-class NovedadAdmin(admin.ModelAdmin):
+class NovedadAdmin(_AudienciaAdmin):
     form = NovedadForm
     fields = NovedadForm.Meta.fields
 
@@ -26,7 +38,7 @@ class NovedadAdmin(admin.ModelAdmin):
 
 
 @admin.register(PlazoReporte)
-class PlazoReporteAdmin(admin.ModelAdmin):
+class PlazoReporteAdmin(_AudienciaAdmin):
     search_fields = ["titulo", "proyecto"]
     form = PlazoReporteForm
     readonly_fields = ["version", "revision", "actualizado_en", "creado_por", "creado_en"]

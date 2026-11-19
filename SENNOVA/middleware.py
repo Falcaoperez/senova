@@ -54,6 +54,8 @@ class RateLimitMiddleware:
         "permisos": (1000, 600, 20),
         "auth_group_change": (1000, 600, 20),
         "auth_group_add": (1000, 600, 20),
+        "auth_group_delete": (1000, 600, 20),
+        "auth_group_changelist": (1000, 600, 20),
     }
 
     def __init__(self, get_response):
@@ -87,7 +89,7 @@ class RateLimitMiddleware:
             else "admin_personalizado:gestionar_usuarios"
             if request.resolver_match.namespace == "admin_personalizado"
             else "admin:auth_group_changelist"
-            if name in {"auth_group_change", "auth_group_add"}
+            if name in {"auth_group_change", "auth_group_add", "auth_group_delete", "auth_group_changelist"}
             else "notificaciones:plazos_admin"
             if request.resolver_match.namespace == "notificaciones"
             else "centro_seguridad"
@@ -177,6 +179,8 @@ class AuditMiddleware:
                     "editar_perfil",
                     "revocar_sesion",
                     "cerrar_otras_sesiones",
+                    "auth_group_delete",
+                    "auth_group_changelist",
                 }
             )
         ):

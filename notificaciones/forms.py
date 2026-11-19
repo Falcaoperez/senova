@@ -6,6 +6,7 @@ from django.db import connection
 from django.http import QueryDict
 from django.utils import timezone
 
+from .grupos import bloquear_grupos
 from .models import Notificacion, Novedad, PlazoReporte, PreferenciasNotificacion
 
 
@@ -200,7 +201,19 @@ class FiltrosAgendaForm(forms.Form):
         return "?" + params.urlencode() if params else ""
 
 
-class NovedadForm(forms.ModelForm):
+class _AudienciaProtegida:
+    def __init__(self, *args, bloquear_grupos=False, **kwargs):
+        self._bloquear_grupos = bloquear_grupos
+        super().__init__(*args, **kwargs)
+
+    def clean_grupos(self):
+        grupos = self.cleaned_data["grupos"]
+        if self._bloquear_grupos:
+            bloquear_grupos(grupos)
+        return grupos
+
+
+class NovedadForm(_AudienciaProtegida, forms.ModelForm):
     solicitud = forms.CharField(required=False, max_length=512, widget=forms.HiddenInput)
 
     def __init__(self, *args, usuario=None, **kwargs):
@@ -240,7 +253,7 @@ class NovedadForm(forms.ModelForm):
         return enlace
 
 
-class PlazoReporteForm(forms.ModelForm):
+class PlazoReporteForm(_AudienciaProtegida, forms.ModelForm):
     fecha_limite = forms.DateTimeField(
         label="Fecha y hora límite (Colombia)",
         widget=forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
