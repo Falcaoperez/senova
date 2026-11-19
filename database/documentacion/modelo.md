@@ -60,6 +60,8 @@ erDiagram
 
 `Gesicom_rol` e `Gesicom_instructorprofile` pertenecen al esquema histórico. Se conservan para mantener compatibilidad; la autorización actual utiliza los grupos de Django. No se duplican sus registros ni se añaden nuevos paneles basados en esas tablas.
 
+Las dos colas reutilizan `bloqueado_hasta` para comparar la reserva asignada al trabajador con la almacenada al leer y guardar cada mensaje. Las consultas de envío son por clave primaria y requieren estado en proceso y reserva vigente. Un resultado tardío no sustituye una reclamación posterior. La invalidación final del PIN y el resultado del correo de seguridad se confirman juntos, bloqueando solicitud antes de correo; la conexión SMTP queda fuera de la transacción. No se incorporan campos, índices ni concesiones nuevas.
+
 La desactivación de una cuenta revoca sus sesiones e invalida sus recuperaciones antes de permitir una futura reactivación. Las operaciones masivas admiten hasta 100 cuentas, bloquean las filas en orden y validan todo el lote antes de modificarlo. El cambio de contraseña utiliza los validadores oficiales de Django con el usuario como contexto.
 
 Cada evidencia tiene una versión creciente y una fecha de última actualización. La migración 0013 incorpora el estado de los registros previos con actor desconocido, manteniendo sus fechas originales. El historial no contiene contraseñas ni copias de los adjuntos.

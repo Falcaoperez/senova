@@ -26,6 +26,10 @@ Los PIN no se envían dentro de la petición web. La respuesta de recuperación 
 
 La cola ofrece entrega al menos una vez: un corte justo después de la aceptación del proveedor y antes de registrar el resultado puede producir una repetición. Los avisos internos por novedad/fase de plazo sí se deduplican con restricciones de la base de datos.
 
+Cada trabajador comprueba el estado y la reserva vigentes antes de preparar el siguiente mensaje. Si la reserva venció o fue recuperada por otro trabajador, deja ese correo sin consumir; una reserva vencida puede recuperarse en la siguiente reclamación normal. Los PIN vuelven a comprobar cuenta, dirección, contraseña, uso y verificación de la solicitud por mensaje. Una cancelación o cambio producido durante el envío anterior del lote se tiene en cuenta al avanzar al siguiente.
+
+El resultado tardío de un trabajador no modifica la reserva, intentos ni errores de otro. Tampoco invalida su recuperación por un fallo antiguo. Esta comprobación ocurre antes de preparar cada mensaje: no retira un envío SMTP que ya empezó o fue aceptado. El contador de enviados representa aceptaciones del transporte; no certifica recepción en la bandeja final del destinatario. Al actualizar reinicia todos los trabajadores para cargar estas comprobaciones; no hacen falta migraciones ni privilegios SQL adicionales.
+
 ## Consulta de novedades y avance de lectura
 
 El formulario **Publicar novedad** incluye una identificación firmada, vinculada al autor y válida durante 24 horas. Reenviar ese mismo formulario recupera la publicación aceptada sin cambiar su contenido, grupos, avisos ni correos preparados, incluso si los campos del reintento están incompletos. La validación fallida no consume la identificación. Para publicar otra novedad abre un formulario nuevo. Si el formulario venció o la publicación fue eliminada, conserva tus cambios y usa el enlace para abrir otro formulario; un reintento no recrea la publicación eliminada.

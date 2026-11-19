@@ -41,6 +41,12 @@ El centro de seguridad limita las operaciones al propietario, pide reautenticaci
 
 La preparación de la lista consulta solo identificador, agente, IP, creación y último uso; calcula la marca de sesión actual en SQL y no carga las claves ni el contenido de las sesiones en cada tarjeta. La autenticación mantiene sus comprobaciones habituales. Los filtros de presentación nunca amplían el propietario, una opción inválida devuelve una lista vacía y la paginación usa rutas internas con parámetros validados. Señalar inactividad no sustituye ni adelanta la comprobación del middleware. La pantalla admite GET/HEAD; los cierres mantienen sus rutas, POST, CSRF y contraseña actual.
 
+## Reservas de correo y cancelaciones
+
+Las colas de seguridad y avisos vinculan cada procesamiento al vencimiento que el trabajador asignó al reclamar sus filas. Antes de preparar un mensaje verifican por clave primaria que siga en proceso, conserve esa reserva y no haya vencido. El guardado exige la misma reclamación, evitando que un proceso retrasado sobrescriba el estado de otro. El procesador de seguridad vuelve a leer cuenta y solicitud por mensaje para detectar cancelación, verificación, uso y cambios de credenciales posteriores al comienzo del lote.
+
+Los fallos de descifrado o el último intento solo invalidan la solicitud si la actualización condicionada del correo corresponde todavía al trabajador. Ambas escrituras son transaccionales; el bloqueo de solicitud precede al de correo, como en los cambios de cuenta. SMTP se ejecuta fuera de esa transacción. Una cancelación posterior a la comprobación no puede revocar un envío ya iniciado o aceptado; la recuperación cancelada sigue inválida y las garantías de entrega al menos una vez se conservan. No cambian cifrado, caducidad del PIN, preferencias ni permisos SQL.
+
 ## Consulta administrativa de novedades
 
 La consulta exige administrador o superusuario antes de procesar los filtros. Personal de Django u otros roles no reciben el listado ni sus métricas. Los filtros se validan y sus valores se parametrizan con el ORM; una entrada inválida no se ignora ni se recorta. La paginación conserva únicamente búsqueda, audiencia, correo y número de página validado. Se mantienen las respuestas privadas y la misma autorización en documentos completos y fragmentos.
