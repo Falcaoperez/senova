@@ -56,6 +56,7 @@ Los datos de MySQL, archivos y credenciales de revisión se conservan en volúme
 - Administración de plazos con filtros validados, opción sin proyecto específico y CSV completo del seguimiento por lotes SQL.
 - Asociación del reporte con su plazo, identificación de entregas tardías y suspensión de recordatorios cuando ya se entregó.
 - Calendario mensual personal en Mis plazos, con estados, filtros y descarga privada `.ics` para importación manual.
+- Descarga del calendario por lotes SQL de hasta 500 plazos, con orden estable y campos del evento seleccionados.
 - Bandeja personal, lectura de avisos y preferencias de correo.
 - Filtros por fechas de Colombia y cambios de lectura individuales o masivos sin recargar la bandeja.
 - Reloj con hora y fecha de Colombia en el pie de la aplicación, adaptable a móvil.

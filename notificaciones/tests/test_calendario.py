@@ -298,7 +298,7 @@ class CalendarioTests(TestCase):
         self.assertTrue(any("Texto\\; con\\, comas\\\\\\nBEGIN:VEVENT" in linea for linea in data))
         self.assertNotIn("\x00", "\n".join(data))
 
-    def test_export_includes_every_page_with_one_query_for_events(self):
+    def test_export_includes_every_page_with_bounded_event_queries(self):
         PlazoReporte.objects.bulk_create(
             [PlazoReporte(titulo=f"Entrega de prueba {i}", fecha_limite=utc("2026-11-20T14:00:00")) for i in range(240)]
         )
@@ -307,8 +307,11 @@ class CalendarioTests(TestCase):
         with CaptureQueriesContext(connection) as queries:
             data = lineas(self.client.get(self.ics, {"mes": "2026-11"}))
         self.assertEqual(data.count("BEGIN:VEVENT"), 242)
-        self.assertEqual(sum("FROM `notificaciones_plazoreporte`" in q["sql"] for q in queries), 1)
-        self.assertLessEqual(len(queries), 6)
+        tabla = "FROM " + connection.ops.quote_name(PlazoReporte._meta.db_table)
+        lecturas = [q["sql"] for q in queries if tabla in q["sql"]]
+        self.assertEqual(len(lecturas), 2)
+        self.assertEqual(sum("LIMIT 500" in sql for sql in lecturas), 1)
+        self.assertLessEqual(len(queries), 7)
         self.assertEqual(len({linea for linea in data if linea.startswith("UID:")}), 242)
 
     def test_calendar_is_bounded_and_export_keeps_results_beyond_preview_limit(self):

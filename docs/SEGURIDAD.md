@@ -123,6 +123,8 @@ Los campos de texto iCalendar normalizan saltos de línea, eliminan controles y 
 
 La lectura no crea avisos, modifica entregas ni utiliza credenciales SMTP. Una copia descargada permanece fuera del control del portal: revocar el acceso impide nuevas descargas, pero no retira archivos previamente guardados o importados.
 
+La exportación iCalendar vuelve a aplicar su alcance SQL en cada lote de hasta 500 filas. El cursor utiliza fecha límite e identificador, sin OFFSET, y el corte inicial excluye altas posteriores. Retirar un grupo, archivar o eliminar un plazo impide leerlo en los lotes siguientes; la comprobación no retira datos del lote ya leído. La selección omite autor, anticipación, versión interna de avisos y otros campos ajenos al evento, conservando la revisión y las anotaciones de entrega. No añade una cuenta, permiso SQL, bloqueo de escritura ni tabla. El recorrido no congela ediciones concurrentes de fechas.
+
 ## Consulta de auditoría
 
 El historial y CSV administrativo comprueban el rol actual de administrador o superusuario en cada petición. El acceso ordinario, los roles revisores y la condición de personal de Django por sí sola no permiten leerlo. Ambas rutas aceptan GET/HEAD; la lectura no modifica ni borra los eventos. El registro sigue siendo el que ya mantiene `AuditMiddleware` y las operaciones transaccionales, sin guardar cuerpos de petición, contraseñas o PIN.
