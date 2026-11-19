@@ -145,6 +145,7 @@ class PublicacionSeguraTests(TestCase):
         token = self.token()
         datos = self.datos(solicitud=token, grupos=[grupo.pk])
         self.client.post(self.url, datos)
+        Novedad.objects.get().grupos.set([Group.objects.get(name="administrador")])
         grupo.delete()
         self.assertEqual(self.client.post(self.url, datos).status_code, 302)
         self.assertEqual(Novedad.objects.count(), 1)
