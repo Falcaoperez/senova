@@ -31,6 +31,22 @@ class Novedad(models.Model):
         return enlace_seguro(self.enlace)
 
 
+class SolicitudNovedad(models.Model):
+    codigo = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="solicitudes_novedades"
+    )
+    novedad = models.OneToOneField(
+        Novedad, on_delete=models.SET_NULL, null=True, blank=True, related_name="solicitud_publicacion"
+    )
+    creada_en = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        default_permissions = ()
+        verbose_name = "Recibo de publicación"
+        verbose_name_plural = "Recibos de publicación"
+
+
 class PlazoReporte(models.Model):
     PROYECTOS = [
         ("LEM", "LEM"),

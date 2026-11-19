@@ -28,6 +28,8 @@ Los PIN y contraseñas se borran de los campos al abandonar la página o ante un
 - Las solicitudes se vinculan mediante HMAC al identificador, hash de contraseña y correo de la cuenta. Un cambio realizado incluso desde el administrador nativo invalida el PIN y la autorización verificada anterior.
 - Los correos de seguridad se encolan en la misma transacción que la solicitud o el cambio de credenciales. No se contacta SMTP desde la recuperación web, cuya respuesta no revela si existe la cuenta ni si el proveedor falla.
 - El cierre de sesión y la revocación requieren POST y CSRF. Los cambios sensibles exigen contraseña actual y confirmación de la contraseña nueva.
+- `next` se valida en cada GET/POST de acceso: solo caminos locales conocidos de hasta 2.048 caracteres, sin controles, barras inversas, segmentos de punto o destinos de entrada/salida. El camino decodificado también se comprueba. Se conserva escapado en el formulario y no concede permisos sobre la vista de destino.
+- Las páginas de acceso incluyen `no-store` y `no-cache` incluso sin sesión. Se mantienen CSRF, límites, rotación de sesión, bloqueo de cuentas inactivas y las opciones de duración del acceso. La interfaz utiliza un único evento de caducidad y la entrada local configurada; ignora direcciones de acceso contenidas en JSON y nunca reenvía el cuerpo de un POST.
 
 ## Cola de seguridad y sesiones
 
@@ -39,7 +41,17 @@ El centro de seguridad limita las operaciones al propietario, pide reautenticaci
 
 La preparación de la lista consulta solo identificador, agente, IP, creación y último uso; calcula la marca de sesión actual en SQL y no carga las claves ni el contenido de las sesiones en cada tarjeta. La autenticación mantiene sus comprobaciones habituales. Los filtros de presentación nunca amplían el propietario, una opción inválida devuelve una lista vacía y la paginación usa rutas internas con parámetros validados. Señalar inactividad no sustituye ni adelanta la comprobación del middleware. La pantalla admite GET/HEAD; los cierres mantienen sus rutas, POST, CSRF y contraseña actual.
 
+## Consulta administrativa de novedades
+
+La consulta exige administrador o superusuario antes de procesar los filtros. Personal de Django u otros roles no reciben el listado ni sus métricas. Los filtros se validan y sus valores se parametrizan con el ORM; una entrada inválida no se ignora ni se recorta. La paginación conserva únicamente búsqueda, audiencia, correo y número de página validado. Se mantienen las respuestas privadas y la misma autorización en documentos completos y fragmentos.
+
+Al preparar las tarjetas se seleccionan solo los datos de presentación del autor, sin hash, correo, privilegios ni último ingreso. Las métricas leen los avisos y estados de correo de las 20 publicaciones de la página, sin mensajes, direcciones de destinatarios ni detalles de error SMTP. La lectura no publica, reintenta ni envía correo. Publicación y reintento conservan sus rutas POST y CSRF; el filtrado no limita el alcance global del reintento. Los textos siguen escapados y los enlaces adicionales conservan su validación de HTTP/HTTPS.
+
 ## Datos y archivos
+
+El formulario personalizado de novedades usa un UUID firmado de 24 horas, ligado al autor y con un dominio diferente del de evidencias. La firma no sustituye autenticación, rol administrativo ni CSRF. El servicio vuelve a consultar el estado activo y la autorización al recuperar o aceptar una publicación. La unicidad SQL del UUID y el bloqueo del recibo coordinan los reintentos; recibo, publicación, grupos y avisos/cola se confirman juntos o se revierten. Una repetición no actualiza la publicación original. Un recibo sin publicación impide recrearla después de su eliminación.
+
+`SolicitudNovedad` almacena solo UUID, propietario, referencia opcional y fecha: no guarda el formulario, la firma ni credenciales; no incorpora permisos predeterminados ni panel propio. La migración se aplica con la cuenta dedicada y mantiene los permisos limitados de la cuenta web. Los clientes sin identificación y el alta nativa de Django conservan su comportamiento anterior. Esta deduplicación de publicaciones identificadas no cambia las garantías de entrega SMTP.
 
 Las vistas comprueban el propietario o el rol revisor. Los archivos se sirven mediante respuestas autenticadas, con `nosniff` y caché privada desactivada; las URLs históricas de medios también requieren autorización. No hay un directorio público de archivos subidos.
 

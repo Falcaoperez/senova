@@ -61,14 +61,13 @@
         return true;
       });
   };
-  let actions, endpoint, login, evidenceURL;
+  let actions, endpoint, evidenceURL;
   try {
     actions = readItems(
       JSON.parse(document.querySelector("#workspace-actions").textContent),
       50,
     );
     endpoint = localURL(dialog.dataset.searchUrl);
-    login = localURL(dialog.dataset.loginUrl);
     evidenceURL = localURL(evidence.getAttribute("href"));
   } catch {
     return;
@@ -241,7 +240,7 @@
       });
       if (ownGeneration !== generation || !dialog.open) return;
       if (response.status === 401) {
-        location.assign(login.href);
+        document.dispatchEvent(new Event("session:expired"));
         return;
       }
       if (response.status === 429) {

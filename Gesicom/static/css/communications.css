@@ -134,3 +134,34 @@ button.text-link { border: 0; background: transparent; font: inherit; font-size:
   border-color: #efcfc7;
   background: #fff5f1;
 }
+
+.news-mail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.news-mail-heading h2 { font-size: 16px; }
+.news-mail-counts { display: flex; flex: 1; flex-wrap: wrap; gap: 12px 24px; }
+.news-mail-note { flex: 1 1 100%; color: var(--muted); font-size: 11px; margin: 0; }
+.news-list-note { color: var(--muted); font-size: 11px; line-height: 1.7; }
+.news-list .news-audience { display: flex; align-items: start; gap: 8px; color: var(--green-dark); font-size: 11px; }
+.news-audience .icon { flex-shrink: 0; width: 16px; height: 16px; margin-top: 1px; }
+.news-reading { max-width: 560px; margin: 18px 0 12px; }
+.news-reading-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; color: var(--muted); font-size: 11px; }
+.news-reading-label strong { color: var(--green-dark); }
+.news-reading progress { display: block; width: 100%; height: 7px; margin-top: 8px; border: 0; border-radius: 8px; overflow: hidden; background: var(--line); accent-color: var(--green-dark); appearance: none; }
+.news-reading progress::-webkit-progress-bar { background: var(--line); border-radius: 8px; }
+.news-reading progress::-webkit-progress-value { background: var(--green-dark); border-radius: 8px; }
+.news-reading progress::-moz-progress-bar { background: var(--green-dark); border-radius: 8px; }
+.news-delivery { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+.news-delivery .badge { max-width: 100%; white-space: normal; line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .news-workspace .notice-item { padding-block: 20px; }
+  .news-workspace .communication-status > form { width: 100%; margin-left: 0; }
+  .news-workspace .communication-status > form .button { width: 100%; white-space: normal; }
+  .news-mail-heading .badge { white-space: normal; }
+}

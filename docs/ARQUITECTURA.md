@@ -26,9 +26,12 @@
 | `ADMIN/services.py` | Cambios de estado y roles, protección de cuentas y auditoría |
 | `ADMIN/auditoria.py` | Consultas filtradas, etiquetas y filas CSV del historial administrativo |
 | `cuentas/` | Formularios comunes, recuperación, correo de seguridad y sesiones |
+| `cuentas/navegacion.py` | Validación del destino local de acceso y retorno de consultas al caducar la sesión |
 | `cuentas/seguridad.py` | Lista personal de sesiones, filtros y metadatos de presentación; las operaciones conservan reautenticación |
 | `instructor/` | Entrada, registro y salida de la aplicación; se conservan las rutas existentes |
 | `notificaciones/` | Novedades, plazos, preferencias, bandeja y cola de entrega |
+| `notificaciones/novedades.py` | Filtros administrativos y métricas agrupadas de las novedades de la página visible |
+| `notificaciones/publicacion.py` | Alta transaccional y recuperación de novedades mediante recibos del formulario |
 | `notificaciones/exportaciones.py` | Filas del seguimiento con campos visibles y fecha explícita de Colombia |
 | `notificaciones/resumen.py` | Conteo y cuatro avisos recientes compartidos durante una petición, sin caché entre cuentas |
 | `notificaciones/calendario.py` | Límites mensuales de Colombia y distribución acotada de plazos en 42 días |
@@ -45,9 +48,15 @@ El centro de operaciones agrega los registros en MySQL y limita las listas recie
 
 `destinatarios` combina en una consulta SQL las cuentas activas, la ausencia de grupos asignados y la pertenencia actual mediante `EXISTS`. No necesita leer primero los identificadores de grupo ni confiar en una precarga anterior. Las novedades y el seguimiento comparten esa selección. El trabajador filtra en MySQL los plazos cuya ventana de aviso ya empezó y excluye entregas y avisos del mismo tipo y versión antes de materializar destinatarios. La creación mantiene su comprobación adicional y unicidad transaccional.
 
+El listado administrativo de novedades utiliza `FiltrosNovedadesForm`. La audiencia y los estados de correo se filtran con `Exists`, sin unir grupos a los conteos. Primero se cuentan y seleccionan 20 publicaciones con identidad mínima del autor y grupos precargados; después se agrupan las notificaciones y su correo uno a uno únicamente para esos identificadores. Así no se agrupan todos los avisos para calcular la paginación ni se recortan los totales de una novedad al filtrar por un estado. La interfaz reutiliza el controlador de navegación existente para actualizar conjuntamente la cola general y la lista en dos regiones, con los filtros fuera de las regiones sustituidas.
+
 Los filtros usan las mismas vistas GET con o sin JavaScript. La mejora interactiva sustituye únicamente los resultados, mantiene los parámetros en la URL y permite volver con el navegador. Los cambios de cuentas siguen siendo formularios POST con CSRF, confirmación de identidad y validación del servidor. Las acciones sensibles no se ejecutan desde la búsqueda.
 
 Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js. `search.js` gestiona la búsqueda, `workspace.js` las acciones administrativas y `admin-dashboard.js` el centro de operaciones; los estilos compartidos de estas interacciones permanecen en `operations.css`.
+
+El inicio de sesión valida `next` mediante `cuentas/navegacion.py` y lo conserva en el formulario incluso ante credenciales incorrectas. Solo acepta rutas locales conocidas de hasta 2.048 caracteres; comprueba también el camino decodificado y excluye acceso/salida y segmentos ambiguos. El middleware conserva la consulta en las redirecciones HTML de GET/HEAD por inactividad o versión antigua de sesión. La navegación de retorno no sustituye los permisos de la vista de destino.
+
+La campana, la búsqueda, las acciones de bandeja y las observaciones emiten `session:expired` al detectar la caducidad. Un único manejador en `sena.js` utiliza la entrada local configurada en el documento y añade la ruta, consulta y fragmento actuales; no toma el destino de un JSON remoto. No guarda campos ni repite operaciones POST. El formulario funciona sin JavaScript y usa los estilos informativos existentes, sin otro panel ni controlador independiente. El acceso añade `no-store` también para visitantes anónimos.
 
 `Gesicom/admin.py` utiliza las mismas reglas de versiones y registro de movimientos. El formulario de corrección reutiliza `formulario.html`; no añade un segundo panel de evidencias. Los estilos de ese flujo están en `evidencias.css`. La tabla de movimientos es de solo lectura en la administración.
 
@@ -56,6 +65,10 @@ Los recursos se sirven desde el proyecto: Work Sans, el emblema SENA y Chart.js.
 Las exportaciones de evidencias y auditoría utilizan `iterar_ordenados`: cada lectura de filas lleva `LIMIT 500` y un cursor por el campo de orden y la clave primaria en la misma dirección. Así conservan los ocho órdenes del reporte y el historial por fecha descendente, con los empates resueltos dentro de SQL y su colación. Directorio y seguimiento usan el mismo recorrido mediante `iterar_por_id`. Un máximo inicial de identificador deja fuera altas posteriores; las consultas vuelven a aplicar los filtros de alcance en cada lote. El CSV de evidencias solo carga sus campos y las identidades mínimas de propietario y plazo, sin hashes, correo ni descripciones. Las columnas de fecha indicadas como Colombia fijan `America/Bogota`.
 
 El alta de evidencias utiliza `SolicitudEnvio` como recibo interno, sin panel ni permisos adicionales. Su UUID único y el bloqueo transaccional de MySQL permiten recuperar el primer registro aceptado cuando llegan reintentos del mismo formulario. El recibo, la evidencia y el movimiento se confirman juntos; un fallo retira también el archivo nuevo que haya quedado sin referencia. Al eliminar la evidencia se conserva el recibo sin destino para que un reintento no la vuelva a crear.
+
+La publicación desde el formulario personalizado utiliza `SolicitudNovedad`. El recibo con UUID único, la novedad, sus grupos y los avisos/correos preparados se confirman en una misma transacción. Las peticiones concurrentes de un formulario se coordinan mediante el bloqueo de su recibo, sin bloquear globalmente las cuentas administradoras. El reintento devuelve el primer resultado y no aplica los nuevos campos. La eliminación de la novedad conserva el recibo sin destino para impedir su recreación. La consulta de recuperación verifica de nuevo que el autor esté activo y autorizado.
+
+`Gesicom/solicitudes.py` conserva el protocolo de evidencias y permite indicar un dominio de firma distinto para novedades: las identificaciones se ligan a la cuenta y vencen a las 24 horas. `sena.js` restaura el botón y su icono al recibir `pageshow` persistente en estos formularios identificados, conservando los campos y el identificador. Los clientes antiguos que no envían identificación y el alta nativa de Django mantienen su comportamiento previo; esta recuperación se aplica al formulario personalizado identificado. La cola SMTP conserva su entrega al menos una vez.
 
 Los archivos compartidos se buscan por nombre indexado y se retiran después del commit solo si ninguna evidencia los referencia. La consulta de disponibilidad no modifica registros históricos. Las vistas de texto leen como máximo 64 KB del origen, más un byte para detectar truncamiento; la descarga conserva el archivo completo.
 
