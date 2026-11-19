@@ -71,6 +71,7 @@ def encolar_aviso_cambio(usuario, correo_anterior=None):
 
 def _reclamar(limite):
     ahora = timezone.now()
+    bloqueado_hasta = ahora + timedelta(seconds=max(600, limite * (settings.EMAIL_TIMEOUT + 15)))
     with transaction.atomic():
         pendientes = CorreoSeguridad.objects.filter(
             Q(estado=CorreoSeguridad.Estado.PENDIENTE)
@@ -83,20 +84,32 @@ def _reclamar(limite):
         ids = list(pendientes.values_list("pk", flat=True)[:limite])
         CorreoSeguridad.objects.filter(pk__in=ids).update(
             estado=CorreoSeguridad.Estado.PROCESANDO,
-            bloqueado_hasta=ahora + timedelta(seconds=max(600, limite * (settings.EMAIL_TIMEOUT + 15))),
+            bloqueado_hasta=bloqueado_hasta,
         )
-    return ids
+    return ids, bloqueado_hasta
 
 
 def procesar_correos_seguridad(limite=25):
     enviados = 0
     transport = get_connection(fail_silently=False)
     try:
-        for correo in CorreoSeguridad.objects.filter(pk__in=_reclamar(limite)).select_related(
-            "usuario", "solicitud__usuario"
-        ):
+        ids, bloqueado_hasta = _reclamar(limite)
+        for pk in ids:
+            correo = (
+                CorreoSeguridad.objects.filter(
+                    pk=pk,
+                    estado=CorreoSeguridad.Estado.PROCESANDO,
+                    bloqueado_hasta=bloqueado_hasta,
+                    bloqueado_hasta__gt=timezone.now(),
+                )
+                .select_related("usuario", "solicitud__usuario")
+                .first()
+            )
+            if not correo:
+                continue
             solicitud = correo.solicitud
             ahora = timezone.now()
+            invalidar_solicitud = False
             valido = correo.usuario.is_active
             if correo.tipo == CorreoSeguridad.Tipo.PIN:
                 valido = bool(
@@ -157,8 +170,7 @@ def procesar_correos_seguridad(limite=25):
                     correo.estado = CorreoSeguridad.Estado.CANCELADO
                     correo.contenido_cifrado = ""
                     correo.ultimo_error = "El contenido ya no se puede descifrar. Solicita un PIN nuevo."
-                    if solicitud:
-                        PasswordResetToken.objects.filter(pk=solicitud.pk).update(utilizado=True)
+                    invalidar_solicitud = bool(solicitud)
                 except Exception:
                     correo.intentos += 1
                     correo.estado = (
@@ -168,19 +180,32 @@ def procesar_correos_seguridad(limite=25):
                     correo.ultimo_error = "El proveedor no aceptó el envío. Revisa la configuración privada del correo."
                     if correo.estado == CorreoSeguridad.Estado.ERROR:
                         correo.contenido_cifrado = ""
-                        if solicitud:
-                            PasswordResetToken.objects.filter(pk=solicitud.pk).update(utilizado=True)
+                        invalidar_solicitud = bool(solicitud)
                     transport.close()
-            # Una cancelación concurrente no debe volver a activar un correo.
-            CorreoSeguridad.objects.filter(pk=correo.pk, estado=CorreoSeguridad.Estado.PROCESANDO).update(
-                estado=correo.estado,
-                intentos=correo.intentos,
-                proximo_intento=correo.proximo_intento,
-                bloqueado_hasta=None,
-                enviado_en=correo.enviado_en,
-                contenido_cifrado=correo.contenido_cifrado,
-                ultimo_error=correo.ultimo_error,
-            )
+            # El resultado solo pertenece a esta reclamación. Una cancelación
+            # o un nuevo trabajador conservan su estado y su recuperación.
+            with transaction.atomic():
+                if invalidar_solicitud:
+                    # El perfil y la recuperación bloquean primero la solicitud
+                    # y después su correo. Mantener ese orden evita interbloqueos.
+                    PasswordResetToken.objects.select_for_update().filter(pk=solicitud.pk).values_list(
+                        "pk", flat=True
+                    ).first()
+                actualizado = CorreoSeguridad.objects.filter(
+                    pk=correo.pk,
+                    estado=CorreoSeguridad.Estado.PROCESANDO,
+                    bloqueado_hasta=bloqueado_hasta,
+                ).update(
+                    estado=correo.estado,
+                    intentos=correo.intentos,
+                    proximo_intento=correo.proximo_intento,
+                    bloqueado_hasta=None,
+                    enviado_en=correo.enviado_en,
+                    contenido_cifrado=correo.contenido_cifrado,
+                    ultimo_error=correo.ultimo_error,
+                )
+                if actualizado and invalidar_solicitud:
+                    PasswordResetToken.objects.filter(pk=solicitud.pk).update(utilizado=True)
     finally:
         transport.close()
     return enviados

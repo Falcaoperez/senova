@@ -166,6 +166,7 @@ def procesar_correos(limite=50):
     from .acceso import destino_notificacion, motivo_cancelacion
 
     ahora = timezone.now()
+    bloqueado_hasta = ahora + timedelta(seconds=max(600, limite * (settings.EMAIL_TIMEOUT + 15)))
     with transaction.atomic():
         candidatos = CorreoPendiente.objects.filter(
             Q(estado=CorreoPendiente.Estado.PENDIENTE)
@@ -178,7 +179,7 @@ def procesar_correos(limite=50):
         ids = list(candidatos.values_list("pk", flat=True)[:limite])
         CorreoPendiente.objects.filter(pk__in=ids).update(
             estado=CorreoPendiente.Estado.PROCESANDO,
-            bloqueado_hasta=ahora + timedelta(seconds=max(600, limite * (settings.EMAIL_TIMEOUT + 15))),
+            bloqueado_hasta=bloqueado_hasta,
         )
     enviados = 0
     transport = get_connection(fail_silently=False)
@@ -189,7 +190,12 @@ def procesar_correos(limite=50):
                 cache.set("notificaciones:trabajador", timezone.now().isoformat(), timeout=120)
                 latido = timezone.now()
             correo = (
-                CorreoPendiente.objects.filter(pk=pk, estado=CorreoPendiente.Estado.PROCESANDO)
+                CorreoPendiente.objects.filter(
+                    pk=pk,
+                    estado=CorreoPendiente.Estado.PROCESANDO,
+                    bloqueado_hasta=bloqueado_hasta,
+                    bloqueado_hasta__gt=timezone.now(),
+                )
                 .select_related(
                     "notificacion__usuario__preferencias_notificacion", "notificacion__plazo", "notificacion__novedad"
                 )
@@ -243,13 +249,15 @@ def procesar_correos(limite=50):
                     correo.proximo_intento = timezone.now() + timedelta(minutes=min(60, 2**correo.intentos))
                     correo.ultimo_error = "El proveedor no aceptó el envío; revisa la configuración SMTP."
                     transport.close()
-            # No recrear una fila eliminada ni reactivar una cancelada durante el envío.
-            estados = (
-                [CorreoPendiente.Estado.PROCESANDO, CorreoPendiente.Estado.CANCELADO]
-                if aceptado
-                else [CorreoPendiente.Estado.PROCESANDO]
+            # Un resultado tardío no sobrescribe otra reclamación. Si SMTP ya
+            # aceptó un aviso cancelado durante el envío, se conserva ese hecho.
+            pertenece = Q(
+                estado=CorreoPendiente.Estado.PROCESANDO,
+                bloqueado_hasta=bloqueado_hasta,
             )
-            CorreoPendiente.objects.filter(pk=correo.pk, estado__in=estados).update(
+            if aceptado:
+                pertenece |= Q(estado=CorreoPendiente.Estado.CANCELADO, bloqueado_hasta__isnull=True)
+            CorreoPendiente.objects.filter(pertenece, pk=correo.pk).update(
                 estado=correo.estado,
                 intentos=correo.intentos,
                 proximo_intento=correo.proximo_intento,
