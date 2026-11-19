@@ -4,6 +4,8 @@
 !.env.example
 .local
 venv
+.venv
+.vscode
 __pycache__
 *.pyc
 *.sqlite3

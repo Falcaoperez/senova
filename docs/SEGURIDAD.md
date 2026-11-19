@@ -65,6 +65,8 @@ Las plantillas escapan contenido, los gráficos usan JSON seguro y los CSV neutr
 
 ## Configuración y operación
 
+El instalador de desarrollo verifica que `.venv` sea un entorno aislado de Python 3.12 antes de instalar; pip exige un entorno virtual. El inicio rápido crea `.env` de forma exclusiva con permisos privados y clave aleatoria solo si no existe. En ese caso las migraciones y las cuentas de revisión se limitan explícitamente a SQLite local, con caché y correo en consola, incluso ante variables de conexión heredadas. Un `.env` existente se conserva sin migrar ni crear cuentas en su base. La configuración de depuración del trabajador usa correo en consola; el entorno operativo del proyecto mantiene Mailpit. No se publican entornos virtuales, datos ni credenciales.
+
 Las claves, credenciales y cuentas de revisión viven en `.env` y `.local/`, excluidos tanto de Git como de la imagen. La aplicación no crea administradores con contraseñas fijas. El contenedor se ejecuta como usuario sin privilegios.
 
 Con `DJANGO_DEBUG=False` se exigen una clave privada y Redis. Se activan cookies seguras, redirección HTTPS y HSTS. La red de producción necesita el proxy HTTPS y los dominios reales configurados. `config/nginx.conf.example` muestra la configuración y mantiene los medios detrás de Django.

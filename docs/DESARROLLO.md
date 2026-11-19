@@ -2,6 +2,8 @@
 
 La configuración activa está en `SENNOVA/`. Cada aplicación conserva sus modelos, migraciones, rutas, plantillas y pruebas. Los nombres históricos de las aplicaciones mantienen la identidad de las tablas y permisos.
 
+Para trabajar en el editor, utiliza la [guía de VS Code](VSCODE.md). `scripts/configurar_entorno.py` crea `.venv` con Python 3.12 e instala `requirements-dev.txt`; `--inicio-rapido` prepara una configuración local únicamente cuando no existe `.env`. Los cuatro archivos compartidos de `.vscode/` definen intérprete, extensiones, tareas y depuración con `debugpy`. El entorno virtual y las credenciales se generan en cada equipo.
+
 ```text
 SENNOVA/
   settings.py, urls.py, wsgi.py   configuración y composición del proyecto
@@ -34,6 +36,7 @@ docs/                           arquitectura, desarrollo, operación y verificac
 
 | Cambio | Ubicación |
 | --- | --- |
+| Instalación y depuración local | `scripts/configurar_entorno.py`, `.vscode/`, `docs/VSCODE.md` y `SENNOVA/tests/test_entorno_desarrollo.py` |
 | Evidencias, páginas, perfil y reportes | `Gesicom/urls.py` y módulos de esa aplicación |
 | Inicio de sesión, registro y salida | `instructor/urls.py` y sus vistas |
 | Regreso después del acceso | `cuentas/navegacion.py`, `instructor/views.py`, `instructor/tests/test_retorno_login.py` y el evento `session:expired` en `Gesicom/static/js/sena.js` |

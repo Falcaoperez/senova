@@ -1,4 +1,5 @@
 -r requirements.txt
+debugpy==1.8.22
 ruff==0.17.5
 djlint==1.50.0
 pip-audit==2.10.1
