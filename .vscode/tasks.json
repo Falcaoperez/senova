@@ -11,11 +11,11 @@
     {
       "label": "GESICOM: preparar .venv",
       "type": "process",
-      "command": "python3.12",
+      "command": "python3.15",
       "args": ["scripts/configurar_entorno.py", "--inicio-rapido"],
       "windows": {
         "command": "py",
-        "args": ["-3.12", "scripts/configurar_entorno.py", "--inicio-rapido"]
+        "args": ["-3.15", "scripts/configurar_entorno.py", "--inicio-rapido"]
       },
       "problemMatcher": []
     },

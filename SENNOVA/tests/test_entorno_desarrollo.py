@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -96,7 +97,7 @@ class EntornoDesarrolloTests(SimpleTestCase):
         python = configurar_entorno.python_del_entorno(self.raiz)
         python.parent.mkdir(parents=True)
         python.touch()
-        (carpeta / "pyvenv.cfg").write_text("version = 3.12.0\n")
+        (carpeta / "pyvenv.cfg").write_text(f"version = {sys.version_info.major}.{sys.version_info.minor}.0\n")
         return carpeta, python
 
     @patch("scripts.configurar_entorno.subprocess.check_output")
@@ -104,7 +105,7 @@ class EntornoDesarrolloTests(SimpleTestCase):
         carpeta, _ = self.preparar_estructura()
         for version, prefix, base in [
             ([3, 11], str(carpeta), "/python-base"),
-            ([3, 12], "/python-global", "/python-global"),
+            (list(sys.version_info[:2]), "/python-global", "/python-global"),
         ]:
             with self.subTest(version=version, prefix=prefix):
                 salida.return_value = json.dumps({"version": version, "prefix": prefix, "base": base})
@@ -115,7 +116,9 @@ class EntornoDesarrolloTests(SimpleTestCase):
     @patch("scripts.configurar_entorno.subprocess.check_output")
     def test_un_entorno_aislado_existente_se_reutiliza(self, salida, builder):
         carpeta, python = self.preparar_estructura()
-        salida.return_value = json.dumps({"version": [3, 12], "prefix": str(carpeta), "base": "/python-base"})
+        salida.return_value = json.dumps(
+            {"version": list(sys.version_info[:2]), "prefix": str(carpeta), "base": "/python-base"}
+        )
         self.assertEqual(configurar_entorno.crear_entorno(self.raiz), python)
         builder.assert_not_called()
 
@@ -127,3 +130,18 @@ class EntornoDesarrolloTests(SimpleTestCase):
         ):
             self.assertEqual(configurar_entorno.main([]), 2)
         preparar.assert_not_called()
+
+    @patch("scripts.configurar_entorno.preparar")
+    def test_python_315_y_las_versiones_compatibles_pueden_preparar_el_proyecto(self, preparar):
+        for version in [(3, 12, 0), (3, 13, 0), (3, 14, 0), (3, 15, 1)]:
+            with self.subTest(version=version), patch("scripts.configurar_entorno.sys.version_info", version):
+                self.assertEqual(configurar_entorno.main(["--inicio-rapido"]), 0)
+                preparar.assert_called_with(configurar_entorno.ROOT, inicio_rapido=True)
+
+    @patch("scripts.configurar_entorno.subprocess.check_output")
+    def test_un_entorno_de_otro_python_no_se_usa_silenciosamente(self, salida):
+        carpeta, _ = self.preparar_estructura()
+        version = [3, 15] if sys.version_info[:2] != (3, 15) else [3, 12]
+        salida.return_value = json.dumps({"version": version, "prefix": str(carpeta), "base": "/python-base"})
+        with self.assertRaisesRegex(RuntimeError, "misma versión"):
+            configurar_entorno.crear_entorno(self.raiz)
