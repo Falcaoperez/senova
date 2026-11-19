@@ -1,6 +1,6 @@
 # Ejecutar GESICOM en Visual Studio Code
 
-Instala Python **3.12 de 64 bits** y abre en VS Code la carpeta que contiene `manage.py`, `requirements.txt` y `SENNOVA/`. Instala las extensiones recomendadas por el proyecto: Python, Pylance, Python Debugger, Ruff y Django.
+Usa Python **3.15 de 64 bits**, o una versión compatible entre 3.12 y 3.14, y abre en VS Code la carpeta que contiene `manage.py`, `requirements.txt` y `SENNOVA/`. Django 6.1 admite Python 3.15. Instala las extensiones recomendadas por el proyecto: Python, Pylance, Python Debugger, Ruff y Django.
 
 ## Primera instalación
 
@@ -9,13 +9,13 @@ En la terminal de VS Code ejecuta el comando de tu sistema.
 Windows:
 
 ```powershell
-py -3.12 scripts/configurar_entorno.py --inicio-rapido
+py -3.15 scripts/configurar_entorno.py --inicio-rapido
 ```
 
 Linux o macOS:
 
 ```bash
-python3.12 scripts/configurar_entorno.py --inicio-rapido
+python3.15 scripts/configurar_entorno.py --inicio-rapido
 ```
 
 El comando crea `.venv` e instala `requirements-dev.txt`, que incluye todas las dependencias de ejecución de `requirements.txt`, las herramientas de comprobación y `debugpy`. Comprueba que no haya dependencias incompatibles. Puede repetirse: reutiliza un entorno válido y conserva la configuración privada existente.
@@ -24,18 +24,20 @@ En Debian/Ubuntu instala antes las bibliotecas necesarias para compilar `mysqlcl
 
 ```bash
 sudo apt-get update
-sudo apt-get install python3.12-venv python3.12-dev build-essential default-libmysqlclient-dev pkg-config
+sudo apt-get install build-essential default-libmysqlclient-dev pkg-config
 ```
 
 En macOS con Homebrew:
 
 ```bash
-brew install python@3.12 mysql-client pkg-config
+brew install python@3.15 mysql-client pkg-config
 export PKG_CONFIG_PATH="$(brew --prefix mysql-client)/lib/pkgconfig"
-python3.12 scripts/configurar_entorno.py --inicio-rapido
+python3.15 scripts/configurar_entorno.py --inicio-rapido
 ```
 
-En Windows usa Python 3.12 de 64 bits para instalar las ruedas disponibles de `mysqlclient`, Pillow, cryptography y debugpy. Gunicorn se instala en sistemas distintos de Windows; la depuración utiliza el servidor de desarrollo de Django.
+En Linux, instala además `venv` y las cabeceras de tu versión de Python si tu distribución los separa en paquetes, por ejemplo `python3.15-venv` y `python3.15-dev` cuando estén disponibles en sus repositorios. En Windows usa Python de 64 bits para instalar las ruedas disponibles de `mysqlclient`, Pillow, cryptography y debugpy. Gunicorn se instala en sistemas distintos de Windows; la depuración utiliza el servidor de desarrollo de Django.
+
+El instalador utiliza el Python con el que lo ejecutas. Para otra versión compatible ajusta el comando, por ejemplo `py -3.14`. Si ya existe `.venv` con otro Python, renombra esa carpeta antes de ejecutar el instalador con 3.15; los archivos del proyecto y `.env` se conservan. No se sustituye silenciosamente el intérprete elegido por otro.
 
 ## Configuración y cuentas locales
 
@@ -87,9 +89,9 @@ La extensión Django reconoce las plantillas como `django-html`; Ruff utiliza la
 | `No module named django`, `redis`, `PIL` o `cryptography` | Ejecuta el instalador, selecciona `.venv` y abre una terminal nueva. |
 | `Import ... could not be resolved` en Pylance | Selecciona `.venv`; ejecuta **Developer: Reload Window** si conserva el intérprete anterior. |
 | `Can not find valid pkg-config name` o fallo al compilar `mysqlclient` | Instala las bibliotecas indicadas para Linux/macOS y repite el instalador. |
-| Falta `clang` al compilar, pero `cc` está instalado | En Linux/macOS ejecuta `CC=cc python3.12 scripts/configurar_entorno.py --inicio-rapido`. |
+| Falta `clang` al compilar, pero `cc` está instalado | En Linux/macOS ejecuta `CC=cc python3.15 scripts/configurar_entorno.py --inicio-rapido`. |
 | PowerShell bloquea `Activate.ps1` | Usa `.\.venv\Scripts\python.exe` directamente; no hace falta cambiar la política de ejecución. |
-| `.venv` está incompleto o usa otra versión | Renombra esa carpeta y ejecuta el instalador con Python 3.12. |
+| `.venv` está incompleto o usa otra versión | Renombra esa carpeta y ejecuta el instalador con tu Python 3.15, o el compatible que hayas elegido. |
 | Conexión rechazada a MySQL o Redis | Revisa los servicios y tu `.env` existente; el instalador conserva sus credenciales. |
 | Puerto 8000 ocupado | Detén la otra instancia o cambia el puerto de `runserver` en el perfil de depuración. |
 | No aparece el PIN | Inicia el trabajador y consulta su terminal; la web solo encola los mensajes. |

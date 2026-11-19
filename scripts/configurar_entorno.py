@@ -11,6 +11,7 @@ import venv
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+PYTHON_SOPORTADOS = {(3, 12), (3, 13), (3, 14), (3, 15)}
 VARIABLES_LOCALES = {
     "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
     "DJANGO_DEBUG": "True",
@@ -31,7 +32,7 @@ def python_del_entorno(raiz, *, windows=None):
 def crear_entorno(raiz):
     carpeta = raiz / ".venv"
     if not carpeta.exists():
-        print("Creando .venv con Python 3.12…", flush=True)
+        print(f"Creando .venv con Python {sys.version_info.major}.{sys.version_info.minor}…", flush=True)
         venv.EnvBuilder(with_pip=True).create(carpeta)
     python = python_del_entorno(raiz)
     if not (carpeta / "pyvenv.cfg").is_file() or not python.is_file():
@@ -49,15 +50,19 @@ def crear_entorno(raiz):
         )
         info = json.loads(salida)
         valido = (
-            info["version"] == [3, 12]
+            tuple(info["version"]) in PYTHON_SOPORTADOS
+            and tuple(info["version"]) == tuple(sys.version_info[:2])
             and Path(info["prefix"]).resolve() == carpeta.resolve()
             and info["prefix"] != info["base"]
         )
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
-        raise RuntimeError("No se pudo verificar .venv. Renómbralo y vuelve a prepararlo con Python 3.12.") from error
+        raise RuntimeError(
+            "No se pudo verificar .venv. Renómbralo y vuelve a prepararlo con tu Python compatible."
+        ) from error
     if not valido:
         raise RuntimeError(
-            ".venv debe ser un entorno aislado de Python 3.12. No se instalaron paquetes en otro Python."
+            ".venv debe ser un entorno aislado de la misma versión de Python que ejecuta el instalador "
+            "(3.12 a 3.15). Si corresponde a otra versión, renómbralo antes de volver a preparar el proyecto."
         )
     return python
 
@@ -130,9 +135,10 @@ def main(argv=None):
         help="Si no existe .env, prepara SQLite, estáticos y cuentas privadas de revisión para desarrollo local.",
     )
     args = parser.parse_args(argv)
-    if sys.version_info[:2] != (3, 12):
+    if tuple(sys.version_info[:2]) not in PYTHON_SOPORTADOS:
         print(
-            "Usa Python 3.12: Windows: py -3.12 scripts/configurar_entorno.py; Linux/macOS: python3.12.",
+            "Usa Python 3.12 a 3.15. Para Python 3.15: py -3.15 scripts/configurar_entorno.py "
+            "en Windows, o python3.15 en Linux/macOS.",
             file=sys.stderr,
         )
         return 2

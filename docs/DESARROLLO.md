@@ -2,7 +2,7 @@
 
 La configuración activa está en `SENNOVA/`. Cada aplicación conserva sus modelos, migraciones, rutas, plantillas y pruebas. Los nombres históricos de las aplicaciones mantienen la identidad de las tablas y permisos.
 
-Para trabajar en el editor, utiliza la [guía de VS Code](VSCODE.md). `scripts/configurar_entorno.py` crea `.venv` con Python 3.12 e instala `requirements-dev.txt`; `--inicio-rapido` prepara una configuración local únicamente cuando no existe `.env`. Los cuatro archivos compartidos de `.vscode/` definen intérprete, extensiones, tareas y depuración con `debugpy`. El entorno virtual y las credenciales se generan en cada equipo.
+Para trabajar en el editor, utiliza la [guía de VS Code](VSCODE.md). `scripts/configurar_entorno.py` crea `.venv` con el Python 3.12 a 3.15 que lo ejecuta e instala `requirements-dev.txt`; `--inicio-rapido` prepara una configuración local únicamente cuando no existe `.env`. Los cuatro archivos compartidos de `.vscode/` definen intérprete, extensiones, tareas y depuración con `debugpy`. El entorno virtual y las credenciales se generan en cada equipo.
 
 ```text
 SENNOVA/
