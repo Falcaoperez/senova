@@ -46,6 +46,21 @@ print(json.dumps({'usuarios_revision': 6, 'cache_compartida': True, 'sin_cliente
         [str(python), "manage.py", "procesar_notificaciones", "--lote", "1"], cwd=raiz, env=entorno, check=True
     )
     subprocess.run([str(python), "-c", codigo], cwd=raiz, env=entorno, check=True)
+    subprocess.run(
+        [
+            str(python),
+            "manage.py",
+            "test",
+            "SENNOVA.tests.test_entorno_desarrollo",
+            "ADMIN.tests.test_auditoria.AuditoriaTests.test_pagination_is_stable_and_export_includes_all_pages_without_n_plus_one",
+            "notificaciones.tests.test_bandeja_interactiva.BandejaInteractivaTests.test_large_filtered_update_and_page_avoid_one_query_per_notice",
+            "--settings=SENNOVA.test_settings",
+            "--noinput",
+        ],
+        cwd=raiz,
+        env=entorno,
+        check=True,
+    )
     with socket.socket() as reserva:
         reserva.bind(("127.0.0.1", 0))
         puerto = reserva.getsockname()[1]

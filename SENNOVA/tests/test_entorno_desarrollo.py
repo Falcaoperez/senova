@@ -18,7 +18,7 @@ from SENNOVA.desarrollo import archivo_perfil, entorno_local
 
 class EntornoDesarrolloTests(SimpleTestCase):
     def setUp(self):
-        self.temporal = tempfile.TemporaryDirectory(prefix="gesicom con espacios ")
+        self.temporal = tempfile.TemporaryDirectory(prefix="gesicom con espacios á ")
         self.addCleanup(self.temporal.cleanup)
         self.raiz = Path(self.temporal.name)
 

@@ -210,5 +210,6 @@ class BandejaInteractivaTests(TestCase):
         with CaptureQueriesContext(connection) as queries:
             response = self.api(self.all, {"alcance": "filtradas", "q": "Carga bandeja"})
         self.assertEqual(response.json()["actualizados"], 250)
-        self.assertEqual(sum(q["sql"].lstrip().startswith("UPDATE `notificaciones_notificacion`") for q in queries), 1)
+        tabla = connection.ops.quote_name(Notificacion._meta.db_table)
+        self.assertEqual(sum(q["sql"].lstrip().startswith(f"UPDATE {tabla}") for q in queries), 1)
         self.assertLessEqual(len(queries), 6)
