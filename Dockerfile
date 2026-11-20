@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
-COPY requirements.txt /tmp/requirements.txt
+COPY requirements.txt requirements-mysql.txt requirements-production.txt /tmp/
 # Las herramientas de compilación se eliminan en la misma capa. El certificado
 # de la sesión, cuando existe, solo se monta durante las descargas.
 RUN --mount=type=secret,id=ca_bundle,required=false,mode=0444 \
@@ -13,9 +13,9 @@ RUN --mount=type=secret,id=ca_bundle,required=false,mode=0444 \
     apt-get update \
     && apt-get install -y --no-install-recommends gcc default-libmysqlclient-dev pkg-config libmariadb3 \
     && python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+    && /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements-production.txt \
     && apt-get purge -y --auto-remove gcc default-libmysqlclient-dev pkg-config \
-    && rm -rf /var/lib/apt/lists/* /tmp/requirements.txt \
+    && rm -rf /var/lib/apt/lists/* /tmp/requirements*.txt \
     && rm -f /etc/apt/apt.conf.d/99buildca \
     && useradd --create-home --uid 10001 app \
     && mkdir -p logs media staticfiles .local \

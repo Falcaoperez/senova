@@ -55,4 +55,5 @@ path.write_text(
     + "\n"
 )
 path.chmod(0o600)
-print("Configuración privada preparada en .env. Las credenciales existentes se conservan.")
+print("Configuración privada MySQL/Docker preparada en .env. Las credenciales existentes se conservan.")
+print("Sin Docker, usa: python scripts/configurar_entorno.py --inicio-rapido --extensiones --ejecutar")

@@ -3,8 +3,8 @@
   "options": {
     "cwd": "${workspaceFolder}",
     "env": {
-      "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
-      "DJANGO_DEBUG": "True"
+      "DJANGO_SETTINGS_MODULE": "SENNOVA.local_settings",
+      "PYTHONUTF8": "1"
     }
   },
   "tasks": [
@@ -12,49 +12,103 @@
       "label": "GESICOM: preparar .venv",
       "type": "process",
       "command": "python3.15",
-      "args": ["scripts/configurar_entorno.py", "--inicio-rapido"],
+      "args": [
+        "scripts/configurar_entorno.py",
+        "--inicio-rapido",
+        "--extensiones"
+      ],
       "windows": {
         "command": "py",
-        "args": ["-3.15", "scripts/configurar_entorno.py", "--inicio-rapido"]
+        "args": [
+          "-3.15",
+          "scripts/configurar_entorno.py",
+          "--inicio-rapido",
+          "--extensiones"
+        ]
       },
       "problemMatcher": []
     },
     {
       "label": "GESICOM: comprobar Django",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
-      "args": ["manage.py", "check"],
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "manage.py",
+        "check"
+      ],
       "group": "build",
-      "problemMatcher": []
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      }
     },
     {
       "label": "GESICOM: aplicar migraciones",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
-      "args": ["manage.py", "migrate", "--settings=SENNOVA.migration_settings"],
-      "problemMatcher": []
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "manage.py",
+        "migrate",
+        "--noinput"
+      ],
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      }
     },
     {
       "label": "GESICOM: recopilar estáticos",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
-      "args": ["manage.py", "collectstatic", "--noinput"],
-      "problemMatcher": []
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "manage.py",
+        "collectstatic",
+        "--noinput"
+      ],
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      }
     },
     {
       "label": "GESICOM: pruebas de Django",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
-      "args": ["manage.py", "test", "--settings=SENNOVA.test_settings", "--noinput"],
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "manage.py",
+        "test",
+        "--settings=SENNOVA.test_settings",
+        "--noinput"
+      ],
       "group": "test",
-      "problemMatcher": []
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      },
+      "options": {
+        "env": {
+          "DJANGO_SETTINGS_MODULE": "SENNOVA.test_settings",
+          "DB_ENGINE": "sqlite",
+          "REDIS_URL": "",
+          "DJANGO_DEBUG": "True",
+          "DJANGO_SECRET_KEY": "clave-exclusiva-de-pruebas-locales-no-usar-en-produccion"
+        }
+      }
     },
     {
       "label": "GESICOM: revisar código",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
-      "args": ["-m", "ruff", "check", "."],
-      "problemMatcher": []
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "problemMatcher": [],
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      }
     }
   ]
 }

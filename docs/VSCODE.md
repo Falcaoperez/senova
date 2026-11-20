@@ -1,99 +1,119 @@
 # Ejecutar GESICOM en Visual Studio Code
 
-Usa Python **3.15 de 64 bits**, o una versión compatible entre 3.12 y 3.14, y abre en VS Code la carpeta que contiene `manage.py`, `requirements.txt` y `SENNOVA/`. Django 6.1 admite Python 3.15. Instala las extensiones recomendadas por el proyecto: Python, Pylance, Python Debugger, Ruff y Django.
+El inicio local funciona en **Windows, macOS y Linux** con Python **3.12 a 3.15 de 64 bits**. No requiere Docker, MySQL, Redis, GCC, `pkg-config` ni bibliotecas de desarrollo de Linux. Usa SQLite y un servidor Waitress compatible con los tres sistemas. MySQL y Redis siguen disponibles en el perfil de despliegue.
 
-## Primera instalación
+Abre en VS Code la carpeta que contiene `manage.py`, `scripts/` y `requirements.txt`. Las rutas con espacios, incluidas las carpetas de OneDrive, se pasan como argumentos independientes.
 
-En la terminal de VS Code ejecuta el comando de tu sistema.
+## Instalar y ejecutar en Windows
+
+En PowerShell, desde la carpeta del proyecto:
+
+```powershell
+python scripts/configurar_entorno.py --inicio-rapido --extensiones --ejecutar
+```
+
+Si `python` no corresponde a la versión deseada, usa `py -3.15` en su lugar. El comando crea `.venv`, instala las dependencias y las extensiones recomendadas, prepara las cuentas y abre el servidor en http://127.0.0.1:8000/. Con **Ctrl+C** se detienen la web y el trabajador de notificaciones.
+
+Para volver a ejecutar después de la instalación:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/ejecutar_local.py
+```
+
+No hace falta activar `Activate.ps1` ni modificar la política de ejecución de PowerShell. Si el puerto está ocupado, añade `--puerto 8001` al segundo comando y abre esa dirección.
+
+## Instalar y ejecutar en macOS o Linux
+
+```bash
+python3.15 scripts/configurar_entorno.py --inicio-rapido --extensiones --ejecutar
+```
+
+Después de la instalación:
+
+```bash
+.venv/bin/python scripts/ejecutar_local.py
+```
+
+El instalador reutiliza un entorno válido de la misma versión de Python con la que lo ejecutas. Para otra versión compatible ajusta el comando. Si `.venv` está incompleto o corresponde a otra versión o sistema, **renombra esa carpeta** y repite la preparación; el instalador no la elimina.
+
+Solo se admiten paquetes precompilados en la instalación local (`--only-binary=:all:`). Si no existe una rueda para tu arquitectura o versión, la preparación se detiene antes de intentar compilar y muestra el paquete que falta. Usa una distribución estándar de Python de 64 bits con `venv` y `pip` disponibles.
+
+## Datos y credenciales del perfil local
+
+`--inicio-rapido` prepara siempre un perfil independiente, incluso si ya ejecutaste `configurar_local.py` y tu `.env` tiene MySQL configurado. Guarda sus archivos en:
+
+```text
+.local/desarrollo/
+  perfil.env                    clave local privada y configuración
+  db.sqlite3                    datos de desarrollo
+  credenciales_revision.json    usuario y contraseña de cada rol
+  media/                        archivos subidos en desarrollo
+  staticfiles/                  recursos recopilados
+  logs/                         diagnóstico local
+```
+
+Abre `credenciales_revision.json` en tu equipo para consultar las seis cuentas. Las contraseñas son aleatorias y no se publican. La preparación puede repetirse tras una instalación parcial: conserva el secreto, las cuentas y contraseñas existentes, y aplica las migraciones pendientes.
+
+El perfil `SENNOVA.local_settings` fuerza SQLite, depuración local y correo en consola. Ignora las conexiones SMTP, MySQL y Redis heredadas. **No altera `.env`, los datos de MySQL ni los archivos de otros perfiles**. La caché se guarda en la misma base SQLite y permite compartir las sesiones y la señal del trabajador entre procesos. Los PIN y avisos de prueba aparecen en la consola del trabajador; no se envían a Internet.
+
+SQLite permite revisar y desarrollar la aplicación en un equipo. Para despliegues con muchos usuarios se conserva MySQL 8.4, Redis y las cuentas SQL con permisos separados.
+
+## Ejecutar con F5
+
+1. Ejecuta primero la preparación anterior; puedes omitir `--ejecutar` si prefieres iniciar desde VS Code.
+2. Abre **Python: Select Interpreter** con `Ctrl+Shift+P` y elige `.venv\Scripts\python.exe` en Windows o `.venv/bin/python` en macOS/Linux.
+3. En **Ejecutar y depurar**, selecciona **GESICOM: aplicación y correos locales** y pulsa **F5**.
+4. Abre http://127.0.0.1:8000/ e ingresa con las cuentas del archivo privado.
+
+El perfil conjunto inicia Waitress con Django y el trabajador; **detener** finaliza ambos. Los perfiles individuales permiten depurar cada proceso por separado. Todas las configuraciones locales apuntan al perfil aislado y al intérprete de `.venv`.
+
+`--extensiones` usa la CLI oficial `code` si está disponible. Si no está en `PATH` o la descarga falla, abre **Extensions: Show Recommended Extensions** e instala las recomendaciones: Python, Pylance, Python Debugger, Ruff y Django. No se instalan extensiones desde fuentes externas al catálogo configurado en VS Code.
+
+## Tareas y comprobaciones
+
+**Terminal > Ejecutar tarea** ofrece preparación de `.venv`, comprobación de Django, migraciones locales, recopilación de estáticos, pruebas con SQLite y Ruff. Las pruebas usan una base independiente y no modifican la base de desarrollo. Las pruebas exclusivas del cliente MySQL requieren su perfil opcional; la integración continua las ejecuta con MySQL y Python 3.12 y 3.15.
 
 Windows:
 
 ```powershell
-py -3.15 scripts/configurar_entorno.py --inicio-rapido
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe manage.py check --settings=SENNOVA.local_settings
+python scripts/verificar_inicio_local.py
 ```
 
-Linux o macOS:
+La última comprobación exige una instalación portátil limpia sin `mysqlclient` ni Gunicorn; verifica el servidor HTTP, la base local y el trabajador con caché compartida. GitHub Actions ejecuta esta instalación en Windows, macOS y Linux, en una carpeta con espacios.
 
-```bash
-python3.15 scripts/configurar_entorno.py --inicio-rapido
-```
+## Usar MySQL o Docker de forma opcional
 
-El comando crea `.venv` e instala `requirements-dev.txt`, que incluye todas las dependencias de ejecución de `requirements.txt`, las herramientas de comprobación y `debugpy`. Comprueba que no haya dependencias incompatibles. Puede repetirse: reutiliza un entorno válido y conserva la configuración privada existente.
+El perfil de despliegue se describe en el [inicio con Docker](../README.md#inicio-local-con-docker). Requiere instalar y arrancar Docker Desktop o Docker Engine antes de ejecutar sus comandos. Si PowerShell indica **«docker no se reconoce»**, utiliza el inicio local de esta guía o instala Docker por separado si necesitas ese perfil.
 
-En Debian/Ubuntu instala antes las bibliotecas necesarias para compilar `mysqlclient`:
+Las dependencias están separadas:
 
-```bash
-sudo apt-get update
-sudo apt-get install build-essential default-libmysqlclient-dev pkg-config
-```
+| Archivo | Uso |
+| --- | --- |
+| `requirements.txt` | Django y ejecución portátil con Waitress, sin cliente SQL nativo |
+| `requirements-dev.txt` | Perfil portátil y herramientas de pruebas, depuración y análisis |
+| `requirements-quality.txt` | Formateador opcional de plantillas; PyYAML puede requerir compilación en Python reciente |
+| `requirements-mysql.txt` | Perfil opcional con `mysqlclient` |
+| `requirements-production.txt` | MySQL y Gunicorn para el contenedor de despliegue |
 
-En macOS con Homebrew:
+Para conectar directamente a un MySQL existente puedes ejecutar `python scripts/configurar_entorno.py --mysql`; el instalador solo acepta ruedas, disponibles para plataformas compatibles. Si no hay rueda, utiliza el contenedor que incorpora las bibliotecas nativas. Para compilar el perfil MySQL manualmente en Linux/macOS sí necesitas sus cabeceras y herramientas; no forman parte del inicio local.
 
-```bash
-brew install python@3.15 mysql-client pkg-config
-export PKG_CONFIG_PATH="$(brew --prefix mysql-client)/lib/pkgconfig"
-python3.15 scripts/configurar_entorno.py --inicio-rapido
-```
-
-En Linux, instala además `venv` y las cabeceras de tu versión de Python si tu distribución los separa en paquetes, por ejemplo `python3.15-venv` y `python3.15-dev` cuando estén disponibles en sus repositorios. En Windows usa Python de 64 bits para instalar las ruedas disponibles de `mysqlclient`, Pillow, cryptography y debugpy. Gunicorn se instala en sistemas distintos de Windows; la depuración utiliza el servidor de desarrollo de Django.
-
-El instalador utiliza el Python con el que lo ejecutas. Para otra versión compatible ajusta el comando, por ejemplo `py -3.14`. Si ya existe `.venv` con otro Python, renombra esa carpeta antes de ejecutar el instalador con 3.15; los archivos del proyecto y `.env` se conservan. No se sustituye silenciosamente el intérprete elegido por otro.
-
-## Configuración y cuentas locales
-
-Si todavía no existe `.env`, `--inicio-rapido` genera una clave privada aleatoria y prepara desarrollo con SQLite, caché local y correo en consola. Aplica las migraciones locales, recopila estáticos y crea seis cuentas de revisión con contraseñas aleatorias. Sus credenciales se guardan en:
-
-```text
-.local/desarrollo/credenciales_revision.json
-```
-
-Abre ese archivo en tu equipo para consultar cada usuario y contraseña. `.env`, las credenciales, la base local y `.venv` permanecen fuera de Git y del ZIP del código. Cada equipo genera su propio entorno virtual porque los ejecutables dependen de Python y del sistema operativo.
-
-Si `.env` ya existe, se conserva exactamente. El instalador no migra ni crea cuentas en la base configurada. Si utiliza MySQL y Redis, inicia esos servicios antes de ejecutar la aplicación. El procedimiento de MySQL, cuentas dedicadas y Mailpit está en el [inicio local del proyecto](../README.md#inicio-local-con-docker). Para preparar solo las dependencias ejecuta el instalador sin `--inicio-rapido`.
-
-MySQL sigue siendo el destino principal de despliegue y de las pruebas de permisos y concurrencia. El inicio con SQLite permite desarrollar y revisar la interfaz sin servicios adicionales.
-
-## Seleccionar el intérprete y ejecutar
-
-1. Abre `Ctrl+Shift+P` y selecciona **Python: Select Interpreter**.
-2. Elige `.venv\Scripts\python.exe` en Windows o `.venv/bin/python` en Linux/macOS. Si VS Code recuerda otro intérprete, cámbialo aquí.
-3. En **Ejecutar y depurar**, selecciona **GESICOM: aplicación y correos locales** y pulsa **F5**.
-4. Abre http://127.0.0.1:8000/ y usa las cuentas creadas en la instalación nueva o las que ya tenía tu base.
-
-El perfil conjunto inicia Django y el trabajador. Los PIN y las confirmaciones aparecen en la terminal del trabajador; ese perfil utiliza correo en consola y no entrega mensajes a Internet. El botón de detener finaliza ambos procesos. También puedes iniciar solo **GESICOM: Django** o solo **GESICOM: correos en consola local**.
-
-Para ejecutar comandos manuales no es obligatorio activar PowerShell. En Windows:
-
-```powershell
-.\.venv\Scripts\python.exe manage.py check
-.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
-```
-
-En Linux/macOS:
-
-```bash
-.venv/bin/python manage.py check
-.venv/bin/python manage.py runserver 127.0.0.1:8000
-```
-
-## Tareas disponibles
-
-**Terminal → Ejecutar tarea** ofrece preparación de `.venv`, comprobación de Django, migraciones con la cuenta dedicada, recopilación de estáticos, pruebas de Django y Ruff. Las tareas usan el intérprete seleccionado; las pruebas utilizan `SENNOVA.test_settings` y una base independiente. Con MySQL necesitan las credenciales exclusivas descritas en [database/README.md](../database/README.md).
-
-La extensión Django reconoce las plantillas como `django-html`; Ruff utiliza la versión de `.venv`. Solo se comparten cuatro archivos de `.vscode/`; los demás archivos personales del editor permanecen excluidos.
+La configuración MySQL original utiliza `SENNOVA.settings`, y las migraciones y pruebas requieren las cuentas dedicadas de [database/README.md](../database/README.md). Las tareas y F5 predeterminados continúan en el perfil local aislado.
 
 ## Resolver errores
 
-| Mensaje o síntoma | Comprobación |
+| Mensaje o síntoma | Solución |
 | --- | --- |
-| `No module named django`, `redis`, `PIL` o `cryptography` | Ejecuta el instalador, selecciona `.venv` y abre una terminal nueva. |
-| `Import ... could not be resolved` en Pylance | Selecciona `.venv`; ejecuta **Developer: Reload Window** si conserva el intérprete anterior. |
-| `Can not find valid pkg-config name` o fallo al compilar `mysqlclient` | Instala las bibliotecas indicadas para Linux/macOS y repite el instalador. |
-| Falta `clang` al compilar, pero `cc` está instalado | En Linux/macOS ejecuta `CC=cc python3.15 scripts/configurar_entorno.py --inicio-rapido`. |
-| PowerShell bloquea `Activate.ps1` | Usa `.\.venv\Scripts\python.exe` directamente; no hace falta cambiar la política de ejecución. |
-| `.venv` está incompleto o usa otra versión | Renombra esa carpeta y ejecuta el instalador con tu Python 3.15, o el compatible que hayas elegido. |
-| Conexión rechazada a MySQL o Redis | Revisa los servicios y tu `.env` existente; el instalador conserva sus credenciales. |
-| Puerto 8000 ocupado | Detén la otra instancia o cambia el puerto de `runserver` en el perfil de depuración. |
-| No aparece el PIN | Inicia el trabajador y consulta su terminal; la web solo encola los mensajes. |
+| `docker no se reconoce` | Ejecuta `configurar_entorno.py --inicio-rapido --extensiones --ejecutar`; Docker es opcional. |
+| `.local ya existe` al copiar instrucciones antiguas | No necesitas crearla a mano; la preparación local reutiliza sus carpetas. |
+| `pkg-config`, GCC o cabeceras de MySQL | Actualiza el código y usa los requisitos portátiles. No instales `requirements-production.txt` para el inicio local. |
+| `No module named django`, `waitress`, `PIL` o `cryptography` | Repite la preparación y ejecuta el Python de `.venv`. |
+| `Import ... could not be resolved` en Pylance | Selecciona `.venv` y ejecuta **Developer: Reload Window** si recuerda otro intérprete. |
+| PowerShell bloquea `Activate.ps1` | Usa `.\.venv\Scripts\python.exe` directamente. |
+| `.venv` incompleto o de otro Python | Renombra esa carpeta y repite la preparación. |
+| No existe el perfil local | Ejecuta la preparación con `--inicio-rapido`; crear solo el `.env` de MySQL no prepara este perfil. |
+| Puerto 8000 ocupado | Detén la otra instancia o usa `scripts/ejecutar_local.py --puerto 8001`. |
+| No aparece el PIN | Mantén activo el trabajador y consulta su terminal. |
 
-El diagnóstico básico es ejecutar el Python de `.venv` con `-m pip check` y `manage.py check`. Comparte únicamente el mensaje necesario del error, sin contraseñas ni el contenido de `.env`.
+Comparte únicamente las líneas necesarias del error, sin credenciales ni el contenido de `.env` o `perfil.env`.

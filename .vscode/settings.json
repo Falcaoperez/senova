@@ -1,6 +1,6 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
-  "python.envFile": "${workspaceFolder}/.env",
+  "python.envFile": "${workspaceFolder}/.local/desarrollo/perfil.env",
   "python.terminal.activateEnvironment": true,
   "ruff.importStrategy": "fromEnvironment",
   "[python]": {

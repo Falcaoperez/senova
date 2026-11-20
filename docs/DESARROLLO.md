@@ -2,7 +2,7 @@
 
 La configuración activa está en `SENNOVA/`. Cada aplicación conserva sus modelos, migraciones, rutas, plantillas y pruebas. Los nombres históricos de las aplicaciones mantienen la identidad de las tablas y permisos.
 
-Para trabajar en el editor, utiliza la [guía de VS Code](VSCODE.md). `scripts/configurar_entorno.py` crea `.venv` con el Python 3.12 a 3.15 que lo ejecuta e instala `requirements-dev.txt`; `--inicio-rapido` prepara una configuración local únicamente cuando no existe `.env`. Los cuatro archivos compartidos de `.vscode/` definen intérprete, extensiones, tareas y depuración con `debugpy`. El entorno virtual y las credenciales se generan en cada equipo.
+Para trabajar en el editor, utiliza la [guía de VS Code](VSCODE.md). `scripts/configurar_entorno.py` crea `.venv` con el Python 3.12 a 3.15 que lo ejecuta e instala `requirements-dev.txt`; `--inicio-rapido` prepara un perfil SQLite aislado en `.local/desarrollo/`, incluso si ya existe un `.env` de MySQL. El inicio local no requiere Docker ni compiladores; `--extensiones --ejecutar` instala las recomendaciones de VS Code cuando su CLI está disponible e inicia web y trabajador. Los cuatro archivos compartidos de `.vscode/` definen intérprete, extensiones, tareas y depuración con `debugpy`. El entorno virtual y las credenciales se generan en cada equipo.
 
 ```text
 SENNOVA/
@@ -69,7 +69,7 @@ docs/                           arquitectura, desarrollo, operación y verificac
 
 ## Pruebas
 
-Instala `requirements-dev.txt` en el entorno virtual. Las pruebas de MySQL usan la base independiente preparada como explica [database/README.md](../database/README.md).
+Instala `requirements-dev.txt` en el entorno virtual para el perfil portátil. Añade `requirements-mysql.txt` para comprobar MySQL. Las pruebas de MySQL usan la base independiente preparada como explica [database/README.md](../database/README.md).
 
 ```bash
 python manage.py test --settings=SENNOVA.test_settings --noinput

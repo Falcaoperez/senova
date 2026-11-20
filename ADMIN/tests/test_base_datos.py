@@ -1,9 +1,11 @@
+import importlib.util
 import io
 import json
 from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import Group, User
@@ -167,6 +169,7 @@ class ConexionMySQLTests(SimpleTestCase):
                     self.opciones({"DB_SSL_MODE": "VERIFY_IDENTITY", "DB_SSL_CA": str(ca), "DB_HOST": host})
 
 
+@skipUnless(importlib.util.find_spec("MySQLdb"), "El diagnóstico del cliente MySQL requiere requirements-mysql.txt.")
 class DiagnosticoMySQLTests(SimpleTestCase):
     def conexion(self):
         cursor = MagicMock()
