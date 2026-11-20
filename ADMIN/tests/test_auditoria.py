@@ -239,7 +239,8 @@ class AuditoriaTests(TestCase):
         with CaptureQueriesContext(connection) as queries:
             data = filas(self.client.get(self.export, {"q": "prueba-paginada"}))
         self.assertEqual(len(data), 121)
-        self.assertEqual(sum("FROM `cuentas_registroseguridad`" in q["sql"] for q in queries), 2)
+        tabla = connection.ops.quote_name(RegistroSeguridad._meta.db_table)
+        self.assertEqual(sum(f"FROM {tabla}" in q["sql"] for q in queries), 2)
         self.assertLessEqual(len(queries), 6)
 
     def test_full_and_fragment_share_results_and_keep_private_headers(self):

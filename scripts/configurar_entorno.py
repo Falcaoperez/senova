@@ -1,38 +1,28 @@
 #!/usr/bin/env python3
-"""Prepara .venv para VS Code sin sobrescribir la configuración privada existente."""
+"""Prepara .venv para VS Code en Windows, macOS y Linux, sin servicios externos."""
 
 import argparse
 import json
 import os
-import secrets
+import re
+import shutil
 import subprocess
 import sys
 import venv
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from SENNOVA.desarrollo import crear_configuracion_local, entorno_local, python_del_entorno
+
 PYTHON_SOPORTADOS = {(3, 12), (3, 13), (3, 14), (3, 15)}
-VARIABLES_LOCALES = {
-    "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
-    "DJANGO_DEBUG": "True",
-    "DJANGO_ALLOWED_HOSTS": "localhost,127.0.0.1",
-    "DB_ENGINE": "sqlite",
-    "REDIS_URL": "",
-    "EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend",
-    "PUBLIC_BASE_URL": "http://127.0.0.1:8000",
-    "CSRF_TRUSTED_ORIGINS": "http://localhost:8000,http://127.0.0.1:8000",
-}
-
-
-def python_del_entorno(raiz, *, windows=None):
-    windows = os.name == "nt" if windows is None else windows
-    return raiz / ".venv" / ("Scripts/python.exe" if windows else "bin/python")
 
 
 def crear_entorno(raiz):
     carpeta = raiz / ".venv"
     if not carpeta.exists():
-        print(f"Creando .venv con Python {sys.version_info.major}.{sys.version_info.minor}…", flush=True)
+        print(f"Creando .venv con Python {sys.version_info.major}.{sys.version_info.minor}...", flush=True)
         venv.EnvBuilder(with_pip=True).create(carpeta)
     python = python_del_entorno(raiz)
     if not (carpeta / "pyvenv.cfg").is_file() or not python.is_file():
@@ -67,31 +57,49 @@ def crear_entorno(raiz):
     return python
 
 
-def crear_configuracion_local(raiz):
-    valores = {
-        **VARIABLES_LOCALES,
-        "DJANGO_SECRET_KEY": secrets.token_urlsafe(48),
-        "DEFAULT_FROM_EMAIL": "GESICOM <no-reply@gesicom.local>",
-    }
-    try:
-        descriptor = os.open(raiz / ".env", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except FileExistsError:
-        return False
-    with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
-        archivo.write("# Desarrollo local: SQLite y correo en consola. No publicar este archivo.\n")
-        archivo.write("\n".join(f"{clave}={valor}" for clave, valor in valores.items()) + "\n")
-    return True
-
-
 def ejecutar(argumentos, raiz, *, entorno=None):
     subprocess.run([str(argumento) for argumento in argumentos], cwd=raiz, env=entorno, check=True)
 
 
-def preparar(raiz, *, inicio_rapido=False):
+def instalar_extensiones(raiz):
+    """Usa la CLI oficial sin interpretar rutas con espacios como comandos de shell."""
+    codigo = shutil.which("code")
+    if not codigo:
+        print("Extensiones: abre VS Code y usa Extensions: Show Recommended Extensions para instalarlas.")
+        return
+    argumentos = [codigo]
+    entorno = dict(os.environ)
+    if Path(codigo).suffix.lower() in {".cmd", ".bat"}:
+        instalacion = Path(codigo).parent.parent
+        ejecutable = instalacion / "Code.exe"
+        cli = instalacion / "resources" / "app" / "out" / "cli.js"
+        if not ejecutable.is_file() or not cli.is_file():
+            print("Extensiones: instálalas desde Extensions: Show Recommended Extensions en VS Code.")
+            return
+        argumentos = [str(ejecutable), str(cli)]
+        entorno["ELECTRON_RUN_AS_NODE"] = "1"
+    extensiones = json.loads((raiz / ".vscode" / "extensions.json").read_text(encoding="utf-8"))["recommendations"]
+    for extension in extensiones:
+        if not re.fullmatch(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_.-]+", extension):
+            raise RuntimeError("Identificador de extensión no válido en .vscode/extensions.json.")
+    try:
+        ejecutar(
+            [*argumentos, *(dato for extension in extensiones for dato in ("--install-extension", extension))],
+            raiz,
+            entorno=entorno,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        print("No se pudieron descargar las extensiones. Instálalas desde las recomendaciones de VS Code.")
+
+
+def preparar(raiz, *, inicio_rapido=False, mysql=False, extensiones=False):
     python = crear_entorno(raiz)
     privados = raiz / ".local"
     privados.mkdir(exist_ok=True, mode=0o700)
-    print("Instalando dependencias de ejecución, pruebas, análisis y depuración…", flush=True)
+    print("Instalando paquetes precompilados de ejecución, pruebas y depuración...", flush=True)
+    requisitos = ["-r", raiz / "requirements-dev.txt"]
+    if mysql:
+        requisitos.extend(["-r", raiz / "requirements-mysql.txt"])
     ejecutar(
         [
             python,
@@ -102,52 +110,66 @@ def preparar(raiz, *, inicio_rapido=False):
             privados / "cache" / "pip",
             "install",
             "--disable-pip-version-check",
-            "-r",
-            raiz / "requirements-dev.txt",
+            "--only-binary=:all:",
+            *requisitos,
         ],
         raiz,
     )
     ejecutar([python, "-m", "pip", "--require-virtualenv", "--cache-dir", privados / "cache" / "pip", "check"], raiz)
     if inicio_rapido:
-        if crear_configuracion_local(raiz):
-            # Estas operaciones se limitan a SQLite local aunque el proceso
-            # padre tenga variables de conexión de otro entorno.
-            entorno = {**os.environ, **VARIABLES_LOCALES}
-            for comando in [
-                ["migrate", "--noinput", "--settings=SENNOVA.migration_settings"],
-                ["collectstatic", "--noinput"],
-                ["crear_usuarios_revision", "--archivo", ".local/desarrollo/credenciales_revision.json"],
-                ["check"],
-            ]:
-                ejecutar([python, raiz / "manage.py", *comando], raiz, entorno=entorno)
-            print("Inicio local listo. Cuentas creadas: .local/desarrollo/credenciales_revision.json")
-        else:
-            print("Se conserva .env. No se migró ni se cambió la base de datos configurada.")
-    print(".venv preparado. En VS Code: Python: Select Interpreter → .venv, y después F5.")
-    print("Para el PIN local, inicia también el perfil de correos en consola de VS Code.")
+        crear_configuracion_local(raiz)
+        entorno = entorno_local(raiz)
+        for comando in [
+            ["createcachetable"],
+            ["migrate", "--noinput"],
+            ["collectstatic", "--noinput"],
+            ["crear_usuarios_revision", "--archivo", ".local/desarrollo/credenciales_revision.json"],
+            ["check"],
+        ]:
+            ejecutar([python, raiz / "manage.py", *comando], raiz, entorno=entorno)
+        print("Perfil SQLite listo. Cuentas: .local/desarrollo/credenciales_revision.json")
+        print("La configuración .env y los datos de otros perfiles se conservan.")
+    if extensiones:
+        instalar_extensiones(raiz)
+    print(".venv preparado. En VS Code: Python: Select Interpreter, elige .venv y después F5.")
+    print("Selecciona GESICOM: aplicación y correos locales; los PIN aparecen en la consola del trabajador.")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--inicio-rapido",
+        "--inicio-rapido", action="store_true", help="Prepara el perfil privado SQLite, incluso si existe .env."
+    )
+    parser.add_argument(
+        "--mysql", action="store_true", help="Añade el cliente MySQL opcional si hay rueda para tu sistema."
+    )
+    parser.add_argument(
+        "--extensiones",
         action="store_true",
-        help="Si no existe .env, prepara SQLite, estáticos y cuentas privadas de revisión para desarrollo local.",
+        help="Instala las extensiones recomendadas si está disponible la CLI de VS Code.",
+    )
+    parser.add_argument(
+        "--ejecutar", action="store_true", help="Prepara el perfil local e inicia la aplicación y el trabajador."
     )
     args = parser.parse_args(argv)
     if tuple(sys.version_info[:2]) not in PYTHON_SOPORTADOS:
         print(
-            "Usa Python 3.12 a 3.15. Para Python 3.15: py -3.15 scripts/configurar_entorno.py "
-            "en Windows, o python3.15 en Linux/macOS.",
+            "Usa Python 3.12 a 3.15 de 64 bits; por ejemplo: py -3.15 scripts/configurar_entorno.py en Windows.",
             file=sys.stderr,
         )
         return 2
     try:
-        preparar(ROOT, inicio_rapido=args.inicio_rapido)
+        preparar(
+            ROOT, inicio_rapido=args.inicio_rapido or args.ejecutar, mysql=args.mysql, extensiones=args.extensiones
+        )
+        if args.ejecutar:
+            ejecutar([python_del_entorno(ROOT), ROOT / "scripts" / "ejecutar_local.py"], ROOT)
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"No se pudo completar la preparación: {error}", file=sys.stderr)
-        print("Revisa los requisitos de Python y del cliente MySQL en docs/VSCODE.md.", file=sys.stderr)
+        print("Consulta docs/VSCODE.md. El inicio local no requiere Docker, MySQL ni compiladores.", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        return 0
     return 0
 
 

@@ -1,15 +1,20 @@
 """Configuración común de GESICOM: Django, MySQL, correo y seguridad."""
 
+import os
 from pathlib import Path
 
-from decouple import AutoConfig
+from decouple import AutoConfig, Config, RepositoryEnv
 
 from .db_config import opciones_mysql
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-env = AutoConfig(search_path=str(BASE_DIR))
-LOG_DIR = BASE_DIR / "logs"
+env = (
+    Config(RepositoryEnv(os.environ["DJANGO_ENV_FILE"]))
+    if os.environ.get("DJANGO_ENV_FILE")
+    else AutoConfig(search_path=str(BASE_DIR))
+)
+LOG_DIR = Path(env("DJANGO_LOG_DIR", default=str(BASE_DIR / "logs")))
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -195,14 +200,6 @@ LOGOUT_REDIRECT_URL = "/login/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "auth.User"
 
-# Ensure log directory exists so FileHandler can open the file
-LOG_DIR = BASE_DIR / "logs"
-try:
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-except Exception:
-    # If directory creation fails, let FileHandler raise a clear error later
-    pass
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -212,7 +209,7 @@ LOGGING = {
             "class": "logging.handlers.RotatingFileHandler",
             "maxBytes": 10 * 1024 * 1024,
             "backupCount": 5,
-            "filename": BASE_DIR / "logs" / "django.log",
+            "filename": LOG_DIR / "django.log",
         },
     },
     "loggers": {

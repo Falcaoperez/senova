@@ -4,19 +4,21 @@ Gestión de evidencias, reportes, novedades y plazos con Django 6.1, MySQL 8.4 y
 
 ## Ejecutar en Visual Studio Code
 
-Abre la carpeta que contiene `manage.py`, instala las extensiones recomendadas y prepara `.venv` con tu Python 3.15. También se admiten Python 3.12, 3.13 y 3.14:
+Abre la carpeta que contiene `manage.py`. El inicio local funciona con Python 3.12 a 3.15 de 64 bits, sin Docker, MySQL, Redis ni herramientas de compilación.
 
 ```powershell
-# Windows
-py -3.15 scripts/configurar_entorno.py --inicio-rapido
+# Windows, desde PowerShell
+python scripts/configurar_entorno.py --inicio-rapido --extensiones --ejecutar
 ```
 
 ```bash
 # Linux/macOS
-python3.15 scripts/configurar_entorno.py --inicio-rapido
+python3.15 scripts/configurar_entorno.py --inicio-rapido --extensiones --ejecutar
 ```
 
-Selecciona `.venv` en **Python: Select Interpreter**, elige **GESICOM: aplicación y correos locales** y pulsa **F5**. En una instalación nueva se prepara SQLite, correo en consola y cuentas privadas en `.local/desarrollo/credenciales_revision.json`. Si `.env` ya existe, se conserva y se utilizan sus servicios; no se modifica esa base. La [guía de VS Code](docs/VSCODE.md) incluye requisitos del cliente MySQL, tareas y solución de errores de importación o PowerShell.
+Abre http://127.0.0.1:8000/. Las seis cuentas se guardan en `.local/desarrollo/credenciales_revision.json`. La preparación crea `.venv` y un perfil SQLite independiente; conserva tu `.env` de MySQL y sus datos. Los PIN de prueba aparecen en la consola del trabajador. **Ctrl+C** detiene ambos procesos.
+
+Para iniciar con **F5**, selecciona `.venv` en **Python: Select Interpreter** y elige **GESICOM: aplicación y correos locales**. Para volver a ejecutar desde PowerShell usa `.\.venv\Scripts\python.exe scripts/ejecutar_local.py`; en Linux/macOS, `.venv/bin/python scripts/ejecutar_local.py`. La [guía de VS Code](docs/VSCODE.md) explica extensiones, tareas y solución de errores.
 
 ## Inicio local con Docker
 
@@ -27,7 +29,7 @@ git clone --branch develop https://github.com/santiagoCoy2025/senova.git
 cd senova
 ```
 
-Requiere Docker Compose y Python 3 para generar la configuración privada.
+Este perfil es opcional. Requiere Docker instalado y en ejecución, Docker Compose y Python 3. Comprueba primero `docker --version` y `docker compose version`. Si PowerShell indica que `docker` no se reconoce, utiliza el inicio local anterior sin contenedores.
 
 ```bash
 python scripts/configurar_local.py
@@ -35,7 +37,7 @@ docker compose -f compose.yml -f compose.dev.yml up -d database redis mailpit
 python scripts/preparar_mysql.py --aplicar --con-pruebas
 docker compose -f compose.yml -f compose.dev.yml up --build -d
 docker compose exec app python manage.py crear_usuarios_revision
-mkdir -p .local
+python -c "from pathlib import Path; Path('.local').mkdir(exist_ok=True)"
 docker compose cp app:/app/.local/credenciales_revision.json .local/credenciales_revision.json
 ```
 
@@ -145,8 +147,9 @@ Cada aplicación mantiene sus rutas en `urls.py` y sus pruebas en `tests/`. `SEN
 Requiere Python 3.12 a 3.15, MySQL 8.4, Redis y las bibliotecas de desarrollo del cliente MySQL para instalar `mysqlclient`.
 
 ```bash
-python3.15 scripts/configurar_entorno.py
+python3.15 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install -r requirements-production.txt -r requirements-dev.txt
 python scripts/configurar_local.py
 python manage.py migrate --settings=SENNOVA.migration_settings
 python manage.py collectstatic --noinput
@@ -181,6 +184,6 @@ Lee [docs/OPERACION.md](docs/OPERACION.md), [docs/SEGURIDAD.md](docs/SEGURIDAD.m
 
 El trabajo continúa en el fork `santiagoCoy2025/senova`. Cada bloque usa una rama nueva y un pull request a `develop`. Después de pasar las comprobaciones e integrar el PR, se elimina la rama de trabajo; `develop` y `main` se conservan. Las instrucciones están en [AGENTS.md](AGENTS.md).
 
-GitHub Actions ejecuta las comprobaciones con Python 3.12 y 3.15, cada uno con sus servicios MySQL y Redis: código, migraciones, pruebas, configuración de producción, estáticos y auditoría de dependencias. Las acciones externas se fijan por SHA. Los valores de autenticación que aparecen en el workflow pertenecen exclusivamente a servicios desechables del trabajo de CI.
+GitHub Actions comprueba también el inicio portátil en Windows, macOS y Linux, con Python 3.15 y una ruta con espacios. Ejecuta las comprobaciones de MySQL con Python 3.12 y 3.15, cada uno con sus servicios MySQL y Redis: código, migraciones, pruebas, configuración de producción, estáticos y auditoría de dependencias. Las acciones externas se fijan por SHA. Los valores de autenticación que aparecen en el workflow pertenecen exclusivamente a servicios desechables del trabajo de CI.
 
 La referencia visual es el [Manual de Identidad Visual SENA 2024](https://www.sena.edu.co/es-co/Documents/MANUAL_IDENTIDAD_VISUAL_SENA_2024.pdf). Work Sans se distribuye localmente con su licencia SIL Open Font License y el logo conserva los trazados y el color del recurso oficial.
