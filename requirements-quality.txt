@@ -1,0 +1,3 @@
+# Formateador opcional de plantillas. PyYAML puede necesitar compilación con Python reciente.
+-r requirements-dev.txt
+djlint==1.54.0

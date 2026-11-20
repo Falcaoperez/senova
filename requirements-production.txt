@@ -1,0 +1,3 @@
+# El contenedor instala las bibliotecas nativas; el equipo de desarrollo no las necesita.
+-r requirements-mysql.txt
+gunicorn==27.0.1; sys_platform != "win32"

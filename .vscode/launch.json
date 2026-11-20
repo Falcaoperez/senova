@@ -5,41 +5,67 @@
       "name": "GESICOM: Django",
       "type": "debugpy",
       "request": "launch",
-      "pythonArgs": ["-X", "frozen_modules=off"],
-      "program": "${workspaceFolder}/manage.py",
-      "args": ["runserver", "127.0.0.1:8000", "--noreload"],
+      "pythonArgs": [
+        "-X",
+        "frozen_modules=off"
+      ],
+      "args": [
+        "--listen=127.0.0.1:8000",
+        "SENNOVA.wsgi:application"
+      ],
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
+      "envFile": "${workspaceFolder}/.local/desarrollo/perfil.env",
       "env": {
-        "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
-        "DJANGO_DEBUG": "True"
+        "DJANGO_SETTINGS_MODULE": "SENNOVA.local_settings",
+        "PYTHONUTF8": "1"
       },
       "django": true,
       "justMyCode": true,
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "windows": {
+        "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      },
+      "module": "waitress"
     },
     {
       "name": "GESICOM: correos en consola local",
       "type": "debugpy",
       "request": "launch",
-      "pythonArgs": ["-X", "frozen_modules=off"],
+      "pythonArgs": [
+        "-X",
+        "frozen_modules=off"
+      ],
       "program": "${workspaceFolder}/manage.py",
-      "args": ["procesar_notificaciones", "--continuo", "--intervalo", "30", "--lote", "50"],
+      "args": [
+        "procesar_notificaciones",
+        "--continuo",
+        "--intervalo",
+        "5",
+        "--lote",
+        "50"
+      ],
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
+      "envFile": "${workspaceFolder}/.local/desarrollo/perfil.env",
       "env": {
-        "DJANGO_SETTINGS_MODULE": "SENNOVA.settings",
-        "DJANGO_DEBUG": "True",
-        "EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend"
+        "DJANGO_SETTINGS_MODULE": "SENNOVA.local_settings",
+        "PYTHONUTF8": "1"
       },
       "justMyCode": true,
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "windows": {
+        "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      }
     }
   ],
   "compounds": [
     {
       "name": "GESICOM: aplicación y correos locales",
-      "configurations": ["GESICOM: Django", "GESICOM: correos en consola local"],
+      "configurations": [
+        "GESICOM: Django",
+        "GESICOM: correos en consola local"
+      ],
       "stopAll": true
     }
   ]
